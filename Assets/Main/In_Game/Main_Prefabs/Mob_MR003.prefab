@@ -17,7 +17,7 @@ GameObject:
   - component: {fileID: 6225626186539438766}
   - component: {fileID: 2309227910224537758}
   m_Layer: 8
-  m_Name: Mob_Ranged_Shotgun
+  m_Name: Mob_MR003
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

@@ -3,11 +3,17 @@ using UnityEngine.AI;
 
 public class MobAI : MonoBehaviour
 {
-    public enum MobType { Melee, Ranged }
+    public enum MobType { Melee, Ranged , Multi}
 
     [Header("몬스터 설정")]
     public MobType type;
-    public float maintainDistance = 5.0f; // 원거리 몬스터가 유지할 거리
+    public float maintainDistance = 0.0f; // 원거리 몬스터가 유지할 거리
+
+    public EntityData myData; // ★ 2단계에서 만든 'Mob_MM001' 데이터를 드래그해서 넣을 칸
+
+    // 실제 게임에서 쓸 현재 스탯들
+    private WeaponData currentWeapon;
+    private float currentHp;
 
     private NavMeshAgent agent;
     private Transform player;
@@ -16,6 +22,16 @@ public class MobAI : MonoBehaviour
     {
         agent = GetComponent<NavMeshAgent>();
         // Start()에서의 1회성 탐색은 제거하고, Update()의 실시간 탐색으로 통합했습니다.
+
+        // ★ 몹이 태어날 때, 내 데이터 파일(myData)을 읽어와서 스탯을 세팅합니다.
+        if (myData != null)
+        {
+            currentHp = myData.maxHp;                      // 내 최대 체력 가져오기
+            currentWeapon = myData.defaultWeapon;          // 내 기본 무기 장착하기
+            agent.speed = myData.moveSpeed;                // 네비메쉬 에이전트 속도 적용
+
+            Debug.Log($"{myData.entityCode} 스폰 완료! 현재 장비: {currentWeapon.weaponName}");
+        }
     }
 
     void Update()

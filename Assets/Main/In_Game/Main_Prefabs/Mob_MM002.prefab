@@ -18,7 +18,7 @@ GameObject:
   - component: {fileID: 6545135902668095321}
   - component: {fileID: 4418655656364599108}
   m_Layer: 8
-  m_Name: Mob_Melee_Tank
+  m_Name: Mob_MM002
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
