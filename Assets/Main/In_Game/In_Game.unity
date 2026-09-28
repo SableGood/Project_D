@@ -2623,7 +2623,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 50}
-  m_SizeDelta: {x: 160, y: 30}
+  m_SizeDelta: {x: 300, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &493081011
 CanvasRenderer:
@@ -2664,7 +2664,7 @@ MonoBehaviour:
     m_AlignByGeometry: 0
     m_RichText: 1
     m_HorizontalOverflow: 0
-    m_VerticalOverflow: 0
+    m_VerticalOverflow: 1
     m_LineSpacing: 1
   m_Text: New Text
 --- !u!1 &511948522
@@ -7733,32 +7733,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WaveManager
   defaultSpawnPoints:
   - {fileID: 1853679827}
+  - {fileID: 1548835084}
+  - {fileID: 1606214933}
+  - {fileID: 1153211635}
   waves:
-  - waveSpawnPoints:
-    - {fileID: 1853679827}
-    - {fileID: 1548835084}
-    - {fileID: 1606214933}
-    - {fileID: 1153211635}
-    mobList:
-    - mobPrefab: {fileID: 1749953442760117039, guid: ae5476325c7cf114189d78f6ad822e9c, type: 3}
-      spawnCount: 1
-    - mobPrefab: {fileID: 1749953442760117039, guid: 88b5e8629ce1b8646b1458242bc11398, type: 3}
-      spawnCount: 1
-    - mobPrefab: {fileID: 2610851043922675693, guid: 624c65916566e594cbd73e3b50883385, type: 3}
-      spawnCount: 1
-    - mobPrefab: {fileID: 2610851043922675693, guid: b2beb42f7c8a622479fbc956e7b6fb16, type: 3}
-      spawnCount: 3
-    - mobPrefab: {fileID: 2610851043922675693, guid: 82eb556ce3f8dfd408f0a5edd321ca9d, type: 3}
-      spawnCount: 3
-    - mobPrefab: {fileID: 1749953442760117039, guid: 3145b27ff520d2a4a91c0ca81116a02a, type: 3}
-      spawnCount: 3
-  - waveSpawnPoints:
-    - {fileID: 1853679827}
-    mobList:
-    - mobPrefab: {fileID: 1749953442760117039, guid: ae5476325c7cf114189d78f6ad822e9c, type: 3}
-      spawnCount: 5
-  - waveSpawnPoints: []
-    mobList: []
+  - {fileID: 11400000, guid: e858cbeda97573647898038856b78a22, type: 2}
+  - {fileID: 11400000, guid: ed7a602d15b851e47b1a37c6ead4710c, type: 2}
+  - {fileID: 11400000, guid: e18cb25a70292ec4d965963a7f399722, type: 2}
+  - {fileID: 11400000, guid: b3bb3c0a7e9c9f74a88f2012c22fb932, type: 2}
+  - {fileID: 11400000, guid: bc19c524ddaa751489ad11e7dcc635e5, type: 2}
+  - {fileID: 11400000, guid: 502dd9193ea2ca94690290c3ad4129ee, type: 2}
+  - {fileID: 11400000, guid: 50f824d6c7d32d54c90bf5ece2e427b5, type: 2}
+  - {fileID: 0}
+  startStage: 1
+  currentStage: 1
+  currentWaveNumber: 1
   waveText: {fileID: 493081012}
   waveStartButton: {fileID: 1183560220}
 --- !u!4 &1746132281

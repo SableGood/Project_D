@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c97c5027b3dea084990d81a572ed37e9, type: 3}
+  m_Name: Ent_TR041
+  m_EditorClassIdentifier: Assembly-CSharp::EntityData
+  entityType: 2
+  entityCode: TR041
+  entityName: "\uCDA9\uACA9\uD30C \uD3EC\uD0D12"
+  maxHp: 300
+  defense: 15
+  moveSpeed: 0
+  cost: 120
+  defaultWeapon: {fileID: 11400000, guid: 90b477b1327266d41bad40aa84a6770f, type: 2}

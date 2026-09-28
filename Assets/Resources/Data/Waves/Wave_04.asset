@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cb89eec06a012e843b7b9e1e909ce88c, type: 3}
+  m_Name: Wave_04
+  m_EditorClassIdentifier: Assembly-CSharp::WaveData
+  waveSpawnPoints: []
+  mobList:
+  - mobPrefab: {fileID: 1749953442760117039, guid: ae5476325c7cf114189d78f6ad822e9c, type: 3}
+    spawnCount: 6
+  - mobPrefab: {fileID: 1749953442760117039, guid: 88b5e8629ce1b8646b1458242bc11398, type: 3}
+    spawnCount: 1
+  - mobPrefab: {fileID: 2610851043922675693, guid: b2beb42f7c8a622479fbc956e7b6fb16, type: 3}
+    spawnCount: 2
