@@ -21,27 +21,29 @@ public class PoolManager : MonoBehaviour
         if (!pools.ContainsKey(prefab))
         {
             // 해당 프리팹의 풀이 최초로 요청될 때 동적 생성
-            pools[prefab] = new ObjectPool<GameObject>(
+            ObjectPool<GameObject> newPool = null;
+            newPool = new ObjectPool<GameObject>(
                 createFunc: () => {
                     GameObject obj = Instantiate(prefab);
+                    obj.SetActive(false); // 위치가 정해지기 전에 OnEnable이 실행되지 않도록
                     // 객체가 자신이 돌아갈 풀을 기억할 수 있도록 추적 컴포넌트 부착
                     PooledObject pooledObj = obj.AddComponent<PooledObject>();
-                    pooledObj.pool = pools[prefab];
+                    pooledObj.pool = newPool;
                     return obj;
                 },
-                actionOnGet: obj => {
-                    obj.transform.position = position;
-                    obj.transform.rotation = rotation;
-                    obj.SetActive(true);
-                },
+                actionOnGet: obj => { }, // 위치/회전/활성화는 아래 Spawn에서 매번 새 값으로 처리
                 actionOnRelease: obj => obj.SetActive(false),
                 actionOnDestroy: obj => Destroy(obj),
-                collectionCheck: false, // 성능을 위해 중복 반환 검사 해제 (안정화 후 false 권장)
+                collectionCheck: false,
                 defaultCapacity: 50,
-                maxSize: 500 // 메모리 오버플로우를 막기 위한 최대치 제한
+                maxSize: 500
             );
+            pools[prefab] = newPool;
         }
 
-        return pools[prefab].Get();
+        GameObject spawned = pools[prefab].Get();
+        spawned.transform.SetPositionAndRotation(position, rotation); // 호출할 때마다 새 위치 적용
+        spawned.SetActive(true);
+        return spawned;
     }
 }

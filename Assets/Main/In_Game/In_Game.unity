@@ -7845,7 +7845,7 @@ MonoBehaviour:
   playerPrefabs:
   - {fileID: 7334419471127146073, guid: 64ed456482b950249a798c234b75d9fe, type: 3}
   - {fileID: 3061444238476834769, guid: 6f7d5482f44c9c846bdb00e03866a3f6, type: 3}
-  - {fileID: 7157170366201097732, guid: 98fb694cfcde7d542a6a3939f9919680, type: 3}
+  - {fileID: 3061444238476834769, guid: 278116e947f98d143bb26b43c95ef82a, type: 3}
   spawnPoint: {fileID: 1746910063}
   pauseMenuUI: {fileID: 286258798}
   gameOverUI: {fileID: 1205960917}

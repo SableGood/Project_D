@@ -14,36 +14,26 @@ public class PlayerHUD : MonoBehaviour
 
     void Start()
     {
-        GameObject player = GameObject.FindWithTag("Player");
-        if (player != null)
-        {
-            playerHealth = player.GetComponent<Health>();
-            playerController = player.GetComponent<PlayerController>();
-        }
-
-        if (playerHealth == null)
-        {
-            Debug.LogWarning("PlayerHUD: 플레이어의 Health 컴포넌트를 찾지 못했습니다!");
-        }
+        // 씬 시작 시 크로스헤어를 모두 숨기는 초기화 작업만 수행합니다.
         UpdateCrosshair();
     }
 
     void Update()
     {
-        // 플레이어를 아직 못 찾았다면 계속 찾도록 유도
+        // 1. 플레이어 지연 할당 (GameManager 연동 최적화)
         if (playerController == null || playerHealth == null)
         {
-            GameObject player = GameObject.FindWithTag("Player");
-            if (player != null)
+            if (GameManager.Instance != null && GameManager.Instance.playerTransform != null)
             {
+                GameObject player = GameManager.Instance.playerTransform.gameObject;
                 playerHealth = player.GetComponent<Health>();
                 playerController = player.GetComponent<PlayerController>();
-                Debug.Log("PlayerHUD: 플레이어를 성공적으로 찾았습니다.");
+                Debug.Log("PlayerHUD: GameManager를 통해 플레이어를 성공적으로 찾았습니다.");
             }
             return; // 플레이어를 찾는 동안은 아래 UI 갱신 로직을 건너뜀
         }
 
-        // 실시간으로 플레이어 체력 상태를 갱신
+        // 2. 실시간으로 플레이어 체력 및 크로스헤어 상태 갱신
         UpdatePlayerHUD();
         SyncCrosshairVisibility();
     }
@@ -86,7 +76,6 @@ public class PlayerHUD : MonoBehaviour
     {
         if (playerHealth == null) return;
 
-        // 대소문자 철자(currentHp, maxHp)를 모두 동일하게 통일했습니다.
         int currentHp = (int)playerHealth.GetCurrentHealth();
         int maxHp = (int)playerHealth.maxHealth;
 

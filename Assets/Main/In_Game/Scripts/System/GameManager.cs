@@ -130,13 +130,27 @@ public class GameManager : MonoBehaviour
     {
         if (playerPrefabs != null && playerPrefabs.Length > index && playerPrefabs[index] != null)
         {
-            currentPlayer = Instantiate(playerPrefabs[index], spawnPoint.position, spawnPoint.rotation);
+            GameObject prefab = playerPrefabs[index];
+            Vector3 finalSpawnPos = spawnPoint.position;
+
+            // 프리팹 원본에서 CharacterController 컴포넌트를 찾아 크기 정보를 가져옵니다.
+            CharacterController controller = prefab.GetComponent<CharacterController>();
+
+            if (controller != null)
+            {
+                // [핵심 로직] 캐릭터 높이의 절반을 더해 위로 띄웁니다.
+                // 주의: 콜라이더의 중심점(Center.y)이 0이 아닐 수 있으므로 이를 빼주어야 발바닥이 땅에 정확히 닿습니다.
+                float yOffset = (controller.height / 2f) - controller.center.y;
+                finalSpawnPos.y += yOffset;
+            }
+
+            currentPlayer = Instantiate(prefab, finalSpawnPos, spawnPoint.rotation);
             currentPlayer.tag = "Player";
 
             // 스폰 직후 안전하게 트랜스폼 동기화 등록
             RegisterPlayer(currentPlayer.transform);
 
-            Debug.Log($"GameManager: {currentPlayer.name} 스폰 완료!");
+            Debug.Log($"GameManager: {currentPlayer.name} 스폰 완료! (동적 스폰 높이: {finalSpawnPos.y})");
         }
         else
         {

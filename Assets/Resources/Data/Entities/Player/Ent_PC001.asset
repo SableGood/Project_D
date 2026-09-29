@@ -15,7 +15,7 @@ MonoBehaviour:
   entityType: 1
   entityCode: PC001
   entityName: "\uCE68\uD32C\uC9C0"
-  maxHp: 100
+  maxHp: 200
   defense: 5
   moveSpeed: 5
   cost: 0

@@ -7,7 +7,7 @@ public class MobAI : MonoBehaviour
 
     [Header("몬스터 설정")]
     public MobType type;
-    public float maintainDistance = 0.0f;
+    public float maintainDistance = 1.0f;
     public EntityData myData;
 
     // [최적화] 컴포넌트 참조를 캐싱할 변수들
