@@ -128,7 +128,7 @@ public class WaveManager : MonoBehaviour
 
                 Transform sp = targetSpawnPoints[Random.Range(0, targetSpawnPoints.Length)];
 
-                GameObject spawnedMob = Instantiate(info.mobPrefab, sp.position, sp.rotation);
+                GameObject spawnedMob = PoolManager.Instance.Spawn(info.mobPrefab, sp.position, sp.rotation);
 
                 MobTracker tracker = spawnedMob.GetComponent<MobTracker>();
                 if (tracker == null)

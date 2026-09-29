@@ -10,10 +10,29 @@ public class PlayerWeaponManager : MonoBehaviour
 
     private int currentWeaponIndex = 0;
     private GameObject currentWeaponInstance;
+    private Weapon currentWeapon;
+    private PlayerController playerController;
 
     void Start()
     {
-        // 게임 시작 시 첫 번째 무기 자동 장착
+        playerController = GetComponent<PlayerController>();
+
+        // ★ [핵심 안전장치] 인스펙터 연결이 풀렸거나 비어있어도 플레이어 자식 중에서 'WeaponMountPoint'를 강제로 찾아냅니다.
+        if (weaponMountPoint == null)
+        {
+            Transform found = transform.Find("WeaponMountPoint");
+            if (found != null)
+            {
+                weaponMountPoint = found;
+                Debug.Log("PlayerWeaponManager: 자식 오브젝트에서 WeaponMountPoint를 자동으로 찾았습니다.");
+            }
+            else
+            {
+                weaponMountPoint = transform; // 자식에 없다면 플레이어 본인 위치를 부모로 지정
+                Debug.LogWarning("PlayerWeaponManager: WeaponMountPoint를 찾지 못해 플레이어 본인을 기준으로 장착합니다.");
+            }
+        }
+
         if (weaponPrefabs.Length > 0)
         {
             EquipWeapon(0);
@@ -28,25 +47,21 @@ public class PlayerWeaponManager : MonoBehaviour
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll > 0f)
         {
-            int nextIndex = (currentWeaponIndex + 1) % weaponPrefabs.Length;
-            EquipWeapon(nextIndex);
+            EquipWeapon((currentWeaponIndex + 1) % weaponPrefabs.Length);
         }
         else if (scroll < 0f)
         {
-            int prevIndex = (currentWeaponIndex - 1 + weaponPrefabs.Length) % weaponPrefabs.Length;
-            EquipWeapon(prevIndex);
+            EquipWeapon((currentWeaponIndex - 1 + weaponPrefabs.Length) % weaponPrefabs.Length);
         }
 
-        // Z, X 키로 이전/다음 무기 교체 (타워 단축키 1~5와 충돌 방지)
-        if (Input.GetKeyDown(KeyCode.Z))
+        // 수동(Manual) 조준 무기일 경우 마우스 좌클릭 시 사격 명령 하달
+        if (currentWeapon != null && currentWeapon.aimType == Weapon.AimType.Manual)
         {
-            int prevIndex = (currentWeaponIndex - 1 + weaponPrefabs.Length) % weaponPrefabs.Length;
-            EquipWeapon(prevIndex);
-        }
-        if (Input.GetKeyDown(KeyCode.X))
-        {
-            int nextIndex = (currentWeaponIndex + 1) % weaponPrefabs.Length;
-            EquipWeapon(nextIndex);
+            if (Input.GetMouseButton(0))
+            {
+                Vector3 aimPoint = GetAimPoint();
+                currentWeapon.ManualAttackCommand(aimPoint);
+            }
         }
     }
 
@@ -54,24 +69,56 @@ public class PlayerWeaponManager : MonoBehaviour
     {
         if (index < 0 || index >= weaponPrefabs.Length || weaponPrefabs[index] == null) return;
 
-        // 기존에 들고 있던 무기 파괴
         if (currentWeaponInstance != null)
         {
             Destroy(currentWeaponInstance);
         }
 
-        // 새 무기 생성 및 부모(MountPoint) 설정
-        currentWeaponInstance = Instantiate(weaponPrefabs[index], weaponMountPoint.position, weaponMountPoint.rotation);
-        currentWeaponInstance.transform.SetParent(weaponMountPoint);
-
-        // 플레이어가 장착한 무기이므로 강제로 수동 발사 모드(isManualFire = true)로 고정
-        Weapon weaponScript = currentWeaponInstance.GetComponent<Weapon>();
-        if (weaponScript != null)
+        // 만약의 경우를 대비해 Equip 시점에도 마운트 포인트 재확인
+        if (weaponMountPoint == null)
         {
-            weaponScript.isManualFire = true;
+            Transform found = transform.Find("WeaponMountPoint");
+            weaponMountPoint = found != null ? found : transform;
+        }
+
+        // weaponMountPoint를 부모로 지정하고, 월드 좌표 유지(worldPositionStays)를 false로 설정
+        currentWeaponInstance = Instantiate(weaponPrefabs[index], weaponMountPoint, false);
+
+        // 부모 기준 로컬 좌표와 회전값을 0으로 강제 스냅하여 손에 딱 붙도록 고정
+        currentWeaponInstance.transform.localPosition = Vector3.zero;
+        currentWeaponInstance.transform.localRotation = Quaternion.identity;
+
+        currentWeapon = currentWeaponInstance.GetComponent<Weapon>();
+        if (currentWeapon != null)
+        {
+            // 플레이어가 장착한 무기이므로 무조건 수동 조준 모드로 고정
+            currentWeapon.aimType = Weapon.AimType.Manual;
         }
 
         currentWeaponIndex = index;
-        Debug.Log($"무기 교체 완료: {weaponPrefabs[index].name}");
+        Debug.Log($"무기 장착 완료: {weaponPrefabs[index].name}");
+    }
+
+    private Vector3 GetAimPoint()
+    {
+        if (playerController != null && playerController.isTPS)
+        {
+            Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            if (Physics.Raycast(ray, out RaycastHit hit, 100f))
+            {
+                return hit.point;
+            }
+            return ray.GetPoint(100f);
+        }
+        else
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
+            if (groundPlane.Raycast(ray, out float distance))
+            {
+                return ray.GetPoint(distance);
+            }
+            return transform.position + transform.forward * 10f;
+        }
     }
 }

@@ -2,22 +2,18 @@ using UnityEngine;
 
 public class MobTracker : MonoBehaviour
 {
-    // 이 몹을 관리하는 웨이브 매니저의 참조 변수
     private WaveManager waveManager;
 
-    // 몹이 생성될 때 웨이브 매니저와 연결해 주는 초기화 함수
     public void Initialize(WaveManager manager)
     {
         waveManager = manager;
     }
 
-    // 유니티 오브젝트가 파괴될 때(사망 또는 삭제) 자동으로 호출되는 기본 함수
-    private void OnDestroy()
+    // ★ 수정: OnDestroy() 대신 오브젝트 풀에 의해 비활성화될 때 호출되는 OnDisable() 사용
+    private void OnDisable()
     {
-        // 웨이브 매니저가 정상적으로 존재할 때만 실행
         if (waveManager != null)
         {
-            // 웨이브 매니저에게 자신이 파괴되었음을 알림
             waveManager.UnregisterMob(gameObject);
         }
     }

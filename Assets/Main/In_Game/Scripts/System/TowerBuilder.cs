@@ -24,6 +24,7 @@ public class TowerBuilder : MonoBehaviour
 
     void Update()
     {
+        // 1번 키를 누를 때마다 건설 모드 토글
         if (Input.GetKeyDown(KeyCode.Alpha1))
         {
             isBuildMode = !isBuildMode;
@@ -31,6 +32,7 @@ public class TowerBuilder : MonoBehaviour
             else CancelBuildMode();
         }
 
+        // 건설 모드 중일 때 미리보기 위치 갱신 및 좌클릭 건설 처리
         if (isBuildMode && currentPreview != null)
         {
             UpdatePreviewPosition();
@@ -45,17 +47,27 @@ public class TowerBuilder : MonoBehaviour
 
     private void StartBuildMode()
     {
+        // [최적화] 미리보기 객체가 없다면 최초 1회만 Instantiate로 생성합니다.
         if (currentPreview == null && previewPrefab != null)
         {
             currentPreview = Instantiate(previewPrefab);
             previewRenderer = currentPreview.GetComponent<Renderer>();
+        }
+        // [최적화] 이미 만들어둔 객체가 있다면 파괴/재생성하지 않고 활성화(켜기)만 수행합니다.
+        else if (currentPreview != null)
+        {
+            currentPreview.SetActive(true);
         }
     }
 
     private void CancelBuildMode()
     {
         isBuildMode = false;
-        if (currentPreview != null) Destroy(currentPreview);
+        // [최적화] Destroy 대신 비활성화(끄기)하여 메모리 할당 부하(GC 스파이크)를 원천 차단합니다.
+        if (currentPreview != null)
+        {
+            currentPreview.SetActive(false);
+        }
     }
 
     private void UpdatePreviewPosition()
@@ -67,12 +79,14 @@ public class TowerBuilder : MonoBehaviour
         {
             Vector3 hitPoint = ray.GetPoint(rayDistance);
 
+            // 바둑판 스냅 로직
             float x = Mathf.Round(hitPoint.x / gridSize) * gridSize;
             float z = Mathf.Round(hitPoint.z / gridSize) * gridSize;
 
             Vector3 snapPos = new Vector3(x, 1.0f, z);
             currentPreview.transform.position = snapPos;
 
+            // 위치 변경 후 설치 가능 여부 검사
             CheckPlacementValidity(snapPos);
         }
     }
@@ -111,6 +125,7 @@ public class TowerBuilder : MonoBehaviour
 
     private void BuildTower()
     {
-        Instantiate(towerPrefab, currentPreview.transform.position, Quaternion.identity);
+        // [최적화] 타워 설치 시에도 Instantiate 대신 시스템에 구현해 둔 PoolManager를 적극 사용합니다.
+        PoolManager.Instance.Spawn(towerPrefab, currentPreview.transform.position, Quaternion.identity);
     }
 }

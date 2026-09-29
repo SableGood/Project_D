@@ -45,7 +45,15 @@ public class Health : MonoBehaviour
             if (GameManager.Instance != null) GameManager.Instance.TriggerGameOver();
         }
 
-        Destroy(gameObject);
+        // [최적화 코드] Die() 함수 내부
+        if (TryGetComponent(out PooledObject pooledObj))
+        {
+            pooledObj.ReleaseToPool();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     public float GetCurrentHealth()

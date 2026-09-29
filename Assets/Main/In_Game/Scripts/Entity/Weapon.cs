@@ -3,82 +3,131 @@ using UnityEngine;
 public class Weapon : MonoBehaviour
 {
     public enum FireMode { StraightFast, RapidBullet, ParabolicShell, HomingMissile, Hitscan }
+    public enum AimType { Auto, Manual }
 
-    [Header("발사 방식 및 타겟팅 (인스펙터 유지)")]
+    [Header("발사 방식 및 속성")]
+    public AimType aimType = AimType.Auto;
     public FireMode fireMode = FireMode.Hitscan;
-    public bool isManualFire = false;
     public GameObject projectilePrefab;
     public LayerMask targetLayer;
 
-    [Header("무기 스펙 (데이터 자동 연동)")]
-    public float attackRange;
-    public float attackCooldown;
-    public int attackDamage;
+    [Header("타겟팅 최적화 설정")]
+    public int maxTargetCapacity = 20;
+
+    [Header("무기 스펙 (기본값)")]
+    public float attackRange = 10f;
+    public float attackCooldown = 0.5f;
+    public int attackDamage = 10;
 
     private float lastAttackTime = 0f;
+    private Collider[] hitColliders;
 
-    // MobAI가 무기 데이터를 꽂아주는 함수
+    void Awake()
+    {
+        hitColliders = new Collider[maxTargetCapacity];
+    }
+
     public void InitWeapon(WeaponData data)
     {
         if (data == null) return;
 
+        // 데이터가 유효한 경우에만 덮어씌우거나, 필요한 항목만 가져옵니다.
         this.attackDamage = (int)data.attackPower;
-        this.attackRange = data.attackRange;
-
-        // CSV의 공격 속도 수치가 '초당 공격 횟수'라면 1f / data.attackSpeed 로 쿨타임을 계산합니다.
-        // 만약 수치 자체가 '공격 간격(초)'라면 data.attackSpeed 를 그대로 넣으시면 됩니다.
-        this.attackCooldown = data.attackSpeed > 0 ? (1f / data.attackSpeed) : 1f;
+        this.attackRange = data.attackRange > 0 ? data.attackRange : this.attackRange;
+        this.attackCooldown = data.attackSpeed > 0 ? (1f / data.attackSpeed) : this.attackCooldown;
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.V))
+        if (aimType == AimType.Auto && Time.time >= lastAttackTime + attackCooldown)
         {
-            isManualFire = !isManualFire;
-            Debug.Log(gameObject.name + " 수동 발사 모드: " + isManualFire);
-        }
-
-        if (Time.time >= lastAttackTime + attackCooldown)
-        {
-            if (isManualFire)
-            {
-                if (Input.GetMouseButton(0)) TryAttack();
-            }
-            else
-            {
-                TryAttack();
-            }
+            AutoAttackUpdate();
         }
     }
 
-    private void TryAttack()
+    public void ManualAttackCommand(Vector3 targetPosition)
     {
-        Collider[] hitColliders = Physics.OverlapSphere(transform.position, attackRange, targetLayer);
-
-        if (hitColliders.Length > 0)
+        if (Time.time >= lastAttackTime + attackCooldown)
         {
-            Transform target = hitColliders[0].transform;
-            PerformAttack(target);
+            PerformAttack(null, targetPosition);
             lastAttackTime = Time.time;
         }
     }
 
-    private void PerformAttack(Transform target)
+    private void AutoAttackUpdate()
+    {
+        int hitCount = Physics.OverlapSphereNonAlloc(transform.position, attackRange, hitColliders, targetLayer);
+        if (hitCount > 0)
+        {
+            Transform bestTarget = GetClosestTarget(hitCount);
+            if (bestTarget != null)
+            {
+                PerformAttack(bestTarget, Vector3.zero);
+                lastAttackTime = Time.time;
+            }
+        }
+    }
+
+    private Transform GetClosestTarget(int hitCount)
+    {
+        Transform bestTarget = null;
+        float closestSqrDistance = Mathf.Infinity;
+        Vector3 currentPos = transform.position;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            if (hitColliders[i] == null) continue; // 널 체크 추가
+
+            float sqrDist = (hitColliders[i].transform.position - currentPos).sqrMagnitude;
+            if (sqrDist < closestSqrDistance)
+            {
+                closestSqrDistance = sqrDist;
+                bestTarget = hitColliders[i].transform;
+            }
+        }
+        return bestTarget;
+    }
+
+    private void PerformAttack(Transform targetTransform, Vector3 manualTargetPosition)
     {
         if (fireMode == FireMode.Hitscan)
         {
-            ApplyDamage(target);
-            Debug.DrawLine(transform.position + Vector3.up * 1.0f, target.position + Vector3.up * 0.5f, Color.green, 0.5f);
+            Vector3 aimPos = targetTransform != null ? targetTransform.position + Vector3.up * 0.5f : manualTargetPosition;
+            // ★ 수정: 무기(총구)의 월드 좌표 기준점 명시
+            Vector3 fireOrigin = transform.position + Vector3.up * 1.0f;
+            Vector3 direction = (aimPos - fireOrigin).normalized;
+
+            if (Physics.Raycast(fireOrigin, direction, out RaycastHit hit, attackRange, targetLayer))
+            {
+                ApplyDamage(hit.transform);
+                Debug.DrawLine(fireOrigin, hit.point, Color.green, 0.5f);
+            }
             return;
         }
 
         if (projectilePrefab != null)
         {
-            Vector3 spawnPos = transform.position + Vector3.up * 1.0f;
-            GameObject projObj = Instantiate(projectilePrefab, spawnPos, Quaternion.identity);
+            // ★ [핵심 해결] 무기가 플레이어 자식으로 잘 붙어있다면, transform.position은 플레이어를 따라 움직이는 현재 무기의 월드 좌표입니다.
+            // 이 위치를 기준으로 정확히 총구 앞쪽에서 투사체를 스폰합니다.
+            Vector3 spawnPos = transform.position + transform.forward * 1.0f + Vector3.up * 0.5f;
+
+            if (PoolManager.Instance == null)
+            {
+                Debug.LogError("PoolManager 인스턴스가 씬에 존재하지 않습니다!");
+                return;
+            }
+
+            GameObject projObj = PoolManager.Instance.Spawn(projectilePrefab, spawnPos, Quaternion.identity);
+            if (projObj == null) return;
 
             Projectile projectile = projObj.GetComponent<Projectile>();
-            if (projectile != null) ConfigureProjectile(projectile, target);
+            if (projectile != null)
+            {
+                ConfigureProjectile(projectile);
+
+                if (targetTransform != null) projectile.InitializeAuto(targetTransform);
+                else projectile.InitializeManual(manualTargetPosition);
+            }
         }
     }
 
@@ -88,8 +137,11 @@ public class Weapon : MonoBehaviour
         if (targetHealth != null) targetHealth.TakeDamage(attackDamage);
     }
 
-    private void ConfigureProjectile(Projectile projectile, Transform target)
+    private void ConfigureProjectile(Projectile projectile)
     {
+        projectile.attackDamage = this.attackDamage;
+        projectile.targetLayer = this.targetLayer;
+
         switch (fireMode)
         {
             case FireMode.StraightFast:
@@ -109,7 +161,6 @@ public class Weapon : MonoBehaviour
                 projectile.speed = 12.0f;
                 break;
         }
-        projectile.Initialize(target);
     }
 
     private void OnDrawGizmosSelected()
