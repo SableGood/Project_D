@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections;
 
 public class Weapon : MonoBehaviour
 {
@@ -14,10 +15,15 @@ public class Weapon : MonoBehaviour
     [Header("타겟팅 최적화 설정")]
     public int maxTargetCapacity = 20;
 
-    [Header("무기 스펙 (기본값)")]
+    [Header("무기 스펙 (기본/런타임 가변)")]
     public float attackRange = 10f;
     public float attackCooldown = 0.5f;
     public int attackDamage = 10;
+
+    [Header("플레이어 전용 스펙")]
+    public PlayerWeaponData playerWepData; // 플레이어가 들었을 때만 할당됨
+    public int currentAmmo;
+    public bool isReloading = false;
 
     private float lastAttackTime = 0f;
     private Collider[] hitColliders;
@@ -27,14 +33,38 @@ public class Weapon : MonoBehaviour
         hitColliders = new Collider[maxTargetCapacity];
     }
 
+    // 1. 몹/타워 전용 초기화 (기존 데이터)
     public void InitWeapon(WeaponData data)
     {
         if (data == null) return;
-
-        // 데이터가 유효한 경우에만 덮어씌우거나, 필요한 항목만 가져옵니다.
         this.attackDamage = (int)data.attackPower;
         this.attackRange = data.attackRange > 0 ? data.attackRange : this.attackRange;
         this.attackCooldown = data.attackSpeed > 0 ? (1f / data.attackSpeed) : this.attackCooldown;
+
+        if (data.projectilePrefab != null)
+        {
+            this.projectilePrefab = data.projectilePrefab;
+        }
+    }
+
+    // 2. 플레이어 전용 초기화 (새로운 탄창 시스템 등 적용)
+    public void InitPlayerWeapon(PlayerWeaponData data)
+    {
+        if (data == null) return;
+        this.playerWepData = data;
+
+        this.attackDamage = (int)data.damage;
+        this.attackRange = data.range;
+        this.attackCooldown = data.fireRate > 0 ? (1f / data.fireRate) : 0.5f;
+        this.currentAmmo = data.maxAmmo;
+        this.isReloading = false;
+
+        // 투사체 발사형 무기일 경우 Resources 폴더에서 동적 로드
+        if (data.fireMode == "Projectile" && !string.IsNullOrEmpty(data.projectilePrefabName))
+        {
+            GameObject loadedPrefab = Resources.Load<GameObject>($"Prefabs/Projectiles/{data.projectilePrefabName}");
+            if (loadedPrefab != null) this.projectilePrefab = loadedPrefab;
+        }
     }
 
     void Update()
@@ -45,14 +75,46 @@ public class Weapon : MonoBehaviour
         }
     }
 
+    // 수동 사격 (플레이어용)
     public void ManualAttackCommand(Vector3 targetPosition)
     {
+        if (isReloading) return; // 장전 중 사격 불가
+
         if (Time.time >= lastAttackTime + attackCooldown)
         {
+            // 탄창 시스템 적용 (탄창이 0보다 큰 무기만 적용)
+            if (playerWepData != null && playerWepData.maxAmmo > 0)
+            {
+                if (currentAmmo <= 0)
+                {
+                    StartCoroutine(ReloadCoroutine());
+                    return;
+                }
+                currentAmmo--; // 총알 소모
+            }
+
             PerformAttack(null, targetPosition);
             lastAttackTime = Time.time;
         }
     }
+
+    public IEnumerator ReloadCoroutine()
+    {
+        if (isReloading || playerWepData == null || playerWepData.maxAmmo <= 0) yield break;
+
+        isReloading = true;
+        Debug.Log("재장전 시작!");
+
+        yield return new WaitForSeconds(playerWepData.reloadTime);
+
+        currentAmmo = playerWepData.maxAmmo;
+        isReloading = false;
+        Debug.Log("재장전 완료!");
+    }
+
+    // =========================================================
+    // 아래부터는 기존에 작성하셨던 몹 타겟팅 및 실제 데미지 적용 로직입니다.
+    // =========================================================
 
     private void AutoAttackUpdate()
     {
@@ -76,7 +138,7 @@ public class Weapon : MonoBehaviour
 
         for (int i = 0; i < hitCount; i++)
         {
-            if (hitColliders[i] == null) continue; // 널 체크 추가
+            if (hitColliders[i] == null) continue;
 
             float sqrDist = (hitColliders[i].transform.position - currentPos).sqrMagnitude;
             if (sqrDist < closestSqrDistance)
@@ -93,7 +155,6 @@ public class Weapon : MonoBehaviour
         if (fireMode == FireMode.Hitscan)
         {
             Vector3 aimPos = targetTransform != null ? targetTransform.position + Vector3.up * 0.5f : manualTargetPosition;
-            // ★ 수정: 무기(총구)의 월드 좌표 기준점 명시
             Vector3 fireOrigin = transform.position + Vector3.up * 1.0f;
             Vector3 direction = (aimPos - fireOrigin).normalized;
 
@@ -107,8 +168,6 @@ public class Weapon : MonoBehaviour
 
         if (projectilePrefab != null)
         {
-            // ★ [핵심 해결] 무기가 플레이어 자식으로 잘 붙어있다면, transform.position은 플레이어를 따라 움직이는 현재 무기의 월드 좌표입니다.
-            // 이 위치를 기준으로 정확히 총구 앞쪽에서 투사체를 스폰합니다.
             Vector3 spawnPos = transform.position + transform.forward * 1.0f + Vector3.up * 0.5f;
 
             if (PoolManager.Instance == null)

@@ -44,12 +44,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6bc7411838ee36f41a4e61724a7bad01, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Weapon
+  aimType: 0
   fireMode: 1
-  attackRange: 10
-  attackCooldown: 0.5
-  attackDamage: 10
-  isManualFire: 0
-  projectilePrefab: {fileID: 7895335454324948737, guid: fcb5c9de19de3a64f9c8d16a1de09b50, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 1fc262461d9318f4fa5dce8c9d2cba0d, type: 3}
   targetLayer:
     serializedVersion: 2
     m_Bits: 256
+  maxTargetCapacity: 20
+  attackRange: 10
+  attackCooldown: 0.5
+  attackDamage: 10

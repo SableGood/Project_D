@@ -3,9 +3,10 @@ using UnityEngine;
 public class PlayerWeaponManager : MonoBehaviour
 {
     [Header("무기 장착 위치")]
-    public Transform weaponMountPoint; // 총을 쥐고 있을 손이나 총구 위치
+    public Transform weaponMountPoint;
 
     [Header("테스트용 무기 프리팹 리스트")]
+    [Tooltip("프리팹 이름은 반드시 W001, W002 등 무기 ID와 동일해야 합니다.")]
     public GameObject[] weaponPrefabs;
 
     private int currentWeaponIndex = 0;
@@ -17,20 +18,10 @@ public class PlayerWeaponManager : MonoBehaviour
     {
         playerController = GetComponent<PlayerController>();
 
-        // ★ [핵심 안전장치] 인스펙터 연결이 풀렸거나 비어있어도 플레이어 자식 중에서 'WeaponMountPoint'를 강제로 찾아냅니다.
         if (weaponMountPoint == null)
         {
             Transform found = transform.Find("WeaponMountPoint");
-            if (found != null)
-            {
-                weaponMountPoint = found;
-                Debug.Log("PlayerWeaponManager: 자식 오브젝트에서 WeaponMountPoint를 자동으로 찾았습니다.");
-            }
-            else
-            {
-                weaponMountPoint = transform; // 자식에 없다면 플레이어 본인 위치를 부모로 지정
-                Debug.LogWarning("PlayerWeaponManager: WeaponMountPoint를 찾지 못해 플레이어 본인을 기준으로 장착합니다.");
-            }
+            weaponMountPoint = found != null ? found : transform;
         }
 
         if (weaponPrefabs.Length > 0)
@@ -43,7 +34,7 @@ public class PlayerWeaponManager : MonoBehaviour
     {
         if (weaponPrefabs == null || weaponPrefabs.Length == 0) return;
 
-        // 마우스 휠로 무기 교체
+        // 마우스 휠 무기 교체
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll > 0f)
         {
@@ -54,13 +45,26 @@ public class PlayerWeaponManager : MonoBehaviour
             EquipWeapon((currentWeaponIndex - 1 + weaponPrefabs.Length) % weaponPrefabs.Length);
         }
 
-        // 수동(Manual) 조준 무기일 경우 마우스 좌클릭 시 사격 명령 하달
-        if (currentWeapon != null && currentWeapon.aimType == Weapon.AimType.Manual)
+        // ★ 발사 방식(Auto/Semi) 및 재장전 데이터 연동
+        if (currentWeapon != null && currentWeapon.playerWepData != null)
         {
-            if (Input.GetMouseButton(0))
+            // R키 수동 장전
+            if (Input.GetKeyDown(KeyCode.R) && currentWeapon.currentAmmo < currentWeapon.playerWepData.maxAmmo)
             {
-                Vector3 aimPoint = GetAimPoint();
-                currentWeapon.ManualAttackCommand(aimPoint);
+                StartCoroutine(currentWeapon.ReloadCoroutine());
+            }
+
+            Vector3 aimPoint = GetAimPoint();
+
+            if (currentWeapon.playerWepData.fireMechanism == "Auto")
+            {
+                // 누르고 있으면 연사 (쿨타임은 Weapon 내부에서 처리)
+                if (Input.GetMouseButton(0)) currentWeapon.ManualAttackCommand(aimPoint);
+            }
+            else if (currentWeapon.playerWepData.fireMechanism == "Semi")
+            {
+                // 누를 때마다 단발 (광클 유도)
+                if (Input.GetMouseButtonDown(0)) currentWeapon.ManualAttackCommand(aimPoint);
             }
         }
     }
@@ -74,29 +78,37 @@ public class PlayerWeaponManager : MonoBehaviour
             Destroy(currentWeaponInstance);
         }
 
-        // 만약의 경우를 대비해 Equip 시점에도 마운트 포인트 재확인
         if (weaponMountPoint == null)
         {
             Transform found = transform.Find("WeaponMountPoint");
             weaponMountPoint = found != null ? found : transform;
         }
 
-        // weaponMountPoint를 부모로 지정하고, 월드 좌표 유지(worldPositionStays)를 false로 설정
         currentWeaponInstance = Instantiate(weaponPrefabs[index], weaponMountPoint, false);
-
-        // 부모 기준 로컬 좌표와 회전값을 0으로 강제 스냅하여 손에 딱 붙도록 고정
         currentWeaponInstance.transform.localPosition = Vector3.zero;
         currentWeaponInstance.transform.localRotation = Quaternion.identity;
 
         currentWeapon = currentWeaponInstance.GetComponent<Weapon>();
         if (currentWeapon != null)
         {
-            // 플레이어가 장착한 무기이므로 무조건 수동 조준 모드로 고정
             currentWeapon.aimType = Weapon.AimType.Manual;
+
+            // ★ 무기 데이터 주입 (프리팹 이름 기반 동적 로드)
+            string weaponID = weaponPrefabs[index].name;
+            PlayerWeaponData data = Resources.Load<PlayerWeaponData>($"Data/Weapons/{weaponID}");
+
+            if (data != null)
+            {
+                currentWeapon.InitPlayerWeapon(data);
+                Debug.Log($"무기 데이터 주입 완료: {data.inGameName} / 최대 탄약: {currentWeapon.currentAmmo}");
+            }
+            else
+            {
+                Debug.LogWarning($"[경고] Resources/Data/Weapons 폴더에서 {weaponID}.asset을 찾을 수 없습니다.");
+            }
         }
 
         currentWeaponIndex = index;
-        Debug.Log($"무기 장착 완료: {weaponPrefabs[index].name}");
     }
 
     private Vector3 GetAimPoint()
@@ -104,20 +116,14 @@ public class PlayerWeaponManager : MonoBehaviour
         if (playerController != null && playerController.isTPS)
         {
             Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (Physics.Raycast(ray, out RaycastHit hit, 100f))
-            {
-                return hit.point;
-            }
+            if (Physics.Raycast(ray, out RaycastHit hit, 100f)) return hit.point;
             return ray.GetPoint(100f);
         }
         else
         {
             Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
             Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
-            if (groundPlane.Raycast(ray, out float distance))
-            {
-                return ray.GetPoint(distance);
-            }
+            if (groundPlane.Raycast(ray, out float distance)) return ray.GetPoint(distance);
             return transform.position + transform.forward * 10f;
         }
     }

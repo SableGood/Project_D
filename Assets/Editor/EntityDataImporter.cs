@@ -20,7 +20,7 @@ public class EntityDataImporter : MonoBehaviour
         CreateFolderIfNotExists("Assets/Resources/Data", "Weapons");
         CreateFolderIfNotExists("Assets/Resources/Data", "Entities");
 
-        // ★ 추가: Weapons 하위 분류 폴더 생성
+        // Weapons 하위 분류 폴더 생성
         CreateFolderIfNotExists("Assets/Resources/Data/Weapons", "Mobs");
         CreateFolderIfNotExists("Assets/Resources/Data/Weapons", "Player");
         CreateFolderIfNotExists("Assets/Resources/Data/Weapons", "Turrets");
@@ -54,36 +54,41 @@ public class EntityDataImporter : MonoBehaviour
             float speed = ParseFloat(cols[11]);
             int cost = (int)ParseFloat(cols[12]);
 
-            // ★ 추가: 태그에 따른 서브 폴더 이름 결정 (무기와 개체 모두 적용하기 위해 위로 끌어올림)
+            // ★ 태그에 따른 서브 폴더 이름 결정
             string subFolder = "Mobs"; // 기본값
             if (tag == "Player") subFolder = "Player";
             else if (tag == "Turret") subFolder = "Turrets";
 
-            // ===== 2. 무기(Weapon) 데이터 덮어쓰기 or 생성 및 폴더 분류 =====
-            string weaponAssetPath = $"Assets/Resources/Data/Weapons/{subFolder}/Wep_{code}.asset";
-            WeaponData weaponData = AssetDatabase.LoadAssetAtPath<WeaponData>(weaponAssetPath);
-            bool isNewWeapon = false;
+            WeaponData weaponData = null; // 초기화
 
-            // 파일이 없으면 새로 생성
-            if (weaponData == null)
+            // ★ [핵심 수정] 플레이어가 아닐 때만(몹, 타워일 때만) 무기 데이터를 생성합니다.
+            if (tag != "Player")
             {
-                weaponData = ScriptableObject.CreateInstance<WeaponData>();
-                isNewWeapon = true;
+                // ===== 2. 무기(Weapon) 데이터 덮어쓰기 or 생성 및 폴더 분류 =====
+                string weaponAssetPath = $"Assets/Resources/Data/Weapons/{subFolder}/Wep_{code}.asset";
+                weaponData = AssetDatabase.LoadAssetAtPath<WeaponData>(weaponAssetPath);
+                bool isNewWeapon = false;
+
+                if (weaponData == null)
+                {
+                    weaponData = ScriptableObject.CreateInstance<WeaponData>();
+                    isNewWeapon = true;
+                }
+
+                // 값 갱신
+                weaponData.weaponName = code + "_Weapon";
+                weaponData.attackPower = atk;
+                weaponData.attackSpeed = atkSpeed;
+                weaponData.attackRange = range;
+
+                if (attackTypeStr.Contains("Melee")) weaponData.attackType = AttackType.Melee;
+                else if (attackTypeStr.Contains("Ranged")) weaponData.attackType = AttackType.Ranged;
+                else if (attackTypeStr.Contains("Multi")) weaponData.attackType = AttackType.Multi;
+                else weaponData.attackType = AttackType.None;
+
+                if (isNewWeapon) AssetDatabase.CreateAsset(weaponData, weaponAssetPath);
+                else EditorUtility.SetDirty(weaponData);
             }
-
-            // 값 갱신
-            weaponData.weaponName = code + "_Weapon";
-            weaponData.attackPower = atk;
-            weaponData.attackSpeed = atkSpeed;
-            weaponData.attackRange = range;
-
-            if (attackTypeStr.Contains("Melee")) weaponData.attackType = AttackType.Melee;
-            else if (attackTypeStr.Contains("Ranged")) weaponData.attackType = AttackType.Ranged;
-            else if (attackTypeStr.Contains("Multi")) weaponData.attackType = AttackType.Multi;
-            else weaponData.attackType = AttackType.None;
-
-            if (isNewWeapon) AssetDatabase.CreateAsset(weaponData, weaponAssetPath);
-            else EditorUtility.SetDirty(weaponData); // 기존 파일이면 변경되었다고 유니티에 알림
 
             // ===== 3. 개체(Entity) 데이터 덮어쓰기 or 생성 및 폴더 분류 =====
             string entityAssetPath = $"Assets/Resources/Data/Entities/{subFolder}/Ent_{code}.asset";
@@ -102,6 +107,8 @@ public class EntityDataImporter : MonoBehaviour
             entityData.defense = def;
             entityData.moveSpeed = speed;
             entityData.cost = cost;
+
+            // ★ 플레이어면 null이 들어가고, 몹/타워면 위에서 생성한 전용 무기가 들어갑니다.
             entityData.defaultWeapon = weaponData;
 
             if (tag == "Player") entityData.entityType = EntityType.Player;
@@ -115,7 +122,7 @@ public class EntityDataImporter : MonoBehaviour
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("CSV 데이터 갱신 및 전체 자동 분류 완료!");
+        Debug.Log("CSV 데이터 갱신 및 전체 자동 분류 완료! (플레이어 무기 찌꺼기 분리 적용)");
     }
 
     // 폴더가 없으면 생성해주는 헬퍼 함수
