@@ -104,8 +104,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67ea1c7918a346940b2bbe7d0205f8d5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerBuilder
-  towerPrefab: {fileID: 7116367801261647846, guid: b2f51ed6d026e59419e214944ac1cef6, type: 3}
-  previewPrefab: {fileID: 8472636184155491842, guid: 3fc4fbbf3027aef4ab3ca16cbd7ced67, type: 3}
+  towerPrefabs:
+  - {fileID: 4062961868020206127, guid: 03f29f220441aed46856b0482d37320c, type: 3}
+  - {fileID: 886742137302997863, guid: d01f63982cc93314c93272526e3cffd1, type: 3}
+  - {fileID: 2898419198516239965, guid: fe5a5b5100f023049bf81f0816583d4e, type: 3}
+  - {fileID: 8006142029814479707, guid: 0fbd4c3a304b4bf48ae6e1d7dd3a44ff, type: 3}
+  - {fileID: 3053417277477350690, guid: 6fcfdcfa7d54d8f4e823564921749015, type: 3}
+  previewPrefabs:
+  - {fileID: 4640493310954779667, guid: f059dd0a98309bb498392e1425edc0b9, type: 3}
+  - {fileID: 6495433412832155837, guid: e7bfe2c9a61b1f94d8c357bbc32f9591, type: 3}
+  - {fileID: 8221577384593496684, guid: 1d6bec4bd89357e49b71885b12d1ff79, type: 3}
+  - {fileID: 9119740930152300994, guid: 1b9de86b3b2190e4c8448dccd12d199b, type: 3}
+  - {fileID: 6815471919430117113, guid: 328cf377008b0ce4fa613201d6249d42, type: 3}
   gridSize: 2
   maxBuildDistance: 10
   matGreen: {fileID: 2100000, guid: 77a904a11bd248e45878e3e6c907d84c, type: 2}
@@ -181,7 +191,7 @@ CharacterController:
   m_Enabled: 1
   serializedVersion: 3
   m_Height: 1
-  m_Radius: 1
+  m_Radius: 0.8
   m_SlopeLimit: 45
   m_StepOffset: 0.1
   m_SkinWidth: 0.1

@@ -2,9 +2,11 @@ using UnityEngine;
 
 public class TowerBuilder : MonoBehaviour
 {
-    [Header("건설 설정")]
-    public GameObject towerPrefab;
-    public GameObject previewPrefab;
+    [Header("건설 설정 (1~5번 슬롯)")]
+    [Tooltip("순서대로 TR010 ~ TR050 타워 프리팹을 넣으세요.")]
+    public GameObject[] towerPrefabs;
+    [Tooltip("순서대로 TR010 ~ TR050 타워의 미리보기용 프리팹을 넣으세요.")]
+    public GameObject[] previewPrefabs;
     public float gridSize = 2.0f;
 
     [Header("최대 건설 가능 거리")]
@@ -17,23 +19,27 @@ public class TowerBuilder : MonoBehaviour
     [Header("충돌 판정 레이어")]
     public LayerMask obstacleLayer;
 
-    private GameObject currentPreview;
-    private Renderer previewRenderer;
+    // 런타임 캐싱 변수들
+    private GameObject[] instantiatedPreviews; // 생성된 미리보기 오브젝트들을 담아둘 배열
+    private GameObject currentPreviewObj;      // 현재 화면에 띄워진 미리보기 오브젝트
+    private Renderer[] currentPreviewRenderers; // 미리보기 오브젝트의 렌더러들 (자식 메쉬 포함)
+
+    private int currentTowerIndex = 0;         // 현재 선택된 타워 번호 (0 ~ 4)
     private bool isBuildMode = false;
     private bool canBuild = false;
 
+    void Start()
+    {
+        // 미리보기 오브젝트를 담을 빈 배열 공간을 슬롯 개수(보통 5개)만큼 초기화합니다.
+        instantiatedPreviews = new GameObject[previewPrefabs.Length];
+    }
+
     void Update()
     {
-        // 1번 키를 누를 때마다 건설 모드 토글
-        if (Input.GetKeyDown(KeyCode.Alpha1))
-        {
-            isBuildMode = !isBuildMode;
-            if (isBuildMode) StartBuildMode();
-            else CancelBuildMode();
-        }
+        HandleInput();
 
         // 건설 모드 중일 때 미리보기 위치 갱신 및 좌클릭 건설 처리
-        if (isBuildMode && currentPreview != null)
+        if (isBuildMode && currentPreviewObj != null)
         {
             UpdatePreviewPosition();
 
@@ -45,28 +51,62 @@ public class TowerBuilder : MonoBehaviour
         }
     }
 
+    private void HandleInput()
+    {
+        // 1번(0) ~ 5번(4) 키 입력 감지
+        if (Input.GetKeyDown(KeyCode.Alpha1)) SelectTower(0);
+        if (Input.GetKeyDown(KeyCode.Alpha2)) SelectTower(1);
+        if (Input.GetKeyDown(KeyCode.Alpha3)) SelectTower(2);
+        if (Input.GetKeyDown(KeyCode.Alpha4)) SelectTower(3);
+        if (Input.GetKeyDown(KeyCode.Alpha5)) SelectTower(4);
+    }
+
+    private void SelectTower(int index)
+    {
+        // 배열 범위를 벗어나거나 해당 슬롯에 프리팹이 비어있으면 무시
+        if (index >= towerPrefabs.Length || towerPrefabs[index] == null) return;
+
+        // 이미 같은 타워를 들고 있는 상태에서 해당 키를 한 번 더 누르면 건설 모드 취소 (토글 기능)
+        if (isBuildMode && currentTowerIndex == index)
+        {
+            CancelBuildMode();
+            return;
+        }
+
+        // 새로운 타워 선택 및 건설 모드 진입
+        currentTowerIndex = index;
+        isBuildMode = true;
+        StartBuildMode();
+    }
+
     private void StartBuildMode()
     {
-        // [최적화] 미리보기 객체가 없다면 최초 1회만 Instantiate로 생성합니다.
-        if (currentPreview == null && previewPrefab != null)
+        // 기존에 켜져 있던 다른 미리보기 오브젝트가 있다면 끕니다.
+        if (currentPreviewObj != null)
         {
-            currentPreview = Instantiate(previewPrefab);
-            previewRenderer = currentPreview.GetComponent<Renderer>();
+            currentPreviewObj.SetActive(false);
         }
-        // [최적화] 이미 만들어둔 객체가 있다면 파괴/재생성하지 않고 활성화(켜기)만 수행합니다.
-        else if (currentPreview != null)
+
+        // 해당 인덱스의 미리보기가 아직 씬에 생성되지 않았다면 최초 1회 생성 (Instantiate)
+        if (instantiatedPreviews[currentTowerIndex] == null)
         {
-            currentPreview.SetActive(true);
+            instantiatedPreviews[currentTowerIndex] = Instantiate(previewPrefabs[currentTowerIndex]);
         }
+
+        // 현재 미리보기 객체 갱신 및 활성화
+        currentPreviewObj = instantiatedPreviews[currentTowerIndex];
+        currentPreviewObj.SetActive(true);
+
+        // ProBuilder로 만든 타워는 자식 오브젝트 여러 개로 이루어져 있을 수 있으므로 GetComponentsInChildren 사용
+        currentPreviewRenderers = currentPreviewObj.GetComponentsInChildren<Renderer>();
     }
 
     private void CancelBuildMode()
     {
         isBuildMode = false;
-        // [최적화] Destroy 대신 비활성화(끄기)하여 메모리 할당 부하(GC 스파이크)를 원천 차단합니다.
-        if (currentPreview != null)
+        if (currentPreviewObj != null)
         {
-            currentPreview.SetActive(false);
+            currentPreviewObj.SetActive(false);
         }
     }
 
@@ -84,7 +124,7 @@ public class TowerBuilder : MonoBehaviour
             float z = Mathf.Round(hitPoint.z / gridSize) * gridSize;
 
             Vector3 snapPos = new Vector3(x, 1.0f, z);
-            currentPreview.transform.position = snapPos;
+            currentPreviewObj.transform.position = snapPos;
 
             // 위치 변경 후 설치 가능 여부 검사
             CheckPlacementValidity(snapPos);
@@ -101,14 +141,12 @@ public class TowerBuilder : MonoBehaviour
 
         if (isTooFar)
         {
-            // 거리가 멀면 미리보기 오브젝트 자체를 꺼버림 (설치 불가 상태)
-            if (currentPreview.activeSelf) currentPreview.SetActive(false);
+            if (currentPreviewObj.activeSelf) currentPreviewObj.SetActive(false);
             canBuild = false;
         }
         else
         {
-            // 거리 안으로 들어오면 다시 켜고 겹침 검사 진행
-            if (!currentPreview.activeSelf) currentPreview.SetActive(true);
+            if (!currentPreviewObj.activeSelf) currentPreviewObj.SetActive(true);
 
             Vector3 center = new Vector3(checkPos.x, 1.0f, checkPos.z);
             Vector3 halfExtents = new Vector3(gridSize * 0.45f, 0.9f, gridSize * 0.45f);
@@ -116,16 +154,28 @@ public class TowerBuilder : MonoBehaviour
 
             canBuild = !isOverlapping;
 
-            if (previewRenderer != null)
+            // ★ 수정됨: 하나의 오브젝트가 3개의 머티리얼을 가지고 있어도 모두 교체하도록 대응
+            if (currentPreviewRenderers != null)
             {
-                previewRenderer.material = canBuild ? matGreen : matRed;
+                Material targetMat = canBuild ? matGreen : matRed;
+                for (int i = 0; i < currentPreviewRenderers.Length; i++)
+                {
+                    Renderer r = currentPreviewRenderers[i];
+                    Material[] mats = r.materials;
+                    // 메쉬가 가진 머티리얼 개수(3개)만큼 반복해서 전부 초록/빨강으로 덮어씌움
+                    for (int j = 0; j < mats.Length; j++)
+                    {
+                        mats[j] = targetMat;
+                    }
+                    r.materials = mats;
+                }
             }
         }
     }
 
     private void BuildTower()
     {
-        // [최적화] 타워 설치 시에도 Instantiate 대신 시스템에 구현해 둔 PoolManager를 적극 사용합니다.
-        PoolManager.Instance.Spawn(towerPrefab, currentPreview.transform.position, Quaternion.identity);
+        // PoolManager를 이용해 선택된 타워(currentTowerIndex)를 바닥에 소환
+        PoolManager.Instance.Spawn(towerPrefabs[currentTowerIndex], currentPreviewObj.transform.position, Quaternion.identity);
     }
 }
