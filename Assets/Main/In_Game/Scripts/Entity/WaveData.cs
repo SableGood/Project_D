@@ -1,24 +1,24 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections.Generic;
 
-// ¸÷ »ı¼º Á¤º¸¸¦ ´ã´Â ±¸Á¶Ã¼ (¿©±â¼­ WaveMobInfo°¡ Á¤ÀÇµË´Ï´Ù)
+// ëª¹ ìƒì„± ì •ë³´ë¥¼ ë‹´ëŠ” êµ¬ì¡°ì²´ (ì—¬ê¸°ì„œ WaveMobInfoê°€ ì •ì˜ë©ë‹ˆë‹¤)
 [System.Serializable]
 public class WaveMobInfo
 {
-    public GameObject mobPrefab; // »ı¼ºÇÒ ¸÷ ÇÁ¸®ÆÕ
-    public int spawnCount;       // ¸¶¸´¼ö
+    public GameObject mobPrefab; // ìƒì„±í•  ëª¹ í”„ë¦¬íŒ¹
+    public int spawnCount;       // ë§ˆë¦¿ìˆ˜
 }
 
-// ¿şÀÌºê ÇÏ³ªÀÇ ÀüÃ¼ Á¤º¸¸¦ ´ã´Â ScriptableObject µ¥ÀÌÅÍ ÆÄÀÏ (¿¡·¯ ÇØ°áÀÇ ÇÙ½É)
+// ì›¨ì´ë¸Œ í•˜ë‚˜ì˜ ì „ì²´ ì •ë³´ë¥¼ ë‹´ëŠ” ScriptableObject ë°ì´í„° íŒŒì¼ (ì—ëŸ¬ í•´ê²°ì˜ í•µì‹¬)
 [CreateAssetMenu(fileName = "NewWaveData", menuName = "Data/WaveData")]
 public class WaveData : ScriptableObject
 {
-    [Header("½ºÅ×ÀÌÁö Á¤º¸")]
-    public int stageNumber = 1; // ¡Ú Ãß°¡µÊ: ÀÌ ¿şÀÌºê°¡ ¼ÓÇÑ ½ºÅ×ÀÌÁö ¹øÈ£
+    [Header("ìŠ¤í…Œì´ì§€ ì •ë³´")]
+    public int stageNumber = 1; // â˜… ì¶”ê°€ë¨: ì´ ì›¨ì´ë¸Œê°€ ì†í•œ ìŠ¤í…Œì´ì§€ ë²ˆí˜¸
 
-    [Header("ÇØ´ç ¿şÀÌºê Àü¿ë ½ºÆù Æ÷ÀÎÆ® (ºñ¿öµÎ¸é ±âº»°ª)")]
+    [Header("í•´ë‹¹ ì›¨ì´ë¸Œ ì „ìš© ìŠ¤í° í¬ì¸íŠ¸ (ë¹„ì›Œë‘ë©´ ê¸°ë³¸ê°’)")]
     public Transform[] waveSpawnPoints;
 
-    [Header("½ºÆù ¸ñ·Ï (ÀÚµ¿ »ı¼ºµÊ)")]
+    [Header("ìŠ¤í° ëª©ë¡ (ìë™ ìƒì„±ë¨)")]
     public List<WaveMobInfo> mobList = new List<WaveMobInfo>();
 }

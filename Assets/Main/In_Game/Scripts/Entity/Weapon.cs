@@ -1,39 +1,62 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections;
+using System.Collections.Generic;
 
 public class Weapon : MonoBehaviour
 {
     public enum FireMode { StraightFast, RapidBullet, ParabolicShell, HomingMissile, Hitscan }
     public enum AimType { Auto, Manual }
 
-    [Header("¹ß»ç ¹æ½Ä ¹× ¼Ó¼º")]
+    [Header("ë°œì‚¬ ë°©ì‹ ë° ì†ì„±")]
     public AimType aimType = AimType.Auto;
     public FireMode fireMode = FireMode.Hitscan;
     public GameObject projectilePrefab;
     public LayerMask targetLayer;
 
-    [Header("Å¸°ÙÆÃ ÃÖÀûÈ­ ¼³Á¤")]
+    [Header("ë°œì‚¬ ìœ„ì¹˜ (ì´êµ¬)")]
+    [Tooltip("íƒ„ì´ ë‚˜ê°€ëŠ” ìœ„ì¹˜. ë¹„ì–´ ìˆìœ¼ë©´ ë¬´ê¸° ìœ„ì¹˜ ê¸°ì¤€ ê¸°ë³¸ ì˜¤í”„ì…‹ì—ì„œ ë°œì‚¬í•©ë‹ˆë‹¤. (ëª¹/íƒ€ì›Œ ë¬´ê¸° í˜¸í™˜ìš©)")]
+    public Transform muzzle;
+
+    [Header("íƒ€ê²ŸíŒ… ìµœì í™” ì„¤ì •")]
     public int maxTargetCapacity = 20;
 
-    [Header("¹«±â ½ºÆå (±âº»/·±Å¸ÀÓ °¡º¯)")]
+    [Header("ë¬´ê¸° ìŠ¤í™ (ê¸°ë³¸/ëŸ°íƒ€ì„ ê°€ë³€)")]
     public float attackRange = 10f;
     public float attackCooldown = 0.5f;
     public int attackDamage = 10;
 
-    [Header("ÇÃ·¹ÀÌ¾î Àü¿ë ½ºÆå")]
-    public PlayerWeaponData playerWepData; // ÇÃ·¹ÀÌ¾î°¡ µé¾úÀ» ¶§¸¸ ÇÒ´çµÊ
+    [Header("í”Œë ˆì´ì–´ ì „ìš© ìŠ¤í™")]
+    public PlayerWeaponData playerWepData; // í”Œë ˆì´ì–´ ë¬´ê¸° í”„ë¦¬íŒ¹ì— ë¯¸ë¦¬ ì—°ê²°ë¨ (ì„í¬í„°ê°€ ìë™ ì§€ì •)
     public int currentAmmo;
     public bool isReloading = false;
 
-    private float lastAttackTime = 0f;
+    [Header("íˆíŠ¸ìŠ¤ìº” ê¶¤ì  í‘œì‹œ (í”Œë ˆì´ì–´ ë¬´ê¸°)")]
+    public bool showTracer = true;
+    public float tracerDuration = 0.05f;
+    public float tracerWidth = 0.03f;
+    public Color tracerColor = new Color(1f, 0.9f, 0.5f, 1f);
+
+    private float lastAttackTime = -999f;
     private Collider[] hitColliders;
+
+    // í”Œë ˆì´ì–´ ë°ì´í„°ì—ì„œ ì½ì–´ì˜¤ëŠ” ê°’ (ëª¹/íƒ€ì›ŒëŠ” ê¸°ë³¸ê°’ = ê¸°ì¡´ ë™ì‘ê³¼ ë™ì¼)
+    private int pelletCount = 1;
+    private float spreadAngle = 0f;
+    private bool canPierce = false;
+    private float projectileSpeedOverride = 0f;
+
+    // ê¶¤ì (íŠ¸ë ˆì´ì„œ) í‘œì‹œìš©
+    private static Material tracerMaterial;
+    private readonly List<LineRenderer> tracers = new List<LineRenderer>();
+    private int tracerIndex;
+    private Coroutine tracerRoutine;
 
     void Awake()
     {
         hitColliders = new Collider[maxTargetCapacity];
     }
 
-    // 1. ¸÷/Å¸¿ö Àü¿ë ÃÊ±âÈ­ (±âÁ¸ µ¥ÀÌÅÍ)
+    // 1. ëª¹/íƒ€ì›Œ ì „ìš© ì´ˆê¸°í™” (ê¸°ì¡´ ë°ì´í„°)
     public void InitWeapon(WeaponData data)
     {
         if (data == null) return;
@@ -47,23 +70,34 @@ public class Weapon : MonoBehaviour
         }
     }
 
-    // 2. ÇÃ·¹ÀÌ¾î Àü¿ë ÃÊ±âÈ­ (»õ·Î¿î ÅºÃ¢ ½Ã½ºÅÛ µî Àû¿ë)
+    // 2. í”Œë ˆì´ì–´ ì „ìš© ì´ˆê¸°í™” (CSV ê°’ì´ ì „ë¶€ ì—¬ê¸°ì„œ ì ìš©ë©ë‹ˆë‹¤)
     public void InitPlayerWeapon(PlayerWeaponData data)
     {
         if (data == null) return;
         this.playerWepData = data;
 
-        this.attackDamage = (int)data.damage;
-        this.attackRange = data.range;
+        this.attackDamage = Mathf.RoundToInt(data.damage);
+        this.attackRange = data.range > 0 ? data.range : this.attackRange;
         this.attackCooldown = data.fireRate > 0 ? (1f / data.fireRate) : 0.5f;
         this.currentAmmo = data.maxAmmo;
         this.isReloading = false;
 
-        // Åõ»çÃ¼ ¹ß»çÇü ¹«±âÀÏ °æ¿ì Resources Æú´õ¿¡¼­ µ¿Àû ·Îµå
-        if (data.fireMode == "Projectile" && !string.IsNullOrEmpty(data.projectilePrefabName))
+        this.pelletCount = Mathf.Max(1, data.projectileCount);
+        this.spreadAngle = Mathf.Max(0f, data.spread);
+        this.canPierce = data.canPierce;
+        this.projectileSpeedOverride = data.projectileSpeed;
+
+        // Fire Mode(CSV)ê°€ ì‹¤ì œ ë°œì‚¬ ë°©ì‹ì„ ê²°ì •í•©ë‹ˆë‹¤.
+        if (data.IsProjectile)
         {
-            GameObject loadedPrefab = Resources.Load<GameObject>($"Prefabs/Projectiles/{data.projectilePrefabName}");
-            if (loadedPrefab != null) this.projectilePrefab = loadedPrefab;
+            this.fireMode = FireMode.StraightFast; // í”Œë ˆì´ì–´ íˆ¬ì‚¬ì²´ëŠ” ì§ì„  ë¹„í–‰
+            if (data.projectilePrefab != null) this.projectilePrefab = data.projectilePrefab;
+            if (this.projectilePrefab == null)
+                Debug.LogWarning($"[{data.weaponID}] Fire Modeê°€ Projectileì¸ë° íˆ¬ì‚¬ì²´ í”„ë¦¬íŒ¹ì´ ì—†ìŠµë‹ˆë‹¤.");
+        }
+        else
+        {
+            this.fireMode = FireMode.Hitscan;
         }
     }
 
@@ -75,22 +109,22 @@ public class Weapon : MonoBehaviour
         }
     }
 
-    // ¼öµ¿ »ç°İ (ÇÃ·¹ÀÌ¾î¿ë)
+    // ìˆ˜ë™ ì‚¬ê²© (í”Œë ˆì´ì–´/í¬íƒ‘ìš©)
     public void ManualAttackCommand(Vector3 targetPosition)
     {
-        if (isReloading) return; // ÀåÀü Áß »ç°İ ºÒ°¡
+        if (isReloading) return; // ì¥ì „ ì¤‘ ì‚¬ê²© ë¶ˆê°€
 
         if (Time.time >= lastAttackTime + attackCooldown)
         {
-            // ÅºÃ¢ ½Ã½ºÅÛ Àû¿ë (ÅºÃ¢ÀÌ 0º¸´Ù Å« ¹«±â¸¸ Àû¿ë)
+            // íƒ„ì°½ ì‹œìŠ¤í…œ ì ìš© (ì¥íƒ„ìˆ˜ê°€ 0ë³´ë‹¤ í° ë¬´ê¸°ë§Œ ì ìš©, 0 = ë¬´í•œ)
             if (playerWepData != null && playerWepData.maxAmmo > 0)
             {
                 if (currentAmmo <= 0)
                 {
-                    StartCoroutine(ReloadCoroutine());
+                    StartReload();
                     return;
                 }
-                currentAmmo--; // ÃÑ¾Ë ¼Ò¸ğ
+                currentAmmo--; // ì´ì•Œ ì†Œëª¨
             }
 
             PerformAttack(null, targetPosition);
@@ -98,22 +132,30 @@ public class Weapon : MonoBehaviour
         }
     }
 
+    // ì¬ì¥ì „ ì‹œì‘ (ì½”ë£¨í‹´ì„ ë¬´ê¸° ìì‹ ì—ì„œ ëŒë ¤, ë¬´ê¸° êµì²´ ì‹œ í•¨ê»˜ ì •ë¦¬ë˜ë„ë¡ í•¨)
+    public void StartReload()
+    {
+        if (isReloading || playerWepData == null || playerWepData.maxAmmo <= 0) return;
+        if (currentAmmo >= playerWepData.maxAmmo) return;
+        StartCoroutine(ReloadCoroutine());
+    }
+
     public IEnumerator ReloadCoroutine()
     {
         if (isReloading || playerWepData == null || playerWepData.maxAmmo <= 0) yield break;
 
         isReloading = true;
-        Debug.Log("ÀçÀåÀü ½ÃÀÛ!");
+        Debug.Log("ì¬ì¥ì „ ì‹œì‘!");
 
         yield return new WaitForSeconds(playerWepData.reloadTime);
 
         currentAmmo = playerWepData.maxAmmo;
         isReloading = false;
-        Debug.Log("ÀçÀåÀü ¿Ï·á!");
+        Debug.Log("ì¬ì¥ì „ ì™„ë£Œ!");
     }
 
     // =========================================================
-    // ¾Æ·¡ºÎÅÍ´Â ±âÁ¸¿¡ ÀÛ¼ºÇÏ¼Ì´ø ¸÷ Å¸°ÙÆÃ ¹× ½ÇÁ¦ µ¥¹ÌÁö Àû¿ë ·ÎÁ÷ÀÔ´Ï´Ù.
+    // ì•„ë˜ë¶€í„°ëŠ” ëª¹ íƒ€ê²ŸíŒ… ë° ì‹¤ì œ ë°ë¯¸ì§€ ì ìš© ë¡œì§ì…ë‹ˆë‹¤.
     // =========================================================
 
     private void AutoAttackUpdate()
@@ -152,41 +194,92 @@ public class Weapon : MonoBehaviour
 
     private void PerformAttack(Transform targetTransform, Vector3 manualTargetPosition)
     {
-        if (fireMode == FireMode.Hitscan)
-        {
-            Vector3 aimPos = targetTransform != null ? targetTransform.position + Vector3.up * 0.5f : manualTargetPosition;
-            Vector3 fireOrigin = transform.position + Vector3.up * 1.0f;
-            Vector3 direction = (aimPos - fireOrigin).normalized;
+        tracerIndex = 0;
 
-            if (Physics.Raycast(fireOrigin, direction, out RaycastHit hit, attackRange, targetLayer))
-            {
-                ApplyDamage(hit.transform);
-                Debug.DrawLine(fireOrigin, hit.point, Color.green, 0.5f);
-            }
+        // íˆ¬ì‚¬ì²´ ê°¯ìˆ˜ë§Œí¼ ë°œì‚¬ (ì‚°íƒ„ì´ ë“±). ëª¹/íƒ€ì›ŒëŠ” 1ë°œ.
+        int count = Mathf.Max(1, pelletCount);
+        for (int i = 0; i < count; i++)
+        {
+            if (fireMode == FireMode.Hitscan) FireHitscan(targetTransform, manualTargetPosition);
+            else FireProjectile(targetTransform, manualTargetPosition);
+        }
+
+        if (tracerIndex > 0)
+        {
+            if (tracerRoutine != null) StopCoroutine(tracerRoutine);
+            tracerRoutine = StartCoroutine(HideTracersAfterDelay());
+        }
+    }
+
+    // ë°œì‚¬ ìœ„ì¹˜: ì´êµ¬(muzzle)ê°€ ìˆìœ¼ë©´ ê·¸ê³³, ì—†ìœ¼ë©´ ê¸°ì¡´ ë°©ì‹ì˜ ê³ ì • ì˜¤í”„ì…‹
+    private Vector3 GetFireOrigin(bool isHitscan)
+    {
+        if (muzzle != null) return muzzle.position;
+        return isHitscan
+            ? transform.position + Vector3.up * 1.0f
+            : transform.position + transform.forward * 1.0f + Vector3.up * 0.5f;
+    }
+
+    // íƒ„í¼ì§: ìˆ˜í‰(Yì¶• ê¸°ì¤€)ìœ¼ë¡œ Â±spread/2 ë²”ìœ„ì—ì„œ ë¬´ì‘ìœ„ íšŒì „
+    private Vector3 ApplySpread(Vector3 direction)
+    {
+        if (spreadAngle <= 0f) return direction;
+        float half = spreadAngle * 0.5f;
+        return Quaternion.AngleAxis(Random.Range(-half, half), Vector3.up) * direction;
+    }
+
+    private void FireHitscan(Transform targetTransform, Vector3 manualTargetPosition)
+    {
+        Vector3 aimPos = targetTransform != null ? targetTransform.position + Vector3.up * 0.5f : manualTargetPosition;
+        Vector3 fireOrigin = GetFireOrigin(true);
+        Vector3 direction = ApplySpread((aimPos - fireOrigin).normalized);
+        Vector3 endPoint = fireOrigin + direction * attackRange;
+
+        if (canPierce)
+        {
+            // ê´€í†µ: ì‚¬ê±°ë¦¬ ì•ˆì˜ ëª¨ë“  ëŒ€ìƒì—ê²Œ í”¼í•´
+            RaycastHit[] hits = Physics.RaycastAll(fireOrigin, direction, attackRange, targetLayer);
+            foreach (RaycastHit h in hits) ApplyDamage(h.transform);
+        }
+        else if (Physics.Raycast(fireOrigin, direction, out RaycastHit hit, attackRange, targetLayer))
+        {
+            ApplyDamage(hit.transform);
+            endPoint = hit.point;
+        }
+
+        Debug.DrawLine(fireOrigin, endPoint, Color.green, 0.5f);
+        if (showTracer && playerWepData != null) ShowTracer(fireOrigin, endPoint);
+    }
+
+    private void FireProjectile(Transform targetTransform, Vector3 manualTargetPosition)
+    {
+        if (projectilePrefab == null) return;
+
+        if (PoolManager.Instance == null)
+        {
+            Debug.LogError("PoolManager ì¸ìŠ¤í„´ìŠ¤ê°€ ì”¬ì— ì¡´ì¬í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤!");
             return;
         }
 
-        if (projectilePrefab != null)
+        Vector3 spawnPos = GetFireOrigin(false);
+
+        Vector3 aimPos = manualTargetPosition;
+        if (targetTransform == null && spreadAngle > 0f)
         {
-            Vector3 spawnPos = transform.position + transform.forward * 1.0f + Vector3.up * 0.5f;
+            aimPos = spawnPos + ApplySpread(manualTargetPosition - spawnPos);
+        }
 
-            if (PoolManager.Instance == null)
-            {
-                Debug.LogError("PoolManager ÀÎ½ºÅÏ½º°¡ ¾À¿¡ Á¸ÀçÇÏÁö ¾Ê½À´Ï´Ù!");
-                return;
-            }
+        GameObject projObj = PoolManager.Instance.Spawn(projectilePrefab, spawnPos, Quaternion.identity);
+        if (projObj == null) return;
 
-            GameObject projObj = PoolManager.Instance.Spawn(projectilePrefab, spawnPos, Quaternion.identity);
-            if (projObj == null) return;
+        Projectile projectile = projObj.GetComponent<Projectile>();
+        if (projectile != null)
+        {
+            ConfigureProjectile(projectile);
+            if (projectileSpeedOverride > 0f) projectile.speed = projectileSpeedOverride;
 
-            Projectile projectile = projObj.GetComponent<Projectile>();
-            if (projectile != null)
-            {
-                ConfigureProjectile(projectile);
-
-                if (targetTransform != null) projectile.InitializeAuto(targetTransform);
-                else projectile.InitializeManual(manualTargetPosition);
-            }
+            if (targetTransform != null) projectile.InitializeAuto(targetTransform);
+            else projectile.InitializeManual(aimPos);
         }
     }
 
@@ -222,9 +315,57 @@ public class Weapon : MonoBehaviour
         }
     }
 
+    // =========================================================
+    // íˆíŠ¸ìŠ¤ìº” ê¶¤ì  (ì§§ê²Œ ë²ˆì©ì´ëŠ” ì„ )
+    // =========================================================
+
+    private void ShowTracer(Vector3 from, Vector3 to)
+    {
+        LineRenderer lr = GetTracer(tracerIndex++);
+        lr.SetPosition(0, from);
+        lr.SetPosition(1, to);
+        lr.enabled = true;
+    }
+
+    private LineRenderer GetTracer(int index)
+    {
+        while (tracers.Count <= index)
+        {
+            if (tracerMaterial == null) tracerMaterial = new Material(Shader.Find("Sprites/Default"));
+
+            GameObject go = new GameObject("Tracer");
+            go.transform.SetParent(transform, false);
+            LineRenderer lr = go.AddComponent<LineRenderer>();
+            lr.useWorldSpace = true;
+            lr.positionCount = 2;
+            lr.sharedMaterial = tracerMaterial;
+            lr.widthMultiplier = tracerWidth;
+            lr.startColor = tracerColor;
+            lr.endColor = new Color(tracerColor.r, tracerColor.g, tracerColor.b, 0.2f);
+            lr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            lr.receiveShadows = false;
+            lr.enabled = false;
+            tracers.Add(lr);
+        }
+        return tracers[index];
+    }
+
+    private IEnumerator HideTracersAfterDelay()
+    {
+        yield return new WaitForSeconds(tracerDuration);
+        foreach (LineRenderer lr in tracers) if (lr != null) lr.enabled = false;
+        tracerRoutine = null;
+    }
+
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireSphere(transform.position, attackRange);
+
+        if (muzzle != null)
+        {
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(muzzle.position, 0.05f);
+        }
     }
 }

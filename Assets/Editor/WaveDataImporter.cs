@@ -1,17 +1,17 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Collections.Generic;
 
 public class WaveDataImporter : MonoBehaviour
 {
-    [MenuItem("Tools/CSV µ¥ÀÌÅÍ »ı¼º/2. ¿şÀÌºê ¼¼ÆÃ (Wave_Data)")]
+    [MenuItem("Tools/CSV ë°ì´í„° ìƒì„±/2. ì›¨ì´ë¸Œ ì„¸íŒ… (Wave_Data)")]
     public static void ImportWaveData()
     {
         TextAsset csvData = Resources.Load<TextAsset>("Wave_Data");
         if (csvData == null)
         {
-            Debug.LogError("Resources Æú´õ¿¡ Wave_Data.csv ÆÄÀÏÀ» Ã£À» ¼ö ¾ø½À´Ï´Ù!");
+            Debug.LogError("Resources í´ë”ì— Wave_Data.csv íŒŒì¼ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
             return;
         }
 
@@ -22,7 +22,7 @@ public class WaveDataImporter : MonoBehaviour
         string[] rows = csvData.text.Split(new char[] { '\n' });
 
         Dictionary<int, List<WaveMobInfo>> waveDict = new Dictionary<int, List<WaveMobInfo>>();
-        Dictionary<int, int> waveToStageDict = new Dictionary<int, int>(); // ¡Ú ¿şÀÌºê ¹øÈ£¿¡ ÇØ´çÇÏ´Â ½ºÅ×ÀÌÁö¸¦ ±â¾ïÇÒ µñ¼Å³Ê¸®
+        Dictionary<int, int> waveToStageDict = new Dictionary<int, int>(); // â˜… ì›¨ì´ë¸Œ ë²ˆí˜¸ì— í•´ë‹¹í•˜ëŠ” ìŠ¤í…Œì´ì§€ë¥¼ ê¸°ì–µí•  ë”•ì…”ë„ˆë¦¬
 
         int currentStageIndex = 1;
         int currentWaveIndex = -1;
@@ -35,13 +35,13 @@ public class WaveDataImporter : MonoBehaviour
             string[] cols = row.Split(',');
             if (cols.Length < 6) continue;
 
-            // ¡Ú A¿­(ÀÎµ¦½º 0) ÆÄ½Ì: ½ºÅ×ÀÌÁö ¹øÈ£ °»½Å
+            // â˜… Aì—´(ì¸ë±ìŠ¤ 0) íŒŒì‹±: ìŠ¤í…Œì´ì§€ ë²ˆí˜¸ ê°±ì‹ 
             if (!string.IsNullOrEmpty(cols[0].Trim()) && float.TryParse(cols[0].Trim(), out float parsedStage))
             {
                 currentStageIndex = (int)parsedStage;
             }
 
-            // ¡Ú B¿­(ÀÎµ¦½º 1) ÆÄ½Ì: ¿şÀÌºê ¹øÈ£ °»½Å ¹× ÇöÀç ½ºÅ×ÀÌÁö ¸ÅÇÎ
+            // â˜… Bì—´(ì¸ë±ìŠ¤ 1) íŒŒì‹±: ì›¨ì´ë¸Œ ë²ˆí˜¸ ê°±ì‹  ë° í˜„ì¬ ìŠ¤í…Œì´ì§€ ë§¤í•‘
             if (!string.IsNullOrEmpty(cols[1].Trim()) && float.TryParse(cols[1].Trim(), out float parsedWave))
             {
                 currentWaveIndex = (int)parsedWave;
@@ -89,7 +89,7 @@ public class WaveDataImporter : MonoBehaviour
                 }
                 else
                 {
-                    Debug.LogWarning($"[{currentWaveIndex} ¿şÀÌºê] ÇÁ¸®ÆÕÀ» Ã£À» ¼ö ¾ø½À´Ï´Ù: {prefabPath}");
+                    Debug.LogWarning($"[{currentWaveIndex} ì›¨ì´ë¸Œ] í”„ë¦¬íŒ¹ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤: {prefabPath}");
                 }
             }
         }
@@ -108,7 +108,7 @@ public class WaveDataImporter : MonoBehaviour
                 isNew = true;
             }
 
-            // ¡Ú ÀúÀåµÈ ½ºÅ×ÀÌÁö ¹øÈ£ ºÎ¿©
+            // â˜… ì €ì¥ëœ ìŠ¤í…Œì´ì§€ ë²ˆí˜¸ ë¶€ì—¬
             waveAsset.stageNumber = waveToStageDict.ContainsKey(waveNum) ? waveToStageDict[waveNum] : 1;
             waveAsset.mobList = kvp.Value;
 
@@ -118,6 +118,6 @@ public class WaveDataImporter : MonoBehaviour
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Debug.Log("CSV ¿şÀÌºê µ¥ÀÌÅÍ ÀÚµ¿ »ı¼º ¿Ï·á! (½ºÅ×ÀÌÁö Á¤º¸ Æ÷ÇÔ)");
+        Debug.Log("CSV ì›¨ì´ë¸Œ ë°ì´í„° ìë™ ìƒì„± ì™„ë£Œ! (ìŠ¤í…Œì´ì§€ ì •ë³´ í¬í•¨)");
     }
 }

@@ -1,21 +1,21 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// ¹«±â °ø°İ Å¸ÀÔÀ» Á¤ÀÇ (±ÙÁ¢, ¿ø°Å¸®, º¹ÇÕ, ¾øÀ½)
+// ë¬´ê¸° ê³µê²© íƒ€ì…ì„ ì •ì˜ (ê·¼ì ‘, ì›ê±°ë¦¬, ë³µí•©, ì—†ìŒ)
 public enum AttackType { Melee, Ranged, Multi, None }
 
-// À¯´ÏÆ¼ ¿ìÅ¬¸¯ ¸Ş´º¿¡ "Data -> WeaponData" Ç×¸ñÀ» ¸¸µé¾î Áİ´Ï´Ù.
+// ìœ ë‹ˆí‹° ìš°í´ë¦­ ë©”ë‰´ì— "Data -> WeaponData" í•­ëª©ì„ ë§Œë“¤ì–´ ì¤ë‹ˆë‹¤.
 [CreateAssetMenu(fileName = "NewWeaponData", menuName = "Data/WeaponData")]
 public class WeaponData : ScriptableObject
 {
-    [Header("±âº» Á¤º¸")]
-    public string weaponName;       // ¹«±â ÀÌ¸§ (¿¹: ±Ù°Å¸® ¹ßÅé)
-    public AttackType attackType;   // °ø°İ À¯Çü
+    [Header("ê¸°ë³¸ ì •ë³´")]
+    public string weaponName;       // ë¬´ê¸° ì´ë¦„ (ì˜ˆ: ê·¼ê±°ë¦¬ ë°œí†±)
+    public AttackType attackType;   // ê³µê²© ìœ í˜•
 
-    [Header("°ø°İ ½ºÆå")]
-    public float attackPower;       // °ø°İ·Â
-    public float attackSpeed;       // °ø°İ¼Óµµ (ÃÊ´ç Å¸°İ È½¼ö)
-    public float attackRange;       // »ç°Å¸®
+    [Header("ê³µê²© ìŠ¤í™")]
+    public float attackPower;       // ê³µê²©ë ¥
+    public float attackSpeed;       // ê³µê²©ì†ë„ (ì´ˆë‹¹ íƒ€ê²© íšŸìˆ˜)
+    public float attackRange;       // ì‚¬ê±°ë¦¬
 
-    [Header("Åõ»çÃ¼ (¿ø°Å¸®¿ë)")]
-    public GameObject projectilePrefab; // ÃÑ¾ËÀÌ³ª ¸¶¹ı ÇÁ¸®ÆÕ (±Ù°Å¸®´Â ºñ¿öµÒ)
+    [Header("íˆ¬ì‚¬ì²´ (ì›ê±°ë¦¬ìš©)")]
+    public GameObject projectilePrefab; // ì´ì•Œì´ë‚˜ ë§ˆë²• í”„ë¦¬íŒ¹ (ê·¼ê±°ë¦¬ëŠ” ë¹„ì›Œë‘ )
 }

@@ -1,15 +1,15 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using System.Collections;
 
 public class Health : MonoBehaviour
 {
-    [Header("Ã¼·Â »óÅÂ (µ¥ÀÌÅÍ ÀÚµ¿ ¿¬µ¿)")]
-    public float maxHealth;     // µ¥ÀÌÅÍ¿¡¼­ ¹Ş¾Æ¿Ã ÃÖ´ë Ã¼·Â
-    private float currentHealth; // ÇöÀç Ã¼·Â
-    private float defense;       // ¹æ¾î·Â (ÃßÈÄ µ¥¹ÌÁö °ø½Ä¿¡ È°¿ë)
+    [Header("ì²´ë ¥ ìƒíƒœ (ë°ì´í„° ìë™ ì—°ë™)")]
+    public float maxHealth;     // ë°ì´í„°ì—ì„œ ë°›ì•„ì˜¬ ìµœëŒ€ ì²´ë ¥
+    private float currentHealth; // í˜„ì¬ ì²´ë ¥
+    private float defense;       // ë°©ì–´ë ¥ (ì¶”í›„ ë°ë¯¸ì§€ ê³µì‹ì— í™œìš©)
     private bool isDead = false;
 
-    // MobAI°¡ ½ºÆùµÉ ¶§ ÀÌ ÇÔ¼ö¸¦ ºÒ·¯¼­ ½ºÅÈÀ» ²È¾ÆÁİ´Ï´Ù.
+    // MobAIê°€ ìŠ¤í°ë  ë•Œ ì´ í•¨ìˆ˜ë¥¼ ë¶ˆëŸ¬ì„œ ìŠ¤íƒ¯ì„ ê½‚ì•„ì¤ë‹ˆë‹¤.
     public void InitStats(EntityData data)
     {
         this.maxHealth = data.maxHp;
@@ -22,11 +22,11 @@ public class Health : MonoBehaviour
     {
         if (isDead) return;
 
-        // ÃßÈÄ ¿©±â¿¡ ¹æ¾î·Â(defense)À» Àû¿ëÇÑ µ¥¹ÌÁö °¨¼Ò °ø½ÄÀ» ³ÖÀ» ¼ö ÀÖ½À´Ï´Ù.
+        // ì¶”í›„ ì—¬ê¸°ì— ë°©ì–´ë ¥(defense)ì„ ì ìš©í•œ ë°ë¯¸ì§€ ê°ì†Œ ê³µì‹ì„ ë„£ì„ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
         currentHealth -= damage;
         currentHealth = Mathf.Max(currentHealth, 0);
 
-        Debug.Log($"{gameObject.name} ÇÇ°İ! (³²Àº Ã¼·Â: {currentHealth}/{maxHealth})");
+        Debug.Log($"{gameObject.name} í”¼ê²©! (ë‚¨ì€ ì²´ë ¥: {currentHealth}/{maxHealth})");
 
         if (currentHealth <= 0 && !isDead)
         {
@@ -37,7 +37,7 @@ public class Health : MonoBehaviour
 
     private IEnumerator ProcessDeathRoutine()
     {
-        Debug.Log($"{gameObject.name} »ç¸Á.");
+        Debug.Log($"{gameObject.name} ì‚¬ë§.");
 
         if (CompareTag("Player") || GetComponent<PlayerController>() != null)
         {
@@ -45,7 +45,7 @@ public class Health : MonoBehaviour
             if (GameManager.Instance != null) GameManager.Instance.TriggerGameOver();
         }
 
-        // [ÃÖÀûÈ­ ÄÚµå] Die() ÇÔ¼ö ³»ºÎ
+        // [ìµœì í™” ì½”ë“œ] Die() í•¨ìˆ˜ ë‚´ë¶€
         if (TryGetComponent(out PooledObject pooledObj))
         {
             pooledObj.ReleaseToPool();

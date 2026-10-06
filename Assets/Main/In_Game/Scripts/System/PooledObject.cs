@@ -1,16 +1,16 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.Pool;
 
 public class PooledObject : MonoBehaviour
 {
     public IObjectPool<GameObject> pool;
 
-    // Destroy(gameObject) ´ë½Å È£ÃâÇÒ ÇÔ¼ö
+    // Destroy(gameObject) ëŒ€ì‹  í˜¸ì¶œí•  í•¨ìˆ˜
     public void ReleaseToPool()
     {
         if (pool != null)
             pool.Release(gameObject);
         else
-            Destroy(gameObject); // Ç® ¸Å´ÏÀú°¡ ÆÄ±«µÈ ¾À ÀüÈ¯ µîÀÇ ¿¹¿Ü »óÈ² ´ëºñ ¾ÈÀüÀåÄ¡
+            Destroy(gameObject); // í’€ ë§¤ë‹ˆì €ê°€ íŒŒê´´ëœ ì”¬ ì „í™˜ ë“±ì˜ ì˜ˆì™¸ ìƒí™© ëŒ€ë¹„ ì•ˆì „ì¥ì¹˜
     }
 }

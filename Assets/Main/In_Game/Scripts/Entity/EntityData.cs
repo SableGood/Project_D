@@ -1,24 +1,24 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
-// °³Ã¼ÀÇ Á¾·ù¸¦ ±¸ºĞÇÏ±â À§ÇÑ Å¸ÀÔ (¿¡·¯ ÇØ°áÀÇ ÇÙ½É!)
+// ê°œì²´ì˜ ì¢…ë¥˜ë¥¼ êµ¬ë¶„í•˜ê¸° ìœ„í•œ íƒ€ì… (ì—ëŸ¬ í•´ê²°ì˜ í•µì‹¬!)
 public enum EntityType { Mob, Player, Turret }
 
 [CreateAssetMenu(fileName = "NewEntityData", menuName = "Data/EntityData")]
 public class EntityData : ScriptableObject
 {
-    [Header("°³Ã¼ Á¤º¸")]
-    public EntityType entityType; // ÀÌ µ¥ÀÌÅÍ°¡ ¸÷ÀÎÁö, ÇÃ·¹ÀÌ¾îÀÎÁö, Å¸¿öÀÎÁö ¼±ÅÃ
+    [Header("ê°œì²´ ì •ë³´")]
+    public EntityType entityType; // ì´ ë°ì´í„°ê°€ ëª¹ì¸ì§€, í”Œë ˆì´ì–´ì¸ì§€, íƒ€ì›Œì¸ì§€ ì„ íƒ
     public string entityCode;
     public string entityName;
 
-    [Header("º»Ã¼ ÇÇÁöÄÃ ½ºÅÈ")]
+    [Header("ë³¸ì²´ í”¼ì§€ì»¬ ìŠ¤íƒ¯")]
     public float maxHp;
     public float defense;
     public float moveSpeed;
 
-    [Header("°Ç¼³/¼ÒÈ¯ ºñ¿ë")]
-    public int cost;          // Å¸¿ö °Ç¼³ ºñ¿ë
+    [Header("ê±´ì„¤/ì†Œí™˜ ë¹„ìš©")]
+    public int cost;          // íƒ€ì›Œ ê±´ì„¤ ë¹„ìš©
 
-    [Header("±âº» ÀåÂø Àåºñ")]
+    [Header("ê¸°ë³¸ ì¥ì°© ì¥ë¹„")]
     public WeaponData defaultWeapon;
 }

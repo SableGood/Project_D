@@ -1,44 +1,50 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class TowerBuilder : MonoBehaviour
 {
-    [Header("°Ç¼³ ¼³Á¤ (1~5¹ø ½½·Ô)")]
-    [Tooltip("¼ø¼­´ë·Î TR010 ~ TR050 Å¸¿ö ÇÁ¸®ÆÕÀ» ³ÖÀ¸¼¼¿ä.")]
+    [Header("ê±´ì„¤ ì„¤ì • (1~5ë²ˆ ìŠ¬ë¡¯)")]
+    [Tooltip("ìˆœì„œëŒ€ë¡œ TR010 ~ TR050 íƒ€ì›Œ í”„ë¦¬íŒ¹ì„ ë„£ìœ¼ì„¸ìš”.")]
     public GameObject[] towerPrefabs;
-    [Tooltip("¼ø¼­´ë·Î TR010 ~ TR050 Å¸¿öÀÇ ¹Ì¸®º¸±â¿ë ÇÁ¸®ÆÕÀ» ³ÖÀ¸¼¼¿ä.")]
+    [Tooltip("ìˆœì„œëŒ€ë¡œ TR010 ~ TR050 íƒ€ì›Œì˜ ë¯¸ë¦¬ë³´ê¸°ìš© í”„ë¦¬íŒ¹ì„ ë„£ìœ¼ì„¸ìš”.")]
     public GameObject[] previewPrefabs;
     public float gridSize = 2.0f;
 
-    [Header("ÃÖ´ë °Ç¼³ °¡´É °Å¸®")]
+    [Header("ìµœëŒ€ ê±´ì„¤ ê°€ëŠ¥ ê±°ë¦¬")]
     public float maxBuildDistance = 10.0f;
 
-    [Header("¹Ì¸®º¸±â »ö»ó")]
+    [Header("ë¯¸ë¦¬ë³´ê¸° ìƒ‰ìƒ")]
     public Material matGreen;
     public Material matRed;
 
-    [Header("Ãæµ¹ ÆÇÁ¤ ·¹ÀÌ¾î")]
+    [Header("ì¶©ëŒ íŒì • ë ˆì´ì–´")]
     public LayerMask obstacleLayer;
 
-    // ·±Å¸ÀÓ Ä³½Ì º¯¼öµé
-    private GameObject[] instantiatedPreviews; // »ı¼ºµÈ ¹Ì¸®º¸±â ¿ÀºêÁ§Æ®µéÀ» ´ã¾ÆµÑ ¹è¿­
-    private GameObject currentPreviewObj;      // ÇöÀç È­¸é¿¡ ¶ç¿öÁø ¹Ì¸®º¸±â ¿ÀºêÁ§Æ®
-    private Renderer[] currentPreviewRenderers; // ¹Ì¸®º¸±â ¿ÀºêÁ§Æ®ÀÇ ·»´õ·¯µé (ÀÚ½Ä ¸Ş½¬ Æ÷ÇÔ)
+    // ëŸ°íƒ€ì„ ìºì‹± ë³€ìˆ˜ë“¤
+    private GameObject[] instantiatedPreviews; // ìƒì„±ëœ ë¯¸ë¦¬ë³´ê¸° ì˜¤ë¸Œì íŠ¸ë“¤ì„ ë‹´ì•„ë‘˜ ë°°ì—´
+    private GameObject currentPreviewObj;      // í˜„ì¬ í™”ë©´ì— ë„ì›Œì§„ ë¯¸ë¦¬ë³´ê¸° ì˜¤ë¸Œì íŠ¸
+    private Renderer[] currentPreviewRenderers; // ë¯¸ë¦¬ë³´ê¸° ì˜¤ë¸Œì íŠ¸ì˜ ë Œë”ëŸ¬ë“¤ (ìì‹ ë©”ì‰¬ í¬í•¨)
 
-    private int currentTowerIndex = 0;         // ÇöÀç ¼±ÅÃµÈ Å¸¿ö ¹øÈ£ (0 ~ 4)
+    private int currentTowerIndex = 0;         // í˜„ì¬ ì„ íƒëœ íƒ€ì›Œ ë²ˆí˜¸ (0 ~ 4)
     private bool isBuildMode = false;
     private bool canBuild = false;
+    private bool waitForMouseRelease = false; // ê±´ì„¤ í´ë¦­ í›„ ë²„íŠ¼ì„ ë—„ ë•Œê¹Œì§€ ì‚¬ê²© ì°¨ë‹¨
+
+    // â˜… ê±´ì„¤ ëª¨ë“œì´ê±°ë‚˜, ë°©ê¸ˆ ê±´ì„¤í•œ í´ë¦­ì„ ì•„ì§ ëˆ„ë¥´ê³  ìˆìœ¼ë©´ true â†’ PlayerWeaponManagerê°€ ì‚¬ê²©í•˜ì§€ ì•ŠìŒ
+    public bool BlocksFiring => isBuildMode || waitForMouseRelease;
 
     void Start()
     {
-        // ¹Ì¸®º¸±â ¿ÀºêÁ§Æ®¸¦ ´ãÀ» ºó ¹è¿­ °ø°£À» ½½·Ô °³¼ö(º¸Åë 5°³)¸¸Å­ ÃÊ±âÈ­ÇÕ´Ï´Ù.
+        // ë¯¸ë¦¬ë³´ê¸° ì˜¤ë¸Œì íŠ¸ë¥¼ ë‹´ì„ ë¹ˆ ë°°ì—´ ê³µê°„ì„ ìŠ¬ë¡¯ ê°œìˆ˜(ë³´í†µ 5ê°œ)ë§Œí¼ ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
         instantiatedPreviews = new GameObject[previewPrefabs.Length];
     }
 
     void Update()
     {
+        if (waitForMouseRelease && !Input.GetMouseButton(0)) waitForMouseRelease = false;
+
         HandleInput();
 
-        // °Ç¼³ ¸ğµå ÁßÀÏ ¶§ ¹Ì¸®º¸±â À§Ä¡ °»½Å ¹× ÁÂÅ¬¸¯ °Ç¼³ Ã³¸®
+        // ê±´ì„¤ ëª¨ë“œ ì¤‘ì¼ ë•Œ ë¯¸ë¦¬ë³´ê¸° ìœ„ì¹˜ ê°±ì‹  ë° ì¢Œí´ë¦­ ê±´ì„¤ ì²˜ë¦¬
         if (isBuildMode && currentPreviewObj != null)
         {
             UpdatePreviewPosition();
@@ -47,13 +53,14 @@ public class TowerBuilder : MonoBehaviour
             {
                 BuildTower();
                 CancelBuildMode();
+                waitForMouseRelease = true;
             }
         }
     }
 
     private void HandleInput()
     {
-        // 1¹ø(0) ~ 5¹ø(4) Å° ÀÔ·Â °¨Áö
+        // 1ë²ˆ(0) ~ 5ë²ˆ(4) í‚¤ ì…ë ¥ ê°ì§€
         if (Input.GetKeyDown(KeyCode.Alpha1)) SelectTower(0);
         if (Input.GetKeyDown(KeyCode.Alpha2)) SelectTower(1);
         if (Input.GetKeyDown(KeyCode.Alpha3)) SelectTower(2);
@@ -63,17 +70,17 @@ public class TowerBuilder : MonoBehaviour
 
     private void SelectTower(int index)
     {
-        // ¹è¿­ ¹üÀ§¸¦ ¹ş¾î³ª°Å³ª ÇØ´ç ½½·Ô¿¡ ÇÁ¸®ÆÕÀÌ ºñ¾îÀÖÀ¸¸é ¹«½Ã
+        // ë°°ì—´ ë²”ìœ„ë¥¼ ë²—ì–´ë‚˜ê±°ë‚˜ í•´ë‹¹ ìŠ¬ë¡¯ì— í”„ë¦¬íŒ¹ì´ ë¹„ì–´ìˆìœ¼ë©´ ë¬´ì‹œ
         if (index >= towerPrefabs.Length || towerPrefabs[index] == null) return;
 
-        // ÀÌ¹Ì °°Àº Å¸¿ö¸¦ µé°í ÀÖ´Â »óÅÂ¿¡¼­ ÇØ´ç Å°¸¦ ÇÑ ¹ø ´õ ´©¸£¸é °Ç¼³ ¸ğµå Ãë¼Ò (Åä±Û ±â´É)
+        // ì´ë¯¸ ê°™ì€ íƒ€ì›Œë¥¼ ë“¤ê³  ìˆëŠ” ìƒíƒœì—ì„œ í•´ë‹¹ í‚¤ë¥¼ í•œ ë²ˆ ë” ëˆ„ë¥´ë©´ ê±´ì„¤ ëª¨ë“œ ì·¨ì†Œ (í† ê¸€ ê¸°ëŠ¥)
         if (isBuildMode && currentTowerIndex == index)
         {
             CancelBuildMode();
             return;
         }
 
-        // »õ·Î¿î Å¸¿ö ¼±ÅÃ ¹× °Ç¼³ ¸ğµå ÁøÀÔ
+        // ìƒˆë¡œìš´ íƒ€ì›Œ ì„ íƒ ë° ê±´ì„¤ ëª¨ë“œ ì§„ì…
         currentTowerIndex = index;
         isBuildMode = true;
         StartBuildMode();
@@ -81,23 +88,23 @@ public class TowerBuilder : MonoBehaviour
 
     private void StartBuildMode()
     {
-        // ±âÁ¸¿¡ ÄÑÁ® ÀÖ´ø ´Ù¸¥ ¹Ì¸®º¸±â ¿ÀºêÁ§Æ®°¡ ÀÖ´Ù¸é ²ü´Ï´Ù.
+        // ê¸°ì¡´ì— ì¼œì ¸ ìˆë˜ ë‹¤ë¥¸ ë¯¸ë¦¬ë³´ê¸° ì˜¤ë¸Œì íŠ¸ê°€ ìˆë‹¤ë©´ ë•ë‹ˆë‹¤.
         if (currentPreviewObj != null)
         {
             currentPreviewObj.SetActive(false);
         }
 
-        // ÇØ´ç ÀÎµ¦½ºÀÇ ¹Ì¸®º¸±â°¡ ¾ÆÁ÷ ¾À¿¡ »ı¼ºµÇÁö ¾Ê¾Ò´Ù¸é ÃÖÃÊ 1È¸ »ı¼º (Instantiate)
+        // í•´ë‹¹ ì¸ë±ìŠ¤ì˜ ë¯¸ë¦¬ë³´ê¸°ê°€ ì•„ì§ ì”¬ì— ìƒì„±ë˜ì§€ ì•Šì•˜ë‹¤ë©´ ìµœì´ˆ 1íšŒ ìƒì„± (Instantiate)
         if (instantiatedPreviews[currentTowerIndex] == null)
         {
             instantiatedPreviews[currentTowerIndex] = Instantiate(previewPrefabs[currentTowerIndex]);
         }
 
-        // ÇöÀç ¹Ì¸®º¸±â °´Ã¼ °»½Å ¹× È°¼ºÈ­
+        // í˜„ì¬ ë¯¸ë¦¬ë³´ê¸° ê°ì²´ ê°±ì‹  ë° í™œì„±í™”
         currentPreviewObj = instantiatedPreviews[currentTowerIndex];
         currentPreviewObj.SetActive(true);
 
-        // ProBuilder·Î ¸¸µç Å¸¿ö´Â ÀÚ½Ä ¿ÀºêÁ§Æ® ¿©·¯ °³·Î ÀÌ·ç¾îÁ® ÀÖÀ» ¼ö ÀÖÀ¸¹Ç·Î GetComponentsInChildren »ç¿ë
+        // ProBuilderë¡œ ë§Œë“  íƒ€ì›ŒëŠ” ìì‹ ì˜¤ë¸Œì íŠ¸ ì—¬ëŸ¬ ê°œë¡œ ì´ë£¨ì–´ì ¸ ìˆì„ ìˆ˜ ìˆìœ¼ë¯€ë¡œ GetComponentsInChildren ì‚¬ìš©
         currentPreviewRenderers = currentPreviewObj.GetComponentsInChildren<Renderer>();
     }
 
@@ -119,14 +126,14 @@ public class TowerBuilder : MonoBehaviour
         {
             Vector3 hitPoint = ray.GetPoint(rayDistance);
 
-            // ¹ÙµÏÆÇ ½º³À ·ÎÁ÷
+            // ë°”ë‘‘íŒ ìŠ¤ëƒ… ë¡œì§
             float x = Mathf.Round(hitPoint.x / gridSize) * gridSize;
             float z = Mathf.Round(hitPoint.z / gridSize) * gridSize;
 
             Vector3 snapPos = new Vector3(x, 1.0f, z);
             currentPreviewObj.transform.position = snapPos;
 
-            // À§Ä¡ º¯°æ ÈÄ ¼³Ä¡ °¡´É ¿©ºÎ °Ë»ç
+            // ìœ„ì¹˜ ë³€ê²½ í›„ ì„¤ì¹˜ ê°€ëŠ¥ ì—¬ë¶€ ê²€ì‚¬
             CheckPlacementValidity(snapPos);
         }
     }
@@ -154,7 +161,7 @@ public class TowerBuilder : MonoBehaviour
 
             canBuild = !isOverlapping;
 
-            // ¡Ú ¼öÁ¤µÊ: ÇÏ³ªÀÇ ¿ÀºêÁ§Æ®°¡ 3°³ÀÇ ¸ÓÆ¼¸®¾óÀ» °¡Áö°í ÀÖ¾îµµ ¸ğµÎ ±³Ã¼ÇÏµµ·Ï ´ëÀÀ
+            // â˜… ìˆ˜ì •ë¨: í•˜ë‚˜ì˜ ì˜¤ë¸Œì íŠ¸ê°€ 3ê°œì˜ ë¨¸í‹°ë¦¬ì–¼ì„ ê°€ì§€ê³  ìˆì–´ë„ ëª¨ë‘ êµì²´í•˜ë„ë¡ ëŒ€ì‘
             if (currentPreviewRenderers != null)
             {
                 Material targetMat = canBuild ? matGreen : matRed;
@@ -162,7 +169,7 @@ public class TowerBuilder : MonoBehaviour
                 {
                     Renderer r = currentPreviewRenderers[i];
                     Material[] mats = r.materials;
-                    // ¸Ş½¬°¡ °¡Áø ¸ÓÆ¼¸®¾ó °³¼ö(3°³)¸¸Å­ ¹İº¹ÇØ¼­ ÀüºÎ ÃÊ·Ï/»¡°­À¸·Î µ¤¾î¾º¿ò
+                    // ë©”ì‰¬ê°€ ê°€ì§„ ë¨¸í‹°ë¦¬ì–¼ ê°œìˆ˜(3ê°œ)ë§Œí¼ ë°˜ë³µí•´ì„œ ì „ë¶€ ì´ˆë¡/ë¹¨ê°•ìœ¼ë¡œ ë®ì–´ì”Œì›€
                     for (int j = 0; j < mats.Length; j++)
                     {
                         mats[j] = targetMat;
@@ -175,7 +182,7 @@ public class TowerBuilder : MonoBehaviour
 
     private void BuildTower()
     {
-        // PoolManager¸¦ ÀÌ¿ëÇØ ¼±ÅÃµÈ Å¸¿ö(currentTowerIndex)¸¦ ¹Ù´Ú¿¡ ¼ÒÈ¯
+        // PoolManagerë¥¼ ì´ìš©í•´ ì„ íƒëœ íƒ€ì›Œ(currentTowerIndex)ë¥¼ ë°”ë‹¥ì— ì†Œí™˜
         PoolManager.Instance.Spawn(towerPrefabs[currentTowerIndex], currentPreviewObj.transform.position, Quaternion.identity);
     }
 }

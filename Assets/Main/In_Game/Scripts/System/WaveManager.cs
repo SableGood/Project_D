@@ -1,29 +1,29 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
 using System.Collections.Generic;
 
 public class WaveManager : MonoBehaviour
 {
-    [Header("±âº» ¼³Á¤ (°ø¿ë ½ºÆù Æ÷ÀÎÆ®)")]
+    [Header("ê¸°ë³¸ ì„¤ì • (ê³µìš© ìŠ¤í° í¬ì¸íŠ¸)")]
     public Transform[] defaultSpawnPoints;
 
-    [Header("¿şÀÌºê ÀüÃ¼ µ¥ÀÌÅÍ ¼³Á¤")]
+    [Header("ì›¨ì´ë¸Œ ì „ì²´ ë°ì´í„° ì„¤ì •")]
     public List<WaveData> waves;
 
-    [Header("½ºÅ×ÀÌÁö ÁöÁ¤ (Å×½ºÆ® ¹× ½ÃÀÛ ¼³Á¤)")]
-    [Tooltip("°ÔÀÓÀ» ½ÃÀÛÇÒ ½ºÅ×ÀÌÁö ¹øÈ£¸¦ ÀÔ·ÂÇÏ¼¼¿ä.")]
+    [Header("ìŠ¤í…Œì´ì§€ ì§€ì • (í…ŒìŠ¤íŠ¸ ë° ì‹œì‘ ì„¤ì •)")]
+    [Tooltip("ê²Œì„ì„ ì‹œì‘í•  ìŠ¤í…Œì´ì§€ ë²ˆí˜¸ë¥¼ ì…ë ¥í•˜ì„¸ìš”.")]
     public int startStage = 1;
 
-    [Header("ÇöÀç ÁøÇà »óÅÂ (½Ç½Ã°£ È®ÀÎ¿ë)")]
+    [Header("í˜„ì¬ ì§„í–‰ ìƒíƒœ (ì‹¤ì‹œê°„ í™•ì¸ìš©)")]
     public int currentStage = 1;
     public int currentWaveNumber = 1;
 
-    [Header("UI ¿¬°á")]
+    [Header("UI ì—°ê²°")]
     public Text waveText;
     public Button waveStartButton;
 
-    private int currentWaveIndex = 0;     // ½ÇÁ¦ ¸®½ºÆ® ÀÎµ¦½º
+    private int currentWaveIndex = 0;     // ì‹¤ì œ ë¦¬ìŠ¤íŠ¸ ì¸ë±ìŠ¤
     private bool isWaveActive = false;
     private int remainingMobCount = 0;
 
@@ -32,7 +32,7 @@ public class WaveManager : MonoBehaviour
         if (waveText != null) waveText.gameObject.SetActive(false);
         if (waveStartButton != null) waveStartButton.onClick.AddListener(StartWave);
 
-        // ½ÃÀÛ ½ºÅ×ÀÌÁö ÁöÁ¤ ·ÎÁ÷ ½ÇÇà
+        // ì‹œì‘ ìŠ¤í…Œì´ì§€ ì§€ì • ë¡œì§ ì‹¤í–‰
         SetStartStage(startStage);
     }
 
@@ -44,23 +44,23 @@ public class WaveManager : MonoBehaviour
         }
     }
 
-    // ÀÎ½ºÆåÅÍ¿¡¼­ ÀÔ·ÂÇÑ ½ºÅ×ÀÌÁö ¹øÈ£¿¡ ¸ÂÃç ½ÃÀÛ ÀÎµ¦½º¸¦ Ã£¾ÆÁÖ´Â ÇÔ¼ö
+    // ì¸ìŠ¤í™í„°ì—ì„œ ì…ë ¥í•œ ìŠ¤í…Œì´ì§€ ë²ˆí˜¸ì— ë§ì¶° ì‹œì‘ ì¸ë±ìŠ¤ë¥¼ ì°¾ì•„ì£¼ëŠ” í•¨ìˆ˜
     private void SetStartStage(int targetStage)
     {
         for (int i = 0; i < waves.Count; i++)
         {
-            // ¸®½ºÆ®¸¦ ¼øÈ¸ÇÏ¸ç ¸ñÇ¥ ½ºÅ×ÀÌÁöÀÇ Ã¹ ¹øÂ° ¿şÀÌºê¸¦ Ã£À½
+            // ë¦¬ìŠ¤íŠ¸ë¥¼ ìˆœíšŒí•˜ë©° ëª©í‘œ ìŠ¤í…Œì´ì§€ì˜ ì²« ë²ˆì§¸ ì›¨ì´ë¸Œë¥¼ ì°¾ìŒ
             if (waves[i].stageNumber == targetStage)
             {
                 currentWaveIndex = i;
                 currentStage = targetStage;
                 currentWaveNumber = i + 1;
-                Debug.Log($"[½ºÅ×ÀÌÁö ÁöÁ¤] Stage {targetStage} (¿şÀÌºê {currentWaveNumber}) ºÎÅÍ °ÔÀÓÀ» ½ÃÀÛÇÕ´Ï´Ù.");
+                Debug.Log($"[ìŠ¤í…Œì´ì§€ ì§€ì •] Stage {targetStage} (ì›¨ì´ë¸Œ {currentWaveNumber}) ë¶€í„° ê²Œì„ì„ ì‹œì‘í•©ë‹ˆë‹¤.");
                 return;
             }
         }
 
-        // ÀÔ·ÂÇÑ ½ºÅ×ÀÌÁö¸¦ Ã£À» ¼ö ¾øÀ¸¸é Ã³À½ºÎÅÍ ½ÃÀÛ
+        // ì…ë ¥í•œ ìŠ¤í…Œì´ì§€ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìœ¼ë©´ ì²˜ìŒë¶€í„° ì‹œì‘
         currentWaveIndex = 0;
         if (waves.Count > 0)
         {
@@ -75,7 +75,7 @@ public class WaveManager : MonoBehaviour
 
         if (currentWaveIndex >= waves.Count)
         {
-            Debug.Log("¸ğµç ¿şÀÌºê¸¦ Å¬¸®¾îÇß½À´Ï´Ù!");
+            Debug.Log("ëª¨ë“  ì›¨ì´ë¸Œë¥¼ í´ë¦¬ì–´í–ˆìŠµë‹ˆë‹¤!");
             return;
         }
 
@@ -91,13 +91,13 @@ public class WaveManager : MonoBehaviour
 
         WaveData currentWaveData = waves[currentWaveIndex];
 
-        // ÇöÀç ÁøÇà »óÅÂ ÀÎ½ºÆåÅÍ º¯¼ö °»½Å
+        // í˜„ì¬ ì§„í–‰ ìƒíƒœ ì¸ìŠ¤í™í„° ë³€ìˆ˜ ê°±ì‹ 
         currentStage = currentWaveData.stageNumber;
         currentWaveNumber = currentWaveIndex + 1;
 
         if (waveText != null)
         {
-            waveText.text = $"Stage {currentStage}\n¿şÀÌºê {currentWaveNumber} ½ÃÀÛ";
+            waveText.text = $"Stage {currentStage}\nì›¨ì´ë¸Œ {currentWaveNumber} ì‹œì‘";
             waveText.gameObject.SetActive(true);
         }
 
@@ -114,7 +114,7 @@ public class WaveManager : MonoBehaviour
             remainingMobCount += info.spawnCount;
         }
 
-        Debug.Log($"[Stage {currentStage} - {currentWaveNumber} ¿şÀÌºê] ÃÑ ¼ÒÈ¯µÉ ¸÷ ¸¶¸´¼ö: {remainingMobCount}");
+        Debug.Log($"[Stage {currentStage} - {currentWaveNumber} ì›¨ì´ë¸Œ] ì´ ì†Œí™˜ë  ëª¹ ë§ˆë¦¿ìˆ˜: {remainingMobCount}");
 
         foreach (WaveMobInfo info in currentWaveData.mobList)
         {
@@ -122,7 +122,7 @@ public class WaveManager : MonoBehaviour
             {
                 if (targetSpawnPoints == null || targetSpawnPoints.Length == 0)
                 {
-                    Debug.LogWarning("ÁöÁ¤µÈ ½ºÆù Æ÷ÀÎÆ®°¡ ¾ø½À´Ï´Ù!");
+                    Debug.LogWarning("ì§€ì •ëœ ìŠ¤í° í¬ì¸íŠ¸ê°€ ì—†ìŠµë‹ˆë‹¤!");
                     break;
                 }
 
@@ -167,7 +167,7 @@ public class WaveManager : MonoBehaviour
     {
         if (waveText != null)
         {
-            waveText.text = "¿şÀÌºê Á¾·á\n- Á¤ºñ ½Ã°£ -";
+            waveText.text = "ì›¨ì´ë¸Œ ì¢…ë£Œ\n- ì •ë¹„ ì‹œê°„ -";
             waveText.gameObject.SetActive(true);
         }
 
@@ -182,7 +182,7 @@ public class WaveManager : MonoBehaviour
         {
             if (waveText != null)
             {
-                waveText.text = "¸ğµç ½ºÅ×ÀÌÁö Å¬¸®¾î!";
+                waveText.text = "ëª¨ë“  ìŠ¤í…Œì´ì§€ í´ë¦¬ì–´!";
                 waveText.gameObject.SetActive(true);
             }
         }

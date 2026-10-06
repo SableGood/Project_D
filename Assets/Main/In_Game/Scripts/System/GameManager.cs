@@ -1,42 +1,42 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
-    // Àü¿ª¿¡¼­ ½±°Ô Á¢±ÙÇÒ ¼ö ÀÖµµ·Ï ½Ì±ÛÅæ ÀÎ½ºÅÏ½º ¼±¾ğ
+    // ì „ì—­ì—ì„œ ì‰½ê²Œ ì ‘ê·¼í•  ìˆ˜ ìˆë„ë¡ ì‹±ê¸€í†¤ ì¸ìŠ¤í„´ìŠ¤ ì„ ì–¸
     public static GameManager Instance { get; private set; }
 
-    [Header("ÇÃ·¹ÀÌ¾î ½ºÆù ¼³Á¤")]
-    public GameObject[] playerPrefabs; // 0:Ä§ÆÒÁö, 1:¿ø¼şÀÌ, 2:¿À¶û¿ìÅº ÇÁ¸®ÆÕ ÇÒ´ç
-    public Transform spawnPoint;       // ¾À ³»¿¡ ¹èÄ¡ÇÑ ½ÃÀÛ À§Ä¡(ºó ¿ÀºêÁ§Æ®)
+    [Header("í”Œë ˆì´ì–´ ìŠ¤í° ì„¤ì •")]
+    public GameObject[] playerPrefabs; // 0:ì¹¨íŒ¬ì§€, 1:ì›ìˆ­ì´, 2:ì˜¤ë‘ìš°íƒ„ í”„ë¦¬íŒ¹ í• ë‹¹
+    public Transform spawnPoint;       // ì”¬ ë‚´ì— ë°°ì¹˜í•œ ì‹œì‘ ìœ„ì¹˜(ë¹ˆ ì˜¤ë¸Œì íŠ¸)
 
     private GameObject currentPlayer;
 
-    [Header("°ÔÀÓ ÄÚ¾î UI ÆĞ³Î")]
-    public GameObject pauseMenuUI;   // ESC Å°¸¦ ´­·¶À» ¶§ µîÀåÇÒ ÀÏ½ÃÁ¤Áö ¸Ş´º UI Äµ¹ö½º/ÆĞ³Î
-    public GameObject gameOverUI;    // ÇÃ·¹ÀÌ¾î »ç¸Á ½Ã µîÀåÇÒ °ÔÀÓ ¿À¹ö UI Äµ¹ö½º/ÆĞ³Î
+    [Header("ê²Œì„ ì½”ì–´ UI íŒ¨ë„")]
+    public GameObject pauseMenuUI;   // ESC í‚¤ë¥¼ ëˆŒë €ì„ ë•Œ ë“±ì¥í•  ì¼ì‹œì •ì§€ ë©”ë‰´ UI ìº”ë²„ìŠ¤/íŒ¨ë„
+    public GameObject gameOverUI;    // í”Œë ˆì´ì–´ ì‚¬ë§ ì‹œ ë“±ì¥í•  ê²Œì„ ì˜¤ë²„ UI ìº”ë²„ìŠ¤/íŒ¨ë„
 
-    [Header("°ÔÀÓ ½ÃÀÛ ¼Â¾÷ UI ÆĞ³Î")]
-    public GameObject difficultyPanel; // ³­ÀÌµµ ¼±ÅÃ Ã¢
-    public GameObject characterPanel;  // Ä³¸¯ÅÍ ¼±ÅÃ Ã¢
-    public GameObject talentPanel;     // Àç´É ¼±ÅÃ Ã¢
+    [Header("ê²Œì„ ì‹œì‘ ì…‹ì—… UI íŒ¨ë„")]
+    public GameObject difficultyPanel; // ë‚œì´ë„ ì„ íƒ ì°½
+    public GameObject characterPanel;  // ìºë¦­í„° ì„ íƒ ì°½
+    public GameObject talentPanel;     // ì¬ëŠ¥ ì„ íƒ ì°½
 
-    [Header("±Û·Î¹ú ÂüÁ¶ µ¥ÀÌÅÍ")]
-    public Transform playerTransform; // ¸ó½ºÅÍµéÀÌ ÂüÁ¶ÇÒ ÇÃ·¹ÀÌ¾îÀÇ À§Ä¡
+    [Header("ê¸€ë¡œë²Œ ì°¸ì¡° ë°ì´í„°")]
+    public Transform playerTransform; // ëª¬ìŠ¤í„°ë“¤ì´ ì°¸ì¡°í•  í”Œë ˆì´ì–´ì˜ ìœ„ì¹˜
 
-    // »óÅÂ °ü¸® º¯¼öµé
+    // ìƒíƒœ ê´€ë¦¬ ë³€ìˆ˜ë“¤
     private bool isPaused = false;
     private bool isGameOver = false;
-    private bool isSetupComplete = false; // ½ÃÀÛ ¼Â¾÷ÀÌ ³¡³µ´ÂÁö È®ÀÎÇÏ´Â º¯¼ö
+    private bool isSetupComplete = false; // ì‹œì‘ ì…‹ì—…ì´ ëë‚¬ëŠ”ì§€ í™•ì¸í•˜ëŠ” ë³€ìˆ˜
 
-    // ÇÃ·¹ÀÌ¾îÀÇ ¼±ÅÃ µ¥ÀÌÅÍ¸¦ ÀÓ½Ã ÀúÀåÇÒ º¯¼öµé
+    // í”Œë ˆì´ì–´ì˜ ì„ íƒ ë°ì´í„°ë¥¼ ì„ì‹œ ì €ì¥í•  ë³€ìˆ˜ë“¤
     private int selectedDifficulty = 1; // 0: Easy, 1: Normal, 2: Hard
     private int selectedCharacter = 0;
-    private int selectedTalent = 0;     // Àç´É ÀÎµ¦½º
+    private int selectedTalent = 0;     // ì¬ëŠ¥ ì¸ë±ìŠ¤
 
     void Awake()
     {
-        // ½Ì±ÛÅæ ÆĞÅÏ ÃÊ±âÈ­ (Áßº¹ ¹æÁö)
+        // ì‹±ê¸€í†¤ íŒ¨í„´ ì´ˆê¸°í™” (ì¤‘ë³µ ë°©ì§€)
         if (Instance == null)
         {
             Instance = this;
@@ -49,16 +49,16 @@ public class GameManager : MonoBehaviour
 
     void Start()
     {
-        // 1. °ÔÀÓ ÄÚ¾î UI ¼û±è
+        // 1. ê²Œì„ ì½”ì–´ UI ìˆ¨ê¹€
         if (pauseMenuUI != null) pauseMenuUI.SetActive(false);
         if (gameOverUI != null) gameOverUI.SetActive(false);
 
-        // 2. ¼Â¾÷ UI ÃÊ±âÈ­ (³­ÀÌµµ Ã¢¸¸ ÄÑ°í ³ª¸ÓÁö´Â ¼û±è)
+        // 2. ì…‹ì—… UI ì´ˆê¸°í™” (ë‚œì´ë„ ì°½ë§Œ ì¼œê³  ë‚˜ë¨¸ì§€ëŠ” ìˆ¨ê¹€)
         if (difficultyPanel != null) difficultyPanel.SetActive(true);
         if (characterPanel != null) characterPanel.SetActive(false);
         if (talentPanel != null) talentPanel.SetActive(false);
 
-        // 3. ¼Â¾÷À» À§ÇØ °ÔÀÓ ½Ã°£À» 0À¸·Î Á¤ÁöÇÏ°í Ä¿¼­ È°¼ºÈ­
+        // 3. ì…‹ì—…ì„ ìœ„í•´ ê²Œì„ ì‹œê°„ì„ 0ìœ¼ë¡œ ì •ì§€í•˜ê³  ì»¤ì„œ í™œì„±í™”
         isSetupComplete = false;
         Time.timeScale = 0f;
         Cursor.lockState = CursorLockMode.None;
@@ -67,65 +67,65 @@ public class GameManager : MonoBehaviour
 
     void Update()
     {
-        // °ÔÀÓ ¼Â¾÷ÀÌ ¿Ï·áµÇ¾ú°í, °ÔÀÓ ¿À¹ö »óÅÂ°¡ ¾Æ´Ò ¶§¸¸ ESC ÀÏ½ÃÁ¤Áö °¡´É
+        // ê²Œì„ ì…‹ì—…ì´ ì™„ë£Œë˜ì—ˆê³ , ê²Œì„ ì˜¤ë²„ ìƒíƒœê°€ ì•„ë‹ ë•Œë§Œ ESC ì¼ì‹œì •ì§€ ê°€ëŠ¥
         if (Input.GetKeyDown(KeyCode.Escape) && !isGameOver && isSetupComplete)
         {
             if (isPaused)
             {
-                ResumeGame(); // ÀÌ¹Ì Á¤ÁöµÇ¾î ÀÖ´Ù¸é ´Ù½Ã °ÔÀÓ Àç°³
+                ResumeGame(); // ì´ë¯¸ ì •ì§€ë˜ì–´ ìˆë‹¤ë©´ ë‹¤ì‹œ ê²Œì„ ì¬ê°œ
             }
             else
             {
-                PauseGame();  // ÁøÇà ÁßÀÌ¶ó¸é °ÔÀÓ ÀÏ½ÃÁ¤Áö
+                PauseGame();  // ì§„í–‰ ì¤‘ì´ë¼ë©´ ê²Œì„ ì¼ì‹œì •ì§€
             }
         }
     }
 
-    // --- [ÇÃ·¹ÀÌ¾î À§Ä¡ µî·Ï ±â´É (ÃÖÀûÈ­ ÇÙ½É)] ---
+    // --- [í”Œë ˆì´ì–´ ìœ„ì¹˜ ë“±ë¡ ê¸°ëŠ¥ (ìµœì í™” í•µì‹¬)] ---
     public void RegisterPlayer(Transform player)
     {
         playerTransform = player;
-        Debug.Log("GameManager: ÇÃ·¹ÀÌ¾î À§Ä¡ µî·Ï ¿Ï·á!");
+        Debug.Log("GameManager: í”Œë ˆì´ì–´ ìœ„ì¹˜ ë“±ë¡ ì™„ë£Œ!");
     }
 
-    // --- [½ÃÀÛ ¼Â¾÷ 1´Ü°è: ³­ÀÌµµ ¼±ÅÃ] ---
+    // --- [ì‹œì‘ ì…‹ì—… 1ë‹¨ê³„: ë‚œì´ë„ ì„ íƒ] ---
     public void SelectDifficulty(int difficultyIndex)
     {
         selectedDifficulty = difficultyIndex;
-        Debug.Log("³­ÀÌµµ ¼±ÅÃ ¿Ï·á: " + difficultyIndex);
+        Debug.Log("ë‚œì´ë„ ì„ íƒ ì™„ë£Œ: " + difficultyIndex);
 
         if (difficultyPanel != null) difficultyPanel.SetActive(false);
         if (characterPanel != null) characterPanel.SetActive(true);
     }
 
-    // --- [½ÃÀÛ ¼Â¾÷ 2´Ü°è: Ä³¸¯ÅÍ ¼±ÅÃ] ---
+    // --- [ì‹œì‘ ì…‹ì—… 2ë‹¨ê³„: ìºë¦­í„° ì„ íƒ] ---
     public void SelectCharacter(int charIndex)
     {
         selectedCharacter = charIndex;
-        Debug.Log("Ä³¸¯ÅÍ ¼±ÅÃ ¿Ï·á: " + charIndex);
+        Debug.Log("ìºë¦­í„° ì„ íƒ ì™„ë£Œ: " + charIndex);
 
         if (characterPanel != null) characterPanel.SetActive(false);
         if (talentPanel != null) talentPanel.SetActive(true);
     }
 
-    // --- [½ÃÀÛ ¼Â¾÷ 3´Ü°è: Àç´É ¼±ÅÃ ¹× °ÔÀÓ º»°İ ½ÃÀÛ] ---
+    // --- [ì‹œì‘ ì…‹ì—… 3ë‹¨ê³„: ì¬ëŠ¥ ì„ íƒ ë° ê²Œì„ ë³¸ê²© ì‹œì‘] ---
     public void SelectTalent(int talentIndex)
     {
         selectedTalent = talentIndex;
-        Debug.Log("Àç´É ¼±ÅÃ ¿Ï·á: " + talentIndex);
+        Debug.Log("ì¬ëŠ¥ ì„ íƒ ì™„ë£Œ: " + talentIndex);
 
-        // ¼Â¾÷ Ã¢À» ¸ğµÎ ²ô°í °ÔÀÓ ½Ã°£ ¹× »óÅÂ Á¤»óÈ­
+        // ì…‹ì—… ì°½ì„ ëª¨ë‘ ë„ê³  ê²Œì„ ì‹œê°„ ë° ìƒíƒœ ì •ìƒí™”
         if (talentPanel != null) talentPanel.SetActive(false);
 
-        isSetupComplete = true; // ¼Â¾÷ ¿Ï·á ¼±¾ğ
-        Time.timeScale = 1f;    // ½Ã°£ Èå¸§ Àç°³
+        isSetupComplete = true; // ì…‹ì—… ì™„ë£Œ ì„ ì–¸
+        Time.timeScale = 1f;    // ì‹œê°„ íë¦„ ì¬ê°œ
 
-        // ¸ğµç ¼³Á¤ÀÌ ³¡³µÀ¸¹Ç·Î ÀúÀåµÈ ÀÎµ¦½º¸¦ ±â¹İÀ¸·Î ÇÃ·¹ÀÌ¾î ½ºÆù
+        // ëª¨ë“  ì„¤ì •ì´ ëë‚¬ìœ¼ë¯€ë¡œ ì €ì¥ëœ ì¸ë±ìŠ¤ë¥¼ ê¸°ë°˜ìœ¼ë¡œ í”Œë ˆì´ì–´ ìŠ¤í°
         SpawnPlayer(selectedCharacter);
         ApplyGameSettings();
     }
 
-    // --- [ÇÃ·¹ÀÌ¾î ½ºÆù ±â´É] ---
+    // --- [í”Œë ˆì´ì–´ ìŠ¤í° ê¸°ëŠ¥] ---
     private void SpawnPlayer(int index)
     {
         if (playerPrefabs != null && playerPrefabs.Length > index && playerPrefabs[index] != null)
@@ -133,13 +133,13 @@ public class GameManager : MonoBehaviour
             GameObject prefab = playerPrefabs[index];
             Vector3 finalSpawnPos = spawnPoint.position;
 
-            // ÇÁ¸®ÆÕ ¿øº»¿¡¼­ CharacterController ÄÄÆ÷³ÍÆ®¸¦ Ã£¾Æ Å©±â Á¤º¸¸¦ °¡Á®¿É´Ï´Ù.
+            // í”„ë¦¬íŒ¹ ì›ë³¸ì—ì„œ CharacterController ì»´í¬ë„ŒíŠ¸ë¥¼ ì°¾ì•„ í¬ê¸° ì •ë³´ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
             CharacterController controller = prefab.GetComponent<CharacterController>();
 
             if (controller != null)
             {
-                // [ÇÙ½É ·ÎÁ÷] Ä³¸¯ÅÍ ³ôÀÌÀÇ Àı¹İÀ» ´õÇØ À§·Î ¶ç¿ó´Ï´Ù.
-                // ÁÖÀÇ: Äİ¶óÀÌ´õÀÇ Áß½ÉÁ¡(Center.y)ÀÌ 0ÀÌ ¾Æ´Ò ¼ö ÀÖÀ¸¹Ç·Î ÀÌ¸¦ »©ÁÖ¾î¾ß ¹ß¹Ù´ÚÀÌ ¶¥¿¡ Á¤È®È÷ ´ê½À´Ï´Ù.
+                // [í•µì‹¬ ë¡œì§] ìºë¦­í„° ë†’ì´ì˜ ì ˆë°˜ì„ ë”í•´ ìœ„ë¡œ ë„ì›ë‹ˆë‹¤.
+                // ì£¼ì˜: ì½œë¼ì´ë”ì˜ ì¤‘ì‹¬ì (Center.y)ì´ 0ì´ ì•„ë‹ ìˆ˜ ìˆìœ¼ë¯€ë¡œ ì´ë¥¼ ë¹¼ì£¼ì–´ì•¼ ë°œë°”ë‹¥ì´ ë•…ì— ì •í™•íˆ ë‹¿ìŠµë‹ˆë‹¤.
                 float yOffset = (controller.height / 2f) - controller.center.y;
                 finalSpawnPos.y += yOffset;
             }
@@ -147,23 +147,23 @@ public class GameManager : MonoBehaviour
             currentPlayer = Instantiate(prefab, finalSpawnPos, spawnPoint.rotation);
             currentPlayer.tag = "Player";
 
-            // ½ºÆù Á÷ÈÄ ¾ÈÀüÇÏ°Ô Æ®·£½ºÆû µ¿±âÈ­ µî·Ï
+            // ìŠ¤í° ì§í›„ ì•ˆì „í•˜ê²Œ íŠ¸ëœìŠ¤í¼ ë™ê¸°í™” ë“±ë¡
             RegisterPlayer(currentPlayer.transform);
 
-            Debug.Log($"GameManager: {currentPlayer.name} ½ºÆù ¿Ï·á! (µ¿Àû ½ºÆù ³ôÀÌ: {finalSpawnPos.y})");
+            Debug.Log($"GameManager: {currentPlayer.name} ìŠ¤í° ì™„ë£Œ! (ë™ì  ìŠ¤í° ë†’ì´: {finalSpawnPos.y})");
         }
         else
         {
-            Debug.LogError("GameManager: ÇÃ·¹ÀÌ¾î ÇÁ¸®ÆÕ ¹è¿­ÀÌ ºñ¾îÀÖ°Å³ª ÀÎµ¦½º ¿À·ùÀÔ´Ï´Ù.");
+            Debug.LogError("GameManager: í”Œë ˆì´ì–´ í”„ë¦¬íŒ¹ ë°°ì—´ì´ ë¹„ì–´ìˆê±°ë‚˜ ì¸ë±ìŠ¤ ì˜¤ë¥˜ì…ë‹ˆë‹¤.");
         }
     }
 
     private void ApplyGameSettings()
     {
-        // ÃßÈÄ ¼±ÅÃµÈ ³­ÀÌµµ³ª Àç´ÉÀ» °ÔÀÓ ³» ½ºÅÈ¿¡ ¹İ¿µÇÏ´Â ·ÎÁ÷
+        // ì¶”í›„ ì„ íƒëœ ë‚œì´ë„ë‚˜ ì¬ëŠ¥ì„ ê²Œì„ ë‚´ ìŠ¤íƒ¯ì— ë°˜ì˜í•˜ëŠ” ë¡œì§
     }
 
-    // --- [±âÁ¸ ÄÚ¾î ½Ã½ºÅÛ (ÀÏ½ÃÁ¤Áö, Á¾·á, Àç½ÃÀÛ)] ---
+    // --- [ê¸°ì¡´ ì½”ì–´ ì‹œìŠ¤í…œ (ì¼ì‹œì •ì§€, ì¢…ë£Œ, ì¬ì‹œì‘)] ---
 
     public void PauseGame()
     {
@@ -191,7 +191,7 @@ public class GameManager : MonoBehaviour
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
-        Debug.Log("°ÔÀÓ ¿À¹ö! ÇÃ·¹ÀÌ¾î°¡ »ç¸ÁÇß½À´Ï´Ù.");
+        Debug.Log("ê²Œì„ ì˜¤ë²„! í”Œë ˆì´ì–´ê°€ ì‚¬ë§í–ˆìŠµë‹ˆë‹¤.");
     }
 
     public void RestartGame()
@@ -208,7 +208,7 @@ public class GameManager : MonoBehaviour
 
     public void QuitGame()
     {
-        Debug.Log("°ÔÀÓÀÌ Á¾·áµË´Ï´Ù.");
+        Debug.Log("ê²Œì„ì´ ì¢…ë£Œë©ë‹ˆë‹¤.");
         Application.Quit();
 
 #if UNITY_EDITOR

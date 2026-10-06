@@ -1,21 +1,21 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
-    [Header("¿¬°áÇÒ ´ë»ó")]
+    [Header("ì—°ê²°í•  ëŒ€ìƒ")]
     public PlayerController player;
 
-    [Header("½ÃÁ¡ ÀüÈ¯ ¼Óµµ")]
+    [Header("ì‹œì  ì „í™˜ ì†ë„")]
     public float transitionSpeed = 8.0f;
 
-    [Header("Å¾ºä ¼¼ÆÃ")]
+    [Header("íƒ‘ë·° ì„¸íŒ…")]
     public Vector3 topDownOffset = new Vector3(0, 10, -7);
     public Vector3 topDownRotation = new Vector3(55, 0, 0);
     public float topDownFOV = 60f;
 
-    [Header("TPS ¼¼ÆÃ (¼öÁ¤º» Àû¿ë)")]
-    public Vector3 tpsOffset = new Vector3(0.5f, 1.5f, -3f); // YÃà 1.5f ¹İ¿µ
-    public float tpsFOV = 90f; // FOV 90 ¹İ¿µ
+    [Header("TPS ì„¸íŒ… (ìˆ˜ì •ë³¸ ì ìš©)")]
+    public Vector3 tpsOffset = new Vector3(0.5f, 1.5f, -3f); // Yì¶• 1.5f ë°˜ì˜
+    public float tpsFOV = 90f; // FOV 90 ë°˜ì˜
 
     private Camera cam;
     private float viewBlend = 0f;
@@ -27,33 +27,33 @@ public class CameraController : MonoBehaviour
 
     void LateUpdate()
     {
-        // ¡Ú ¼öÁ¤µÈ ¹æ¾î ÄÚµå: player º¯¼ö(PlayerController)°¡ ºñ¾îÀÖ´Ù¸é ½º½º·Î Ã£¾Æ ¿¬°áÇÕ´Ï´Ù.
+        // â˜… ìˆ˜ì •ëœ ë°©ì–´ ì½”ë“œ: player ë³€ìˆ˜(PlayerController)ê°€ ë¹„ì–´ìˆë‹¤ë©´ ìŠ¤ìŠ¤ë¡œ ì°¾ì•„ ì—°ê²°í•©ë‹ˆë‹¤.
         if (player == null)
         {
             GameObject playerObj = GameObject.FindWithTag("Player");
             if (playerObj != null)
             {
-                // ÇÙ½É: ¿ÀºêÁ§Æ®ÀÇ transformÀÌ ¾Æ´Ï¶ó PlayerController ÄÄÆ÷³ÍÆ®¸¦ °¡Á®¿Í¾ß ÇÕ´Ï´Ù.
+                // í•µì‹¬: ì˜¤ë¸Œì íŠ¸ì˜ transformì´ ì•„ë‹ˆë¼ PlayerController ì»´í¬ë„ŒíŠ¸ë¥¼ ê°€ì ¸ì™€ì•¼ í•©ë‹ˆë‹¤.
                 player = playerObj.GetComponent<PlayerController>();
-                Debug.Log("CameraController: ÇÃ·¹ÀÌ¾î(PlayerController)¸¦ ÀÚµ¿À¸·Î Ã£¾Ò½À´Ï´Ù.");
+                Debug.Log("CameraController: í”Œë ˆì´ì–´(PlayerController)ë¥¼ ìë™ìœ¼ë¡œ ì°¾ì•˜ìŠµë‹ˆë‹¤.");
             }
-            return; // ´ë»óÀ» Ã£´Â µ¿¾ÈÀº ¾Æ·¡ ÀÌµ¿ ·ÎÁ÷À» °Ç³Ê¶İ´Ï´Ù.
+            return; // ëŒ€ìƒì„ ì°¾ëŠ” ë™ì•ˆì€ ì•„ë˜ ì´ë™ ë¡œì§ì„ ê±´ë„ˆëœë‹ˆë‹¤.
         }
 
-        // --- ¿©±â¼­ºÎÅÍ Á¤»óÀûÀÎ Ä«¸Ş¶ó ÃßÀû ¹× ½ÃÁ¡ ÀüÈ¯ ·ÎÁ÷ ---
+        // --- ì—¬ê¸°ì„œë¶€í„° ì •ìƒì ì¸ ì¹´ë©”ë¼ ì¶”ì  ë° ì‹œì  ì „í™˜ ë¡œì§ ---
 
         float targetBlend = player.isTPS ? 1f : 0f;
         viewBlend = Mathf.Lerp(viewBlend, targetBlend, Time.deltaTime * transitionSpeed);
 
-        // Å¾ºä À§Ä¡/È¸Àü °è»ê
+        // íƒ‘ë·° ìœ„ì¹˜/íšŒì „ ê³„ì‚°
         Vector3 tdPos = player.transform.position + topDownOffset;
         Quaternion tdRot = Quaternion.Euler(topDownRotation);
 
-        // TPS À§Ä¡/È¸Àü °è»ê
+        // TPS ìœ„ì¹˜/íšŒì „ ê³„ì‚°
         Quaternion tpsRot = Quaternion.Euler(player.cameraPitch, player.transform.eulerAngles.y, 0);
         Vector3 tpsPos = player.transform.position + tpsRot * tpsOffset;
 
-        // Ä«¸Ş¶ó ÀÌµ¿, È¸Àü, FOV ½Ç½Ã°£ Àû¿ë
+        // ì¹´ë©”ë¼ ì´ë™, íšŒì „, FOV ì‹¤ì‹œê°„ ì ìš©
         transform.position = Vector3.Lerp(tdPos, tpsPos, viewBlend);
         transform.rotation = Quaternion.Slerp(tdRot, tpsRot, viewBlend);
         cam.fieldOfView = Mathf.Lerp(topDownFOV, tpsFOV, viewBlend);

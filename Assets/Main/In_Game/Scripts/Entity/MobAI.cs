@@ -1,22 +1,22 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.AI;
 
 public class MobAI : MonoBehaviour
 {
     public enum MobType { Melee, Ranged, Multi }
 
-    [Header("¸ó½ºÅÍ ¼³Á¤")]
+    [Header("ëª¬ìŠ¤í„° ì„¤ì •")]
     public MobType type;
     public float maintainDistance = 1.0f;
     public EntityData myData;
 
-    // [ÃÖÀûÈ­] ÄÄÆ÷³ÍÆ® ÂüÁ¶¸¦ Ä³½ÌÇÒ º¯¼öµé
+    // [ìµœì í™”] ì»´í¬ë„ŒíŠ¸ ì°¸ì¡°ë¥¼ ìºì‹±í•  ë³€ìˆ˜ë“¤
     private NavMeshAgent agent;
     private Health health;
     private Weapon weapon;
     private Transform player;
 
-    // ¿ÀºêÁ§Æ®°¡ »ı¼ºµÉ ¶§ ÃÖÃÊ 1È¸¸¸ È£ÃâµÇ¾î ÄÄÆ÷³ÍÆ® Å½»ö ºÎÇÏ¸¦ ÃÖ¼ÒÈ­ÇÕ´Ï´Ù.
+    // ì˜¤ë¸Œì íŠ¸ê°€ ìƒì„±ë  ë•Œ ìµœì´ˆ 1íšŒë§Œ í˜¸ì¶œë˜ì–´ ì»´í¬ë„ŒíŠ¸ íƒìƒ‰ ë¶€í•˜ë¥¼ ìµœì†Œí™”í•©ë‹ˆë‹¤.
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
@@ -24,10 +24,10 @@ public class MobAI : MonoBehaviour
         weapon = GetComponentInChildren<Weapon>();
     }
 
-    // ¡Ú [Ä¡¸íÀû ¹ö±× ÇÈ½º] Start() ´ë½Å Ç®¿¡¼­ ²¨³»Á® È°¼ºÈ­µÉ ¶§¸¶´Ù È£ÃâµÇ´Â OnEnable() »ç¿ë
+    // â˜… [ì¹˜ëª…ì  ë²„ê·¸ í”½ìŠ¤] Start() ëŒ€ì‹  í’€ì—ì„œ êº¼ë‚´ì ¸ í™œì„±í™”ë  ë•Œë§ˆë‹¤ í˜¸ì¶œë˜ëŠ” OnEnable() ì‚¬ìš©
     void OnEnable()
     {
-        // Ä³½ÌµÈ µ¥ÀÌÅÍ°¡ ÀÖÀ» °æ¿ì ¸÷ÀÇ ½ºÅÈ°ú ¹«±â¸¦ »õ°ÍÃ³·³ ¿ÂÀüÈ÷ ÃÊ±âÈ­ÇÕ´Ï´Ù.
+        // ìºì‹±ëœ ë°ì´í„°ê°€ ìˆì„ ê²½ìš° ëª¹ì˜ ìŠ¤íƒ¯ê³¼ ë¬´ê¸°ë¥¼ ìƒˆê²ƒì²˜ëŸ¼ ì˜¨ì „íˆ ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
         if (myData != null)
         {
             if (agent != null) agent.speed = myData.moveSpeed;
@@ -38,17 +38,17 @@ public class MobAI : MonoBehaviour
 
     void Update()
     {
-        // Ä³½ÌµÈ ÇÃ·¹ÀÌ¾î°¡ ¾ø°Å³ª ÆÄ±«µÇ¾ú´Ù¸é, GameManagerÀÇ º¯¼ö¸¦ ÂüÁ¶ÇÕ´Ï´Ù.
+        // ìºì‹±ëœ í”Œë ˆì´ì–´ê°€ ì—†ê±°ë‚˜ íŒŒê´´ë˜ì—ˆë‹¤ë©´, GameManagerì˜ ë³€ìˆ˜ë¥¼ ì°¸ì¡°í•©ë‹ˆë‹¤.
         if (player == null)
         {
             if (GameManager.Instance != null && GameManager.Instance.playerTransform != null)
             {
                 player = GameManager.Instance.playerTransform;
             }
-            return; // ÇÃ·¹ÀÌ¾î°¡ ¾ÆÁ÷ ¼¼ÆÃµÇÁö ¾Ê¾Ò´Ù¸é ´ë±â
+            return; // í”Œë ˆì´ì–´ê°€ ì•„ì§ ì„¸íŒ…ë˜ì§€ ì•Šì•˜ë‹¤ë©´ ëŒ€ê¸°
         }
 
-        // [ÀÌÈÄ ±âÁ¸ AI ÀÌµ¿ ·ÎÁ÷ À¯Áö...]
+        // [ì´í›„ ê¸°ì¡´ AI ì´ë™ ë¡œì§ ìœ ì§€...]
         float distance = Vector3.Distance(transform.position, player.position);
 
         if (type == MobType.Melee)

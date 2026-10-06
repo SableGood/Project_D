@@ -1,21 +1,21 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class PlayerController : MonoBehaviour
 {
-    [Header("ÀÌµ¿ ¹× È¸Àü ¼Óµµ")]
+    [Header("ì´ë™ ë° íšŒì „ ì†ë„")]
     public float moveSpeed = 5.0f;
     public float mouseSensitivity = 2.0f;
 
-    [Header("ÇöÀç ½ÃÁ¡ »óÅÂ")]
+    [Header("í˜„ì¬ ì‹œì  ìƒíƒœ")]
     public bool isTPS = false;
     public float cameraPitch = 15f;
 
-    [Header("ÇÃ·¹ÀÌ¾î µ¥ÀÌÅÍ ¼³Á¤")]
-    public EntityData myData; // ÀÎ½ºÆåÅÍ¿¡¼­ ¿¬°áÇÒ ÇÃ·¹ÀÌ¾î Àü¿ë ScriptableObject
+    [Header("í”Œë ˆì´ì–´ ë°ì´í„° ì„¤ì •")]
+    public EntityData myData; // ì¸ìŠ¤í™í„°ì—ì„œ ì—°ê²°í•  í”Œë ˆì´ì–´ ì „ìš© ScriptableObject
 
     private CharacterController controller;
 
-    // ¡Ú [Ãß°¡] ½ºÆù ½ÃÁ¡ÀÇ Á¤»óÀûÀÎ ¹Ù´Ú ³ôÀÌ¸¦ ±â¾ïÇÒ º¯¼ö
+    // â˜… [ì¶”ê°€] ìŠ¤í° ì‹œì ì˜ ì •ìƒì ì¸ ë°”ë‹¥ ë†’ì´ë¥¼ ê¸°ì–µí•  ë³€ìˆ˜
     private float defaultYPos;
 
     void Start()
@@ -27,25 +27,25 @@ public class PlayerController : MonoBehaviour
         }
         UpdateCursorState();
 
-        // °ÔÀÓ ½ÃÀÛ ½Ã, GameManager¿¡ ÀÚ½ÅÀÇ Transform(À§Ä¡)À» µî·ÏÇÕ´Ï´Ù.
+        // ê²Œì„ ì‹œì‘ ì‹œ, GameManagerì— ìì‹ ì˜ Transform(ìœ„ì¹˜)ì„ ë“±ë¡í•©ë‹ˆë‹¤.
         if (GameManager.Instance != null)
         {
             GameManager.Instance.RegisterPlayer(transform);
         }
 
-        // ÇÃ·¹ÀÌ¾î ½ºÆù ½Ã EntityData¸¦ ±â¹İÀ¸·Î Ã¼·Â ½ºÅÈÀ» ÃÊ±âÈ­ÇÕ´Ï´Ù.
+        // í”Œë ˆì´ì–´ ìŠ¤í° ì‹œ EntityDataë¥¼ ê¸°ë°˜ìœ¼ë¡œ ì²´ë ¥ ìŠ¤íƒ¯ì„ ì´ˆê¸°í™”í•©ë‹ˆë‹¤.
         Health health = GetComponent<Health>();
         if (health != null && myData != null)
         {
             health.InitStats(myData);
-            Debug.Log($"ÇÃ·¹ÀÌ¾î ½ºÅÈ ÃÊ±âÈ­ ¿Ï·á! ÃÖ´ë Ã¼·Â: {health.maxHealth}");
+            Debug.Log($"í”Œë ˆì´ì–´ ìŠ¤íƒ¯ ì´ˆê¸°í™” ì™„ë£Œ! ìµœëŒ€ ì²´ë ¥: {health.maxHealth}");
         }
         else if (myData == null)
         {
-            Debug.LogWarning("PlayerController: myData(EntityData)°¡ ÇÒ´çµÇÁö ¾Ê¾Æ Ã¼·ÂÀ» ÃÊ±âÈ­ÇÒ ¼ö ¾ø½À´Ï´Ù.");
+            Debug.LogWarning("PlayerController: myData(EntityData)ê°€ í• ë‹¹ë˜ì§€ ì•Šì•„ ì²´ë ¥ì„ ì´ˆê¸°í™”í•  ìˆ˜ ì—†ìŠµë‹ˆë‹¤.");
         }
 
-        // ¡Ú [ÇÙ½É Ãß°¡] GameManager°¡ µ¿ÀûÀ¸·Î °è»êÇØÁØ ¿Ïº®ÇÑ ½ºÆù ³ôÀÌ¸¦ ±â·ÏÇØµÓ´Ï´Ù.
+        // â˜… [í•µì‹¬ ì¶”ê°€] GameManagerê°€ ë™ì ìœ¼ë¡œ ê³„ì‚°í•´ì¤€ ì™„ë²½í•œ ìŠ¤í° ë†’ì´ë¥¼ ê¸°ë¡í•´ë‘¡ë‹ˆë‹¤.
         defaultYPos = transform.position.y;
     }
 
@@ -92,39 +92,39 @@ public class PlayerController : MonoBehaviour
             moveDirection = new Vector3(h, 0, v).normalized;
         }
 
-        // ¡Ú [ÇÙ½É ¹æ¾î ÄÚµå 1] ÀÌµ¿ º¤ÅÍ¿¡ ¼Óµµ¸¦ °öÇÑ µÚ, YÃà(À§¾Æ·¡) ¹°¸® »óÅÂ¸¦ °­Á¦ Á¦¾îÇÕ´Ï´Ù.
+        // â˜… [í•µì‹¬ ë°©ì–´ ì½”ë“œ 1] ì´ë™ ë²¡í„°ì— ì†ë„ë¥¼ ê³±í•œ ë’¤, Yì¶•(ìœ„ì•„ë˜) ë¬¼ë¦¬ ìƒíƒœë¥¼ ê°•ì œ ì œì–´í•©ë‹ˆë‹¤.
         moveDirection *= moveSpeed;
 
         if (controller.isGrounded)
         {
-            // ¶¥¿¡ ´ê¾ÆÀÖÀ» ¶§´Â ¸÷ÀÇ ¸Ó¸®¸¦ Å¸°í ¿Ã¶ó°¡Áö ¸øÇÏµµ·Ï ¹Ì¼¼ÇÏ°Ô ¹Ù´ÚÀ¸·Î °è¼Ó ´©¸¨´Ï´Ù.
+            // ë•…ì— ë‹¿ì•„ìˆì„ ë•ŒëŠ” ëª¹ì˜ ë¨¸ë¦¬ë¥¼ íƒ€ê³  ì˜¬ë¼ê°€ì§€ ëª»í•˜ë„ë¡ ë¯¸ì„¸í•˜ê²Œ ë°”ë‹¥ìœ¼ë¡œ ê³„ì† ëˆ„ë¦…ë‹ˆë‹¤.
             moveDirection.y = -0.1f;
         }
         else
         {
-            // °øÁß¿¡ ÀÖÀ» ¶§¸¸ Áß·ÂÀ» Àû¿ëÇÕ´Ï´Ù.
+            // ê³µì¤‘ì— ìˆì„ ë•Œë§Œ ì¤‘ë ¥ì„ ì ìš©í•©ë‹ˆë‹¤.
             moveDirection.y += Physics.gravity.y * Time.deltaTime;
         }
 
         controller.Move(moveDirection * Time.deltaTime);
 
-        // ¡Ú [ÇÙ½É ¹æ¾î ÄÚµå 2] ¸÷°ú ºñÁ¤»óÀûÀ¸·Î °ãÃÄ À¯´ÏÆ¼ ¹°¸® ¿£ÁøÀÌ Ä³¸¯ÅÍ¸¦ ÇÏ´Ã·Î ¹ß»çÇßÀ» °æ¿ìÀÇ ÃÖÈÄ ¾ÈÀüÀåÄ¡
-        if (transform.position.y > defaultYPos + 1.0f) // Á¤»ó ³ôÀÌº¸´Ù 1 ÀÌ»ó ¼Ú±¸Ä¡¸é °¨Áö
+        // â˜… [í•µì‹¬ ë°©ì–´ ì½”ë“œ 2] ëª¹ê³¼ ë¹„ì •ìƒì ìœ¼ë¡œ ê²¹ì³ ìœ ë‹ˆí‹° ë¬¼ë¦¬ ì—”ì§„ì´ ìºë¦­í„°ë¥¼ í•˜ëŠ˜ë¡œ ë°œì‚¬í–ˆì„ ê²½ìš°ì˜ ìµœí›„ ì•ˆì „ì¥ì¹˜
+        if (transform.position.y > defaultYPos + 1.0f) // ì •ìƒ ë†’ì´ë³´ë‹¤ 1 ì´ìƒ ì†Ÿêµ¬ì¹˜ë©´ ê°ì§€
         {
-            // CharacterController°¡ ÄÑÁ® ÀÖÀ¸¸é transform À§Ä¡ °­Á¦ º¯°æÀÌ ¹«½ÃµÇ¹Ç·Î Àá½Ã ²ü´Ï´Ù.
+            // CharacterControllerê°€ ì¼œì ¸ ìˆìœ¼ë©´ transform ìœ„ì¹˜ ê°•ì œ ë³€ê²½ì´ ë¬´ì‹œë˜ë¯€ë¡œ ì ì‹œ ë•ë‹ˆë‹¤.
             controller.enabled = false;
 
             Vector3 correctedPos = transform.position;
-            correctedPos.y = defaultYPos; // ½ºÆùµÇ¾ú´ø Á¤»óÀûÀÎ ¹Ù´Ú ³ôÀÌ·Î Áï½Ã ²ø¾î³»¸²
+            correctedPos.y = defaultYPos; // ìŠ¤í°ë˜ì—ˆë˜ ì •ìƒì ì¸ ë°”ë‹¥ ë†’ì´ë¡œ ì¦‰ì‹œ ëŒì–´ë‚´ë¦¼
             transform.position = correctedPos;
 
-            controller.enabled = true; // º¸Á¤ ¿Ï·á ÈÄ ´Ù½Ã ÄÔ
+            controller.enabled = true; // ë³´ì • ì™„ë£Œ í›„ ë‹¤ì‹œ ì¼¬
         }
     }
 
     private void UpdateCursorState()
     {
-        // UI Á¶ÀÛÀº PlayerHUD·Î ÀÌ°üÇÏ°í, ¿©±â¼­´Â ¸¶¿ì½º Ä¿¼­ »óÅÂ¸¸ Á¦¾îÇÕ´Ï´Ù.
+        // UI ì¡°ì‘ì€ PlayerHUDë¡œ ì´ê´€í•˜ê³ , ì—¬ê¸°ì„œëŠ” ë§ˆìš°ìŠ¤ ì»¤ì„œ ìƒíƒœë§Œ ì œì–´í•©ë‹ˆë‹¤.
         if (isTPS)
         {
             Cursor.lockState = CursorLockMode.Locked;

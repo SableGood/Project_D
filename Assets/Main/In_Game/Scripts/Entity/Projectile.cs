@@ -1,14 +1,14 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class Projectile : MonoBehaviour
 {
     public enum ProjectileType { Homing, Straight, Parabolic }
 
-    [Header("Åõ»çÃ¼ ¸ğµå ¹× ½ºÆå ¼³Á¤")]
+    [Header("íˆ¬ì‚¬ì²´ ëª¨ë“œ ë° ìŠ¤í™ ì„¤ì •")]
     public ProjectileType projectileType = ProjectileType.Homing;
     public float speed = 15.0f;
 
-    // ¿ÜºÎ(Weapon)¿¡¼­ ÁÖÀÔ¹Ş´Â µ¿Àû ½ºÆå
+    // ì™¸ë¶€(Weapon)ì—ì„œ ì£¼ì…ë°›ëŠ” ë™ì  ìŠ¤í™
     [HideInInspector] public int attackDamage;
     [HideInInspector] public LayerMask targetLayer;
 
@@ -18,7 +18,7 @@ public class Projectile : MonoBehaviour
     private Vector3 targetPos;
     private float journeyTime = 0f;
 
-    // ÀÚµ¿ ¿¡ÀÓ(Å¸°Ù Á¸Àç) ÃÊ±âÈ­
+    // ìë™ ì—ì„(íƒ€ê²Ÿ ì¡´ì¬) ì´ˆê¸°í™”
     public void InitializeAuto(Transform targetTransform)
     {
         target = targetTransform;
@@ -31,10 +31,10 @@ public class Projectile : MonoBehaviour
         journeyTime = 0f;
     }
 
-    // ¼öµ¿ ¿¡ÀÓ(ÁÂÇ¥ ¹ß»ç) ÃÊ±âÈ­
+    // ìˆ˜ë™ ì—ì„(ì¢Œí‘œ ë°œì‚¬) ì´ˆê¸°í™”
     public void InitializeManual(Vector3 aimPosition)
     {
-        target = null; // °íÁ¤µÈ Å¸°ÙÀÌ ¾øÀ½
+        target = null; // ê³ ì •ëœ íƒ€ê²Ÿì´ ì—†ìŒ
         targetPos = aimPosition;
         straightDir = (targetPos - transform.position).normalized;
         startPos = transform.position;
@@ -56,7 +56,7 @@ public class Projectile : MonoBehaviour
                 break;
         }
 
-        // ¡Ú [ÇÙ½É] ¼öµ¿ Á¶ÁØ µî ¶ô¿Â Å¸°ÙÀÌ ¾øÀ» °æ¿ì ºñÇà µµÁß Ãæµ¹(¸íÁß) °Ë»ç¸¦ º°µµ·Î ¼öÇà
+        // â˜… [í•µì‹¬] ìˆ˜ë™ ì¡°ì¤€ ë“± ë½ì˜¨ íƒ€ê²Ÿì´ ì—†ì„ ê²½ìš° ë¹„í–‰ ë„ì¤‘ ì¶©ëŒ(ëª…ì¤‘) ê²€ì‚¬ë¥¼ ë³„ë„ë¡œ ìˆ˜í–‰
         if (target == null)
         {
             Collider[] hits = Physics.OverlapSphere(transform.position, 0.5f, targetLayer);
@@ -125,16 +125,16 @@ public class Projectile : MonoBehaviour
 
         if (journeyTime >= 1.0f)
         {
-            // µµ´Ş ½ÃÁ¡ Å¸°İ. Å¸°ÙÀÌ ¾øÀ¸¸é µµÂø ÁöÁ¡¿¡¼­ ¹üÀ§ Æø¹ß
+            // ë„ë‹¬ ì‹œì  íƒ€ê²©. íƒ€ê²Ÿì´ ì—†ìœ¼ë©´ ë„ì°© ì§€ì ì—ì„œ ë²”ìœ„ í­ë°œ
             HitTarget(target);
         }
     }
 
-    [Header("Æø¹ß ¹üÀ§ ¼³Á¤ (Shell/Æ÷°İ Àü¿ë)")]
+    [Header("í­ë°œ ë²”ìœ„ ì„¤ì • (Shell/í¬ê²© ì „ìš©)")]
     public bool isAreaOfEffect = false;
     public float explosionRadius = 3.0f;
 
-    // Æ¯Á¤ ¸íÁß ´ë»ó(hitTransform)ÀÌ ÀÖÀ» °æ¿ì ¿ì¼± µ¥¹ÌÁö Ã³¸®
+    // íŠ¹ì • ëª…ì¤‘ ëŒ€ìƒ(hitTransform)ì´ ìˆì„ ê²½ìš° ìš°ì„  ë°ë¯¸ì§€ ì²˜ë¦¬
     private void HitTarget(Transform hitTransform = null)
     {
         if (hitTransform != null)
@@ -154,7 +154,7 @@ public class Projectile : MonoBehaviour
                 Health areaHealth = hit.GetComponent<Health>();
                 if (areaHealth != null)
                 {
-                    areaHealth.TakeDamage(attackDamage); // ¹üÀ§ ³» Ãß°¡ µ¥¹ÌÁö
+                    areaHealth.TakeDamage(attackDamage); // ë²”ìœ„ ë‚´ ì¶”ê°€ ë°ë¯¸ì§€
                 }
             }
         }

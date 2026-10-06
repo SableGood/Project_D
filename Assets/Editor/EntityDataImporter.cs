@@ -1,31 +1,31 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEditor;
 using System.IO;
 
 public class EntityDataImporter : MonoBehaviour
 {
-    [MenuItem("Tools/CSV µ¥ÀÌÅÍ »ı¼º/1. °³Ã¼ ¹× ¹«±â (Mob_Data)")]
+    [MenuItem("Tools/CSV ë°ì´í„° ìƒì„±/1. ê°œì²´ ë° ë¬´ê¸° (Mob_Data)")]
     public static void ImportCSVData()
     {
         TextAsset csvData = Resources.Load<TextAsset>("Mob_Data");
         if (csvData == null)
         {
-            Debug.LogError("Resources Æú´õ¿¡ Mob_Data.csv ÆÄÀÏÀ» Ã£À» ¼ö ¾ø½À´Ï´Ù!");
+            Debug.LogError("Resources í´ë”ì— Mob_Data.csv íŒŒì¼ì„ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤!");
             return;
         }
 
-        // 1. ±âº» Æú´õ ¹× ÇÏÀ§ Æú´õ »ı¼º (¾øÀ» °æ¿ì¿¡¸¸)
+        // 1. ê¸°ë³¸ í´ë” ë° í•˜ìœ„ í´ë” ìƒì„± (ì—†ì„ ê²½ìš°ì—ë§Œ)
         CreateFolderIfNotExists("Assets", "Resources");
         CreateFolderIfNotExists("Assets/Resources", "Data");
         CreateFolderIfNotExists("Assets/Resources/Data", "Weapons");
         CreateFolderIfNotExists("Assets/Resources/Data", "Entities");
 
-        // Weapons ÇÏÀ§ ºĞ·ù Æú´õ »ı¼º
+        // Weapons í•˜ìœ„ ë¶„ë¥˜ í´ë” ìƒì„±
         CreateFolderIfNotExists("Assets/Resources/Data/Weapons", "Mobs");
         CreateFolderIfNotExists("Assets/Resources/Data/Weapons", "Player");
         CreateFolderIfNotExists("Assets/Resources/Data/Weapons", "Turrets");
 
-        // Entities ÇÏÀ§ ºĞ·ù Æú´õ »ı¼º
+        // Entities í•˜ìœ„ ë¶„ë¥˜ í´ë” ìƒì„±
         CreateFolderIfNotExists("Assets/Resources/Data/Entities", "Mobs");
         CreateFolderIfNotExists("Assets/Resources/Data/Entities", "Player");
         CreateFolderIfNotExists("Assets/Resources/Data/Entities", "Turrets");
@@ -54,17 +54,17 @@ public class EntityDataImporter : MonoBehaviour
             float speed = ParseFloat(cols[11]);
             int cost = (int)ParseFloat(cols[12]);
 
-            // ¡Ú ÅÂ±×¿¡ µû¸¥ ¼­ºê Æú´õ ÀÌ¸§ °áÁ¤
-            string subFolder = "Mobs"; // ±âº»°ª
+            // â˜… íƒœê·¸ì— ë”°ë¥¸ ì„œë¸Œ í´ë” ì´ë¦„ ê²°ì •
+            string subFolder = "Mobs"; // ê¸°ë³¸ê°’
             if (tag == "Player") subFolder = "Player";
             else if (tag == "Turret") subFolder = "Turrets";
 
-            WeaponData weaponData = null; // ÃÊ±âÈ­
+            WeaponData weaponData = null; // ì´ˆê¸°í™”
 
-            // ¡Ú [ÇÙ½É ¼öÁ¤] ÇÃ·¹ÀÌ¾î°¡ ¾Æ´Ò ¶§¸¸(¸÷, Å¸¿öÀÏ ¶§¸¸) ¹«±â µ¥ÀÌÅÍ¸¦ »ı¼ºÇÕ´Ï´Ù.
+            // â˜… [í•µì‹¬ ìˆ˜ì •] í”Œë ˆì´ì–´ê°€ ì•„ë‹ ë•Œë§Œ(ëª¹, íƒ€ì›Œì¼ ë•Œë§Œ) ë¬´ê¸° ë°ì´í„°ë¥¼ ìƒì„±í•©ë‹ˆë‹¤.
             if (tag != "Player")
             {
-                // ===== 2. ¹«±â(Weapon) µ¥ÀÌÅÍ µ¤¾î¾²±â or »ı¼º ¹× Æú´õ ºĞ·ù =====
+                // ===== 2. ë¬´ê¸°(Weapon) ë°ì´í„° ë®ì–´ì“°ê¸° or ìƒì„± ë° í´ë” ë¶„ë¥˜ =====
                 string weaponAssetPath = $"Assets/Resources/Data/Weapons/{subFolder}/Wep_{code}.asset";
                 weaponData = AssetDatabase.LoadAssetAtPath<WeaponData>(weaponAssetPath);
                 bool isNewWeapon = false;
@@ -75,7 +75,7 @@ public class EntityDataImporter : MonoBehaviour
                     isNewWeapon = true;
                 }
 
-                // °ª °»½Å
+                // ê°’ ê°±ì‹ 
                 weaponData.weaponName = code + "_Weapon";
                 weaponData.attackPower = atk;
                 weaponData.attackSpeed = atkSpeed;
@@ -90,7 +90,7 @@ public class EntityDataImporter : MonoBehaviour
                 else EditorUtility.SetDirty(weaponData);
             }
 
-            // ===== 3. °³Ã¼(Entity) µ¥ÀÌÅÍ µ¤¾î¾²±â or »ı¼º ¹× Æú´õ ºĞ·ù =====
+            // ===== 3. ê°œì²´(Entity) ë°ì´í„° ë®ì–´ì“°ê¸° or ìƒì„± ë° í´ë” ë¶„ë¥˜ =====
             string entityAssetPath = $"Assets/Resources/Data/Entities/{subFolder}/Ent_{code}.asset";
             EntityData entityData = AssetDatabase.LoadAssetAtPath<EntityData>(entityAssetPath);
             bool isNewEntity = false;
@@ -108,7 +108,7 @@ public class EntityDataImporter : MonoBehaviour
             entityData.moveSpeed = speed;
             entityData.cost = cost;
 
-            // ¡Ú ÇÃ·¹ÀÌ¾î¸é nullÀÌ µé¾î°¡°í, ¸÷/Å¸¿ö¸é À§¿¡¼­ »ı¼ºÇÑ Àü¿ë ¹«±â°¡ µé¾î°©´Ï´Ù.
+            // â˜… í”Œë ˆì´ì–´ë©´ nullì´ ë“¤ì–´ê°€ê³ , ëª¹/íƒ€ì›Œë©´ ìœ„ì—ì„œ ìƒì„±í•œ ì „ìš© ë¬´ê¸°ê°€ ë“¤ì–´ê°‘ë‹ˆë‹¤.
             entityData.defaultWeapon = weaponData;
 
             if (tag == "Player") entityData.entityType = EntityType.Player;
@@ -122,10 +122,10 @@ public class EntityDataImporter : MonoBehaviour
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
 
-        Debug.Log("CSV µ¥ÀÌÅÍ °»½Å ¹× ÀüÃ¼ ÀÚµ¿ ºĞ·ù ¿Ï·á! (ÇÃ·¹ÀÌ¾î ¹«±â Âî²¨±â ºĞ¸® Àû¿ë)");
+        Debug.Log("CSV ë°ì´í„° ê°±ì‹  ë° ì „ì²´ ìë™ ë¶„ë¥˜ ì™„ë£Œ! (í”Œë ˆì´ì–´ ë¬´ê¸° ì°Œêº¼ê¸° ë¶„ë¦¬ ì ìš©)");
     }
 
-    // Æú´õ°¡ ¾øÀ¸¸é »ı¼ºÇØÁÖ´Â ÇïÆÛ ÇÔ¼ö
+    // í´ë”ê°€ ì—†ìœ¼ë©´ ìƒì„±í•´ì£¼ëŠ” í—¬í¼ í•¨ìˆ˜
     private static void CreateFolderIfNotExists(string parentFolder, string newFolderName)
     {
         string fullPath = parentFolder + "/" + newFolderName;

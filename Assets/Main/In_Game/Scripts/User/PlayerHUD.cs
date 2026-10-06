@@ -1,9 +1,9 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.UI;
 
 public class PlayerHUD : MonoBehaviour
 {
-    [Header("HP UI ¿¬°á (ÇÏÀÌ¶óÅ° ±¸Á¶ ¹İ¿µ)")]
+    [Header("HP UI ì—°ê²° (í•˜ì´ë¼í‚¤ êµ¬ì¡° ë°˜ì˜)")]
     public Text hpNumericText;
     public Image hpBarImage;
     public GameObject[] crosshairs;
@@ -14,13 +14,13 @@ public class PlayerHUD : MonoBehaviour
 
     void Start()
     {
-        // ¾À ½ÃÀÛ ½Ã Å©·Î½ºÇì¾î¸¦ ¸ğµÎ ¼û±â´Â ÃÊ±âÈ­ ÀÛ¾÷¸¸ ¼öÇàÇÕ´Ï´Ù.
+        // ì”¬ ì‹œì‘ ì‹œ í¬ë¡œìŠ¤í—¤ì–´ë¥¼ ëª¨ë‘ ìˆ¨ê¸°ëŠ” ì´ˆê¸°í™” ì‘ì—…ë§Œ ìˆ˜í–‰í•©ë‹ˆë‹¤.
         UpdateCrosshair();
     }
 
     void Update()
     {
-        // 1. ÇÃ·¹ÀÌ¾î Áö¿¬ ÇÒ´ç (GameManager ¿¬µ¿ ÃÖÀûÈ­)
+        // 1. í”Œë ˆì´ì–´ ì§€ì—° í• ë‹¹ (GameManager ì—°ë™ ìµœì í™”)
         if (playerController == null || playerHealth == null)
         {
             if (GameManager.Instance != null && GameManager.Instance.playerTransform != null)
@@ -28,12 +28,12 @@ public class PlayerHUD : MonoBehaviour
                 GameObject player = GameManager.Instance.playerTransform.gameObject;
                 playerHealth = player.GetComponent<Health>();
                 playerController = player.GetComponent<PlayerController>();
-                Debug.Log("PlayerHUD: GameManager¸¦ ÅëÇØ ÇÃ·¹ÀÌ¾î¸¦ ¼º°øÀûÀ¸·Î Ã£¾Ò½À´Ï´Ù.");
+                Debug.Log("PlayerHUD: GameManagerë¥¼ í†µí•´ í”Œë ˆì´ì–´ë¥¼ ì„±ê³µì ìœ¼ë¡œ ì°¾ì•˜ìŠµë‹ˆë‹¤.");
             }
-            return; // ÇÃ·¹ÀÌ¾î¸¦ Ã£´Â µ¿¾ÈÀº ¾Æ·¡ UI °»½Å ·ÎÁ÷À» °Ç³Ê¶Ü
+            return; // í”Œë ˆì´ì–´ë¥¼ ì°¾ëŠ” ë™ì•ˆì€ ì•„ë˜ UI ê°±ì‹  ë¡œì§ì„ ê±´ë„ˆëœ€
         }
 
-        // 2. ½Ç½Ã°£À¸·Î ÇÃ·¹ÀÌ¾î Ã¼·Â ¹× Å©·Î½ºÇì¾î »óÅÂ °»½Å
+        // 2. ì‹¤ì‹œê°„ìœ¼ë¡œ í”Œë ˆì´ì–´ ì²´ë ¥ ë° í¬ë¡œìŠ¤í—¤ì–´ ìƒíƒœ ê°±ì‹ 
         UpdatePlayerHUD();
         SyncCrosshairVisibility();
     }

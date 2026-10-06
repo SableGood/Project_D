@@ -1,35 +1,35 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System.Text;
 
 public class ProjectExporter : MonoBehaviour
 {
-    [MenuItem("Tools/ÇÁ·ÎÁ§Æ® ±¸Á¶ ³»º¸³»±â (TXT)")]
+    [MenuItem("Tools/í”„ë¡œì íŠ¸ êµ¬ì¡° ë‚´ë³´ë‚´ê¸° (TXT)")]
     public static void ExportProjectStructure()
     {
         string targetPath = "Assets";
         StringBuilder sb = new StringBuilder();
         sb.AppendLine("=== Project_D Assets Structure ===");
 
-        // Assets Æú´õ ³»ÀÇ ¸ğµç ÆÄÀÏ °æ·Î¸¦ °¡Á®¿É´Ï´Ù.
+        // Assets í´ë” ë‚´ì˜ ëª¨ë“  íŒŒì¼ ê²½ë¡œë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
         string[] files = Directory.GetFiles(targetPath, "*.*", SearchOption.AllDirectories);
 
         foreach (string file in files)
         {
-            // .meta ÆÄÀÏÀº ±¸Á¶ ÆÄ¾Ç¿¡ ºÒÇÊ¿äÇÏ¹Ç·Î Á¦¿ÜÇÕ´Ï´Ù.
+            // .meta íŒŒì¼ì€ êµ¬ì¡° íŒŒì•…ì— ë¶ˆí•„ìš”í•˜ë¯€ë¡œ ì œì™¸í•©ë‹ˆë‹¤.
             if (file.EndsWith(".meta")) continue;
 
-            // À©µµ¿ì °æ·Î ½½·¡½Ã(\)¸¦ ÅëÀÏ(/)ÇÏ¿© º¸±â ÁÁ°Ô ¸¸µì´Ï´Ù.
+            // ìœˆë„ìš° ê²½ë¡œ ìŠ¬ë˜ì‹œ(\)ë¥¼ í†µì¼(/)í•˜ì—¬ ë³´ê¸° ì¢‹ê²Œ ë§Œë“­ë‹ˆë‹¤.
             sb.AppendLine(file.Replace("\\", "/"));
         }
 
-        // ÇÁ·ÎÁ§Æ® ÃÖ»óÀ§ °æ·Î(Assets Æú´õ ¹Ù±ù)¿¡ ÅØ½ºÆ® ÆÄÀÏ·Î ÀúÀåÇÕ´Ï´Ù.
+        // í”„ë¡œì íŠ¸ ìµœìƒìœ„ ê²½ë¡œ(Assets í´ë” ë°”ê¹¥)ì— í…ìŠ¤íŠ¸ íŒŒì¼ë¡œ ì €ì¥í•©ë‹ˆë‹¤.
         string savePath = Application.dataPath + "/../ProjectStructure.txt";
         File.WriteAllText(savePath, sb.ToString());
 
-        Debug.Log($"ÇÁ·ÎÁ§Æ® ±¸Á¶ ÃßÃâ ¿Ï·á! ÆÄÀÏ À§Ä¡: {savePath}");
-        // ÀúÀåµÈ Æú´õ¸¦ ÀÚµ¿À¸·Î ¿­¾îÁİ´Ï´Ù.
+        Debug.Log($"í”„ë¡œì íŠ¸ êµ¬ì¡° ì¶”ì¶œ ì™„ë£Œ! íŒŒì¼ ìœ„ì¹˜: {savePath}");
+        // ì €ì¥ëœ í´ë”ë¥¼ ìë™ìœ¼ë¡œ ì—´ì–´ì¤ë‹ˆë‹¤.
         EditorUtility.RevealInFinder(savePath);
     }
 }

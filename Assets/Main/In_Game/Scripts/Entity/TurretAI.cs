@@ -1,21 +1,21 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class TurretAI : MonoBehaviour
 {
-    [Header("Å¸¿ö ¼³Á¤")]
-    public EntityData myData;             // Æ÷Å¾ÀÇ ½ºÅÈ µ¥ÀÌÅÍ (Mob_Data.csv¿¡¼­ ÀÓÆ÷Æ®ÇÑ µ¥ÀÌÅÍ)
-    public Transform turretHead;          // ÁÂ¿ì·Î È¸ÀüÇÒ 'Æ÷Å¾' ÀÚ½Ä ¿ÀºêÁ§Æ®
-    public float rotationSpeed = 10f;     // È¸Àü ¼Óµµ
-    public float fireAngleThreshold = 5f; // ¸î µµ ÀÌ³»·Î Á¶ÁØµÇ¾úÀ» ¶§ »ç°İÇÒÁö (¿ÀÂ÷ Çã¿ë ¹üÀ§)
+    [Header("íƒ€ì›Œ ì„¤ì •")]
+    public EntityData myData;             // í¬íƒ‘ì˜ ìŠ¤íƒ¯ ë°ì´í„° (Mob_Data.csvì—ì„œ ì„í¬íŠ¸í•œ ë°ì´í„°)
+    public Transform turretHead;          // ì¢Œìš°ë¡œ íšŒì „í•  'í¬íƒ‘' ìì‹ ì˜¤ë¸Œì íŠ¸
+    public float rotationSpeed = 10f;     // íšŒì „ ì†ë„
+    public float fireAngleThreshold = 5f; // ëª‡ ë„ ì´ë‚´ë¡œ ì¡°ì¤€ë˜ì—ˆì„ ë•Œ ì‚¬ê²©í• ì§€ (ì˜¤ì°¨ í—ˆìš© ë²”ìœ„)
 
     private Weapon weapon;
     private Transform currentTarget;
-    private float checkRate = 0.2f;       // 0.2ÃÊ¸¶´Ù Å¸°Ù °»½Å (¼º´É ÃÖÀûÈ­)
+    private float checkRate = 0.2f;       // 0.2ì´ˆë§ˆë‹¤ íƒ€ê²Ÿ ê°±ì‹  (ì„±ëŠ¥ ìµœì í™”)
     private float nextCheckTime;
 
     void Awake()
     {
-        // 3Áß ±¸Á¶(¸öÅë -> Æ÷Å¾ -> ¹«±â) Áß ÇÏÀ§¿¡ ÀÖ´Â Weapon ÄÄÆ÷³ÍÆ®¸¦ Ã£¾Æ¿É´Ï´Ù.
+        // 3ì¤‘ êµ¬ì¡°(ëª¸í†µ -> í¬íƒ‘ -> ë¬´ê¸°) ì¤‘ í•˜ìœ„ì— ìˆëŠ” Weapon ì»´í¬ë„ŒíŠ¸ë¥¼ ì°¾ì•„ì˜µë‹ˆë‹¤.
         weapon = GetComponentInChildren<Weapon>();
     }
 
@@ -23,10 +23,10 @@ public class TurretAI : MonoBehaviour
     {
         if (myData != null && weapon != null)
         {
-            // µ¥ÀÌÅÍ ÁÖÀÔ ¹× Å¸¿ö Ã¼·Â ¼¼ÆÃ (Health ½ºÅ©¸³Æ®°¡ ÀÖ´Ù¸é ¿¬µ¿)
+            // ë°ì´í„° ì£¼ì… ë° íƒ€ì›Œ ì²´ë ¥ ì„¸íŒ… (Health ìŠ¤í¬ë¦½íŠ¸ê°€ ìˆë‹¤ë©´ ì—°ë™)
             weapon.InitWeapon(myData.defaultWeapon);
 
-            // ¡Ú ÇÙ½É: Æ÷Å¾ÀÌ ¸ñÇ¥¸¦ ¹Ù¶óº» ÈÄ Á÷Á¢ ½î°Ô ¸¸µé±â À§ÇØ °­Á¦·Î Manual(¼öµ¿) ¸ğµå·Î º¯°æÇÕ´Ï´Ù.
+            // â˜… í•µì‹¬: í¬íƒ‘ì´ ëª©í‘œë¥¼ ë°”ë¼ë³¸ í›„ ì§ì ‘ ì˜ê²Œ ë§Œë“¤ê¸° ìœ„í•´ ê°•ì œë¡œ Manual(ìˆ˜ë™) ëª¨ë“œë¡œ ë³€ê²½í•©ë‹ˆë‹¤.
             weapon.aimType = Weapon.AimType.Manual;
         }
     }
@@ -37,7 +37,7 @@ public class TurretAI : MonoBehaviour
         AimAndShoot();
     }
 
-    // »ç°Å¸® ³» °¡Àå °¡±î¿î Àû Å½»ö
+    // ì‚¬ê±°ë¦¬ ë‚´ ê°€ì¥ ê°€ê¹Œìš´ ì  íƒìƒ‰
     void FindTarget()
     {
         if (Time.time < nextCheckTime) return;
@@ -45,7 +45,7 @@ public class TurretAI : MonoBehaviour
 
         if (weapon == null) return;
 
-        // Weapon¿¡ ¼¼ÆÃµÈ »ç°Å¸®¿Í Å¸°Ù ·¹ÀÌ¾î¸¦ È°¿ëÇÏ¿© °ãÄ¡´Â Àû(Collider)µéÀ» Ã£½À´Ï´Ù.
+        // Weaponì— ì„¸íŒ…ëœ ì‚¬ê±°ë¦¬ì™€ íƒ€ê²Ÿ ë ˆì´ì–´ë¥¼ í™œìš©í•˜ì—¬ ê²¹ì¹˜ëŠ” ì (Collider)ë“¤ì„ ì°¾ìŠµë‹ˆë‹¤.
         Collider[] hits = Physics.OverlapSphere(transform.position, weapon.attackRange, weapon.targetLayer);
 
         float shortestDistance = Mathf.Infinity;
@@ -53,7 +53,7 @@ public class TurretAI : MonoBehaviour
 
         foreach (Collider hit in hits)
         {
-            float distance = (transform.position - hit.transform.position).sqrMagnitude; // sqrMagnitude·Î ¿¬»ê ¼Óµµ ÃÖÀûÈ­
+            float distance = (transform.position - hit.transform.position).sqrMagnitude; // sqrMagnitudeë¡œ ì—°ì‚° ì†ë„ ìµœì í™”
             if (distance < shortestDistance)
             {
                 shortestDistance = distance;
@@ -63,26 +63,26 @@ public class TurretAI : MonoBehaviour
         currentTarget = nearestEnemy;
     }
 
-    // ¸ñÇ¥¸¦ ÇâÇØ È¸ÀüÇÏ°í Á¤Á¶ÁØ ½Ã »ç°İ¸í·É ÇÏ´Ş
+    // ëª©í‘œë¥¼ í–¥í•´ íšŒì „í•˜ê³  ì •ì¡°ì¤€ ì‹œ ì‚¬ê²©ëª…ë ¹ í•˜ë‹¬
     void AimAndShoot()
     {
         if (currentTarget == null || weapon == null) return;
 
-        // 1. Å¸°Ù ¹æÇâ º¤ÅÍ °è»ê (Æ÷Å¾ÀÌ À§¾Æ·¡·Î ±îµü°Å¸®Áö ¾Ê°Ô YÃà È¸Àü¸¸ Àû¿ë)
+        // 1. íƒ€ê²Ÿ ë°©í–¥ ë²¡í„° ê³„ì‚° (í¬íƒ‘ì´ ìœ„ì•„ë˜ë¡œ ê¹Œë”±ê±°ë¦¬ì§€ ì•Šê²Œ Yì¶• íšŒì „ë§Œ ì ìš©)
         Vector3 dirToTarget = currentTarget.position - turretHead.position;
         dirToTarget.y = 0;
 
         if (dirToTarget.sqrMagnitude < 0.01f) return;
 
-        // 2. Æ÷Å¾ ¸Ó¸®(TurretHead)¸¦ ºÎµå·´°Ô È¸Àü (Slerp)
+        // 2. í¬íƒ‘ ë¨¸ë¦¬(TurretHead)ë¥¼ ë¶€ë“œëŸ½ê²Œ íšŒì „ (Slerp)
         Quaternion targetRotation = Quaternion.LookRotation(dirToTarget);
         turretHead.rotation = Quaternion.Slerp(turretHead.rotation, targetRotation, Time.deltaTime * rotationSpeed);
 
-        // 3. Á¶ÁØ °¢µµ °è»ê ¹× »ç°İ
-        // ÇöÀç Æ÷Å¾ÀÌ ¹Ù¶óº¸´Â ¹æÇâ(forward)°ú Å¸°Ù ¹æÇâ °£ÀÇ °¢µµ Â÷ÀÌ¸¦ Àì´Ï´Ù.
+        // 3. ì¡°ì¤€ ê°ë„ ê³„ì‚° ë° ì‚¬ê²©
+        // í˜„ì¬ í¬íƒ‘ì´ ë°”ë¼ë³´ëŠ” ë°©í–¥(forward)ê³¼ íƒ€ê²Ÿ ë°©í–¥ ê°„ì˜ ê°ë„ ì°¨ì´ë¥¼ ì½ë‹ˆë‹¤.
         float angleToTarget = Vector3.Angle(turretHead.forward, dirToTarget);
 
-        // ¿ÀÂ÷ ¹üÀ§(5µµ) ¾ÈÀ¸·Î µé¾î¿À¸é WeaponÀÇ ¼öµ¿ »ç°İ ·ÎÁ÷À» È£Ãâ!
+        // ì˜¤ì°¨ ë²”ìœ„(5ë„) ì•ˆìœ¼ë¡œ ë“¤ì–´ì˜¤ë©´ Weaponì˜ ìˆ˜ë™ ì‚¬ê²© ë¡œì§ì„ í˜¸ì¶œ!
         if (angleToTarget <= fireAngleThreshold)
         {
             weapon.ManualAttackCommand(currentTarget.position);

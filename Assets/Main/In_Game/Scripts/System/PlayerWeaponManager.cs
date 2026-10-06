@@ -1,30 +1,35 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class PlayerWeaponManager : MonoBehaviour
 {
-    [Header("¹«±â ÀåÂø À§Ä¡")]
+    [Header("ë¬´ê¸° ì¥ì°© ìœ„ì¹˜")]
     public Transform weaponMountPoint;
 
-    [Header("Å×½ºÆ®¿ë ¹«±â ÇÁ¸®ÆÕ ¸®½ºÆ®")]
-    [Tooltip("ÇÁ¸®ÆÕ ÀÌ¸§Àº ¹İµå½Ã W001, W002 µî ¹«±â ID¿Í µ¿ÀÏÇØ¾ß ÇÕ´Ï´Ù.")]
+    [Header("í…ŒìŠ¤íŠ¸ìš© ë¬´ê¸° í”„ë¦¬íŒ¹ ë¦¬ìŠ¤íŠ¸")]
+    [Tooltip("Tools/í”Œë ˆì´ì–´/2. í…ŒìŠ¤íŠ¸: ëª¨ë“  í”Œë ˆì´ì–´ ë¬´ê¸° ì¥ì°© ë©”ë‰´ë¡œ ìë™ìœ¼ë¡œ ì±„ìš¸ ìˆ˜ ìˆìŠµë‹ˆë‹¤.")]
     public GameObject[] weaponPrefabs;
+
+    [Header("ì¡°ì¤€")]
+    [Tooltip("TPS ì¡°ì¤€ ë ˆì´ê°€ ë¬´ì‹œí•  ë ˆì´ì–´ (ìê¸° ìì‹  ë“±)")]
+    public LayerMask tpsAimIgnoreLayers;
 
     private int currentWeaponIndex = 0;
     private GameObject currentWeaponInstance;
     private Weapon currentWeapon;
+    private WeaponVisual currentVisual;
     private PlayerController playerController;
+    private TowerBuilder towerBuilder;
 
     void Start()
     {
         playerController = GetComponent<PlayerController>();
+        towerBuilder = GetComponent<TowerBuilder>();
 
-        if (weaponMountPoint == null)
-        {
-            Transform found = transform.Find("WeaponMountPoint");
-            weaponMountPoint = found != null ? found : transform;
-        }
+        if (tpsAimIgnoreLayers.value == 0) tpsAimIgnoreLayers = LayerMask.GetMask("Player");
 
-        if (weaponPrefabs.Length > 0)
+        EnsureMountPoint();
+
+        if (weaponPrefabs != null && weaponPrefabs.Length > 0)
         {
             EquipWeapon(0);
         }
@@ -34,7 +39,7 @@ public class PlayerWeaponManager : MonoBehaviour
     {
         if (weaponPrefabs == null || weaponPrefabs.Length == 0) return;
 
-        // ¸¶¿ì½º ÈÙ ¹«±â ±³Ã¼
+        // ë§ˆìš°ìŠ¤ íœ  ë¬´ê¸° êµì²´
         float scroll = Input.GetAxis("Mouse ScrollWheel");
         if (scroll > 0f)
         {
@@ -45,85 +50,113 @@ public class PlayerWeaponManager : MonoBehaviour
             EquipWeapon((currentWeaponIndex - 1 + weaponPrefabs.Length) % weaponPrefabs.Length);
         }
 
-        // ¡Ú ¹ß»ç ¹æ½Ä(Auto/Semi) ¹× ÀçÀåÀü µ¥ÀÌÅÍ ¿¬µ¿
-        if (currentWeapon != null && currentWeapon.playerWepData != null)
+        if (currentWeapon == null) return;
+
+        // ì¡°ì¤€ì  ê³„ì‚° â†’ ë¬´ê¸° ì´ë¯¸ì§€ ë°©í–¥ ê°±ì‹  (ì‚¬ê²© ì—¬ë¶€ì™€ ë¬´ê´€í•˜ê²Œ í•­ìƒ)
+        Vector3 aimPoint = GetAimPoint();
+        if (currentVisual != null)
         {
-            // RÅ° ¼öµ¿ ÀåÀü
-            if (Input.GetKeyDown(KeyCode.R) && currentWeapon.currentAmmo < currentWeapon.playerWepData.maxAmmo)
-            {
-                StartCoroutine(currentWeapon.ReloadCoroutine());
-            }
+            currentVisual.SetAimPoint(aimPoint);
+            currentVisual.Refresh();
+        }
 
-            Vector3 aimPoint = GetAimPoint();
+        if (currentWeapon.playerWepData == null) return;
 
-            if (currentWeapon.playerWepData.fireMechanism == "Auto")
-            {
-                // ´©¸£°í ÀÖÀ¸¸é ¿¬»ç (ÄğÅ¸ÀÓÀº Weapon ³»ºÎ¿¡¼­ Ã³¸®)
-                if (Input.GetMouseButton(0)) currentWeapon.ManualAttackCommand(aimPoint);
-            }
-            else if (currentWeapon.playerWepData.fireMechanism == "Semi")
-            {
-                // ´©¸¦ ¶§¸¶´Ù ´Ü¹ß (±¤Å¬ À¯µµ)
-                if (Input.GetMouseButtonDown(0)) currentWeapon.ManualAttackCommand(aimPoint);
-            }
+        // Rí‚¤ ìˆ˜ë™ ì¥ì „
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            currentWeapon.StartReload();
+        }
+
+        // íƒ€ì›Œ ê±´ì„¤ ì¤‘(ë˜ëŠ” ë°©ê¸ˆ ê±´ì„¤í•œ í´ë¦­)ì—ëŠ” ì‚¬ê²©í•˜ì§€ ì•ŠìŒ
+        if (towerBuilder != null && towerBuilder.BlocksFiring) return;
+
+        // ë°œì‚¬ ë°©ì‹(Auto/Semi)
+        if (currentWeapon.playerWepData.IsAuto)
+        {
+            // ëˆ„ë¥´ê³  ìˆìœ¼ë©´ ì—°ì‚¬ (ì¿¨íƒ€ì„ì€ Weapon ë‚´ë¶€ì—ì„œ ì²˜ë¦¬)
+            if (Input.GetMouseButton(0)) currentWeapon.ManualAttackCommand(aimPoint);
+        }
+        else
+        {
+            // ëˆ„ë¥¼ ë•Œë§ˆë‹¤ ë‹¨ë°œ
+            if (Input.GetMouseButtonDown(0)) currentWeapon.ManualAttackCommand(aimPoint);
         }
     }
 
     public void EquipWeapon(int index)
     {
-        if (index < 0 || index >= weaponPrefabs.Length || weaponPrefabs[index] == null) return;
+        if (weaponPrefabs == null || index < 0 || index >= weaponPrefabs.Length || weaponPrefabs[index] == null) return;
 
         if (currentWeaponInstance != null)
         {
             Destroy(currentWeaponInstance);
         }
 
-        if (weaponMountPoint == null)
-        {
-            Transform found = transform.Find("WeaponMountPoint");
-            weaponMountPoint = found != null ? found : transform;
-        }
+        EnsureMountPoint();
 
         currentWeaponInstance = Instantiate(weaponPrefabs[index], weaponMountPoint, false);
         currentWeaponInstance.transform.localPosition = Vector3.zero;
         currentWeaponInstance.transform.localRotation = Quaternion.identity;
 
         currentWeapon = currentWeaponInstance.GetComponent<Weapon>();
+        currentVisual = currentWeaponInstance.GetComponentInChildren<WeaponVisual>();
+
         if (currentWeapon != null)
         {
             currentWeapon.aimType = Weapon.AimType.Manual;
 
-            // ¡Ú ¹«±â µ¥ÀÌÅÍ ÁÖÀÔ (ÇÁ¸®ÆÕ ÀÌ¸§ ±â¹İ µ¿Àû ·Îµå)
-            string weaponID = weaponPrefabs[index].name;
-            PlayerWeaponData data = Resources.Load<PlayerWeaponData>($"Data/Weapons/{weaponID}");
+            // â˜… ë¬´ê¸° ë°ì´í„°: í”„ë¦¬íŒ¹ì— ì—°ê²°ëœ ë°ì´í„° ìš°ì„ , ì—†ìœ¼ë©´ í”„ë¦¬íŒ¹ ì´ë¦„(=ì½”ë“œëª…)ìœ¼ë¡œ ê²€ìƒ‰
+            PlayerWeaponData data = currentWeapon.playerWepData;
+            if (data == null)
+            {
+                string weaponID = weaponPrefabs[index].name;
+                data = Resources.Load<PlayerWeaponData>($"Data/Weapons/PlayerWeapons/{weaponID}");
+            }
 
             if (data != null)
             {
                 currentWeapon.InitPlayerWeapon(data);
-                Debug.Log($"¹«±â µ¥ÀÌÅÍ ÁÖÀÔ ¿Ï·á: {data.inGameName} / ÃÖ´ë Åº¾à: {currentWeapon.currentAmmo}");
+                Debug.Log($"ë¬´ê¸° ì¥ì°©: [{data.weaponID}] {data.inGameName} / íƒ„ì•½: {(data.UsesAmmo ? currentWeapon.currentAmmo.ToString() : "âˆ")}");
             }
             else
             {
-                Debug.LogWarning($"[°æ°í] Resources/Data/Weapons Æú´õ¿¡¼­ {weaponID}.assetÀ» Ã£À» ¼ö ¾ø½À´Ï´Ù.");
+                Debug.LogWarning($"[ê²½ê³ ] '{weaponPrefabs[index].name}' ë¬´ê¸° ë°ì´í„°ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤. Tools/CSV ë°ì´í„° ìƒì„±/3. ë¬´ê¸° ë¥¼ ì‹¤í–‰í•˜ì„¸ìš”.");
             }
         }
 
         currentWeaponIndex = index;
     }
 
+    // í˜„ì¬ ë“¤ê³  ìˆëŠ” ë¬´ê¸° (HUD ë“±ì—ì„œ íƒ„ì•½ í‘œì‹œìš©)
+    public Weapon CurrentWeapon => currentWeapon;
+
+    private void EnsureMountPoint()
+    {
+        if (weaponMountPoint != null) return;
+        Transform found = transform.Find("WeaponMountPoint");
+        weaponMountPoint = found != null ? found : transform;
+    }
+
     private Vector3 GetAimPoint()
     {
+        Camera cam = Camera.main;
+        if (cam == null) return transform.position + transform.forward * 10f;
+
         if (playerController != null && playerController.isTPS)
         {
-            Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (Physics.Raycast(ray, out RaycastHit hit, 100f)) return hit.point;
+            Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            if (Physics.Raycast(ray, out RaycastHit hit, 100f, ~tpsAimIgnoreLayers, QueryTriggerInteraction.Ignore)) return hit.point;
             return ray.GetPoint(100f);
         }
         else
         {
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-            Plane groundPlane = new Plane(Vector3.up, Vector3.zero);
-            if (groundPlane.Raycast(ray, out float distance)) return ray.GetPoint(distance);
+            // íƒ‘ë·°: ë§ˆìš°ìŠ¤ê°€ ê°€ë¦¬í‚¤ëŠ” ì§€ì ì„ "ë¬´ê¸° ë†’ì´"ì˜ í‰ë©´ì—ì„œ êµ¬í•©ë‹ˆë‹¤.
+            // (ë°”ë‹¥ ë†’ì´ë¡œ êµ¬í•˜ë©´ íƒ„ì´ ì•„ë˜ë¡œ êº¾ì—¬ ë‚˜ê°€ë¯€ë¡œ)
+            float aimHeight = weaponMountPoint != null ? weaponMountPoint.position.y : transform.position.y;
+            Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+            Plane aimPlane = new Plane(Vector3.up, new Vector3(0f, aimHeight, 0f));
+            if (aimPlane.Raycast(ray, out float distance)) return ray.GetPoint(distance);
             return transform.position + transform.forward * 10f;
         }
     }

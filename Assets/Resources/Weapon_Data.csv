@@ -1,8 +1,8 @@
-코드명,이름,인게임 별칭 (임시),역할,Tag,Layer,Aim Type,Fire Mode,발사방식,유효거리,공격력,재장전속도,장탄수,공격속도,투사체 갯수,타겟 관통 여부,방어구 무시,투사체 속도,Projectile Prefab,장비 설명
-W001,Knife,코알라 대검,기본 근접무장 ,Untagged,Default,Multi,Hitscan,Auto,1,30,,0,1,1,TRUE,10,-,-,- 날이 무뎌지고 군데 군데 녹이 슨 군용 대검이다. 왜 인지는 모르지만 손잡이에 코알라 얼굴이 달려있다.
-W002,HG,콜트,기본 권총,Untagged,Default,Multi,Hitscan,Semi,6,20,1.5,7,1,1,FALSE,0,-,Projectile_Ball,
-W003,SMG,톰슨,기본 기관단총,Untagged,Default,Multi,Hitscan,Auto,6,10,2,20,1.8,1,FALSE,0,-,Projectile_Ball,
-W004,AR,스토너,기본 돌격소총,Untagged,Default,Multi,Hitscan,Auto,8,15,2,20,1.5,1,FALSE,0,-,Projectile_Ball,
-W005,MG,람보,기본 기관총,Untagged,Default,Multi,Hitscan,Auto,8,10,4,,2.2,1,FALSE,0,-,Projectile_Ball,
-W006,RF,개런드,기본 저격총,Untagged,Default,Multi,Hitscan,Semi,10,50,3,,1,1,TRUE,20,-,Projectile_Pene,
-W007,SG,모스버그,기본 산탄총,Untagged,Default,Multi,Hitscan,Semi,4,10,3,,1,4,FALSE,5,-,Projectile_Shot,
+코드명,이름,인게임 별칭 (임시),역할,Tag,Layer,Aim Type,Fire Mode,발사방식,유효거리,공격력,재장전속도,장탄수,공격속도,투사체 갯수,타겟 관통 여부,방어구 무시,투사체 속도,Projectile Prefab,장비 설명,Sprite,무기 크기,탄퍼짐
+W001,Knife,코알라 대검,기본 근접무장 ,Untagged,Default,Multi,Hitscan,Auto,1,30,,0,1,1,TRUE,10,-,-,- 날이 무뎌지고 군데 군데 녹이 슨 군용 대검이다. 왜 인지는 모르지만 손잡이에 코알라 얼굴이 달려있다.,,0.6,0
+W002,HG,콜트,기본 권총,Untagged,Default,Multi,Hitscan,Semi,6,20,1.5,7,1,1,FALSE,0,-,Projectile_Ball,,Pic_Colt,0.5,0
+W003,SMG,톰슨,기본 기관단총,Untagged,Default,Multi,Hitscan,Auto,6,10,2,20,1.8,1,FALSE,0,-,Projectile_Ball,,Pic_Thompson,0.85,0
+W004,AR,스토너,기본 돌격소총,Untagged,Default,Multi,Hitscan,Auto,8,15,2,20,1.5,1,FALSE,0,-,Projectile_Ball,,Pic_Eugene,1,0
+W005,MG,람보,기본 기관총,Untagged,Default,Multi,Hitscan,Auto,8,10,4,,2.2,1,FALSE,0,-,Projectile_Ball,,Pic_MAG,1.2,0
+W006,RF,개런드,기본 저격총,Untagged,Default,Multi,Hitscan,Semi,10,50,3,,1,1,TRUE,20,-,Projectile_Pene,,Pic_Garand,1.2,0
+W007,SG,모스버그,기본 산탄총,Untagged,Default,Multi,Hitscan,Semi,4,10,3,,1,4,FALSE,5,-,Projectile_Shot,,Pic_Mossburg,1,20

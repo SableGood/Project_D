@@ -1,61 +1,61 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class MainMenuManager : MonoBehaviour
 {
-    [Header("¼­ºê ÆĞ³Î ¿¬°á")]
-    public GameObject optionsPanel;    // ¼³Á¤ Ã¢ UI ÆĞ³Î
-    public GameObject playerInfoPanel; // ÇÃ·¹ÀÌ¾î Á¤º¸ Ã¢ UI ÆĞ³Î
+    [Header("ì„œë¸Œ íŒ¨ë„ ì—°ê²°")]
+    public GameObject optionsPanel;    // ì„¤ì • ì°½ UI íŒ¨ë„
+    public GameObject playerInfoPanel; // í”Œë ˆì´ì–´ ì •ë³´ ì°½ UI íŒ¨ë„
 
     void Start()
     {
-        // ¸ŞÀÎ ¸Ş´º ÁøÀÔ ½Ã ¼­ºê ÆĞ³ÎµéÀº º¸ÀÌÁö ¾Ê°Ô ¼û±è Ã³¸®
+        // ë©”ì¸ ë©”ë‰´ ì§„ì… ì‹œ ì„œë¸Œ íŒ¨ë„ë“¤ì€ ë³´ì´ì§€ ì•Šê²Œ ìˆ¨ê¹€ ì²˜ë¦¬
         if (optionsPanel != null) optionsPanel.SetActive(false);
         if (playerInfoPanel != null) playerInfoPanel.SetActive(false);
     }
 
-    // 1. °ÔÀÓ ½ÃÀÛ ¹öÆ° ±â´É
+    // 1. ê²Œì„ ì‹œì‘ ë²„íŠ¼ ê¸°ëŠ¥
     public void StartGame()
     {
-        // ¡Ú Ãß°¡: ÇÃ·¹ÀÌ¾î°¡ Ä³¸¯ÅÍ¸¦ ´©¸£Áö ¾Ê°í ¹Ù·Î ½ÃÀÛÇßÀ» °æ¿ì ±âº»°ª(0: Ä§ÆÒÁö) °­Á¦ ÁöÁ¤
+        // â˜… ì¶”ê°€: í”Œë ˆì´ì–´ê°€ ìºë¦­í„°ë¥¼ ëˆ„ë¥´ì§€ ì•Šê³  ë°”ë¡œ ì‹œì‘í–ˆì„ ê²½ìš° ê¸°ë³¸ê°’(0: ì¹¨íŒ¬ì§€) ê°•ì œ ì§€ì •
         if (!PlayerPrefs.HasKey("SelectedCharacter"))
         {
             PlayerPrefs.SetInt("SelectedCharacter", 0);
             PlayerPrefs.Save();
         }
 
-        SceneManager.LoadScene("In_Game"); // ½ÇÁ¦ °ÔÀÓ ÇÃ·¹ÀÌ ¾À ÀÌ¸§À¸·Î º¯°æÇÏ¼¼¿ä
+        SceneManager.LoadScene("In_Game"); // ì‹¤ì œ ê²Œì„ í”Œë ˆì´ ì”¬ ì´ë¦„ìœ¼ë¡œ ë³€ê²½í•˜ì„¸ìš”
     }
 
-    // 2. ¼³Á¤ ¹öÆ° ±â´É (¿­±â/´İ±â)
+    // 2. ì„¤ì • ë²„íŠ¼ ê¸°ëŠ¥ (ì—´ê¸°/ë‹«ê¸°)
     public void OpenOptionsPanel(bool isOpen)
     {
         if (optionsPanel != null) optionsPanel.SetActive(isOpen);
     }
 
-    // 3. ÇÃ·¹ÀÌ¾î Á¤º¸ ¹öÆ° ±â´É (¿­±â/´İ±â)
+    // 3. í”Œë ˆì´ì–´ ì •ë³´ ë²„íŠ¼ ê¸°ëŠ¥ (ì—´ê¸°/ë‹«ê¸°)
     public void OpenPlayerInfoPanel(bool isOpen)
     {
         if (playerInfoPanel != null) playerInfoPanel.SetActive(isOpen);
     }
 
-    // 4. °ÔÀÓ Á¾·á ¹öÆ° ±â´É
+    // 4. ê²Œì„ ì¢…ë£Œ ë²„íŠ¼ ê¸°ëŠ¥
     public void QuitGame()
     {
-        Debug.Log("°ÔÀÓÀÌ Á¾·áµË´Ï´Ù.");
-        Application.Quit(); // ºôµåµÈ °ÔÀÓ ¾Û Á¾·á
+        Debug.Log("ê²Œì„ì´ ì¢…ë£Œë©ë‹ˆë‹¤.");
+        Application.Quit(); // ë¹Œë“œëœ ê²Œì„ ì•± ì¢…ë£Œ
 
-        // À¯´ÏÆ¼ ¿¡µğÅÍ¿¡¼­ Å×½ºÆ® ÁßÀÏ ¶§ ÇÃ·¹ÀÌ ¸ğµå¸¦ ²¨ÁÖ´Â ¾ÈÀüÀåÄ¡
+        // ìœ ë‹ˆí‹° ì—ë””í„°ì—ì„œ í…ŒìŠ¤íŠ¸ ì¤‘ì¼ ë•Œ í”Œë ˆì´ ëª¨ë“œë¥¼ êº¼ì£¼ëŠ” ì•ˆì „ì¥ì¹˜
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.isPlaying = false;
 #endif
     }
 
-    // 5. Ä³¸¯ÅÍ ¼±ÅÃ ±â´É (0: Ä§ÆÒÁö, 1: ¿ø¼şÀÌ, 2: ¿À¶û¿ìÅº)
+    // 5. ìºë¦­í„° ì„ íƒ ê¸°ëŠ¥ (0: ì¹¨íŒ¬ì§€, 1: ì›ìˆ­ì´, 2: ì˜¤ë‘ìš°íƒ„)
     public void SelectCharacter(int characterIndex)
     {
         PlayerPrefs.SetInt("SelectedCharacter", characterIndex);
-        PlayerPrefs.Save(); // ¡Ú Ãß°¡: ¼±ÅÃÇÑ °ªÀ» Áï½Ã µğ½ºÅ©¿¡ ÀúÀåÇÏ¿© ¾À ÀüÈ¯ ½Ã À¯½Ç ¹æÁö
-        Debug.Log("Ä³¸¯ÅÍ ¼±ÅÃ ¿Ï·á. ÀÎµ¦½º: " + characterIndex);
+        PlayerPrefs.Save(); // â˜… ì¶”ê°€: ì„ íƒí•œ ê°’ì„ ì¦‰ì‹œ ë””ìŠ¤í¬ì— ì €ì¥í•˜ì—¬ ì”¬ ì „í™˜ ì‹œ ìœ ì‹¤ ë°©ì§€
+        Debug.Log("ìºë¦­í„° ì„ íƒ ì™„ë£Œ. ì¸ë±ìŠ¤: " + characterIndex);
     }
 }

@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using UnityEngine.Pool;
 using System.Collections.Generic;
 
@@ -6,7 +6,7 @@ public class PoolManager : MonoBehaviour
 {
     public static PoolManager Instance { get; private set; }
 
-    // ¿øº» ÇÁ¸®ÆÕÀ» Å°(Key)·Î »ç¿ëÇÏ¿© ¹«±âº° Åõ»çÃ¼, ¸ó½ºÅÍº°·Î µ¶¸³µÈ Ç®À» ÀÚµ¿ °ü¸®
+    // ì›ë³¸ í”„ë¦¬íŒ¹ì„ í‚¤(Key)ë¡œ ì‚¬ìš©í•˜ì—¬ ë¬´ê¸°ë³„ íˆ¬ì‚¬ì²´, ëª¬ìŠ¤í„°ë³„ë¡œ ë…ë¦½ëœ í’€ì„ ìë™ ê´€ë¦¬
     private Dictionary<GameObject, IObjectPool<GameObject>> pools = new Dictionary<GameObject, IObjectPool<GameObject>>();
 
     void Awake()
@@ -15,23 +15,23 @@ public class PoolManager : MonoBehaviour
         else Destroy(gameObject);
     }
 
-    // Instantiate¸¦ ´ëÃ¼ÇÒ Ç®¸µ Àü¿ë ¼ÒÈ¯ ÇÔ¼ö
+    // Instantiateë¥¼ ëŒ€ì²´í•  í’€ë§ ì „ìš© ì†Œí™˜ í•¨ìˆ˜
     public GameObject Spawn(GameObject prefab, Vector3 position, Quaternion rotation)
     {
         if (!pools.ContainsKey(prefab))
         {
-            // ÇØ´ç ÇÁ¸®ÆÕÀÇ Ç®ÀÌ ÃÖÃÊ·Î ¿äÃ»µÉ ¶§ µ¿Àû »ı¼º
+            // í•´ë‹¹ í”„ë¦¬íŒ¹ì˜ í’€ì´ ìµœì´ˆë¡œ ìš”ì²­ë  ë•Œ ë™ì  ìƒì„±
             ObjectPool<GameObject> newPool = null;
             newPool = new ObjectPool<GameObject>(
                 createFunc: () => {
                     GameObject obj = Instantiate(prefab);
-                    obj.SetActive(false); // À§Ä¡°¡ Á¤ÇØÁö±â Àü¿¡ OnEnableÀÌ ½ÇÇàµÇÁö ¾Êµµ·Ï
-                    // °´Ã¼°¡ ÀÚ½ÅÀÌ µ¹¾Æ°¥ Ç®À» ±â¾ïÇÒ ¼ö ÀÖµµ·Ï ÃßÀû ÄÄÆ÷³ÍÆ® ºÎÂø
+                    obj.SetActive(false); // ìœ„ì¹˜ê°€ ì •í•´ì§€ê¸° ì „ì— OnEnableì´ ì‹¤í–‰ë˜ì§€ ì•Šë„ë¡
+                    // ê°ì²´ê°€ ìì‹ ì´ ëŒì•„ê°ˆ í’€ì„ ê¸°ì–µí•  ìˆ˜ ìˆë„ë¡ ì¶”ì  ì»´í¬ë„ŒíŠ¸ ë¶€ì°©
                     PooledObject pooledObj = obj.AddComponent<PooledObject>();
                     pooledObj.pool = newPool;
                     return obj;
                 },
-                actionOnGet: obj => { }, // À§Ä¡/È¸Àü/È°¼ºÈ­´Â ¾Æ·¡ Spawn¿¡¼­ ¸Å¹ø »õ °ªÀ¸·Î Ã³¸®
+                actionOnGet: obj => { }, // ìœ„ì¹˜/íšŒì „/í™œì„±í™”ëŠ” ì•„ë˜ Spawnì—ì„œ ë§¤ë²ˆ ìƒˆ ê°’ìœ¼ë¡œ ì²˜ë¦¬
                 actionOnRelease: obj => obj.SetActive(false),
                 actionOnDestroy: obj => Destroy(obj),
                 collectionCheck: false,
@@ -42,7 +42,7 @@ public class PoolManager : MonoBehaviour
         }
 
         GameObject spawned = pools[prefab].Get();
-        spawned.transform.SetPositionAndRotation(position, rotation); // È£ÃâÇÒ ¶§¸¶´Ù »õ À§Ä¡ Àû¿ë
+        spawned.transform.SetPositionAndRotation(position, rotation); // í˜¸ì¶œí•  ë•Œë§ˆë‹¤ ìƒˆ ìœ„ì¹˜ ì ìš©
         spawned.SetActive(true);
         return spawned;
     }

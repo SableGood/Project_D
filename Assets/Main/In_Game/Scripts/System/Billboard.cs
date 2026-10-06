@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class Billboard : MonoBehaviour
 {
@@ -8,11 +8,11 @@ public class Billboard : MonoBehaviour
     {
         mainCam = Camera.main;
 
-        // SpriteRendererÀÇ ¼û°ÜÁø ±×¸²ÀÚ ¿É¼ÇÀ» ÄÚµå·Î °­Á¦ È°¼ºÈ­
+        // SpriteRendererì˜ ìˆ¨ê²¨ì§„ ê·¸ë¦¼ì ì˜µì…˜ì„ ì½”ë“œë¡œ ê°•ì œ í™œì„±í™”
         SpriteRenderer sr = GetComponent<SpriteRenderer>();
         if (sr != null)
         {
-            // TwoSided·Î ¼³Á¤ÇØ¾ß ºôº¸µå È¸Àü ½Ã ±×¸²ÀÚ°¡ ¾ã¾ÆÁö°Å³ª »ç¶óÁö´Â Çö»óÀ» ¸·À» ¼ö ÀÖ½À´Ï´Ù.
+            // TwoSidedë¡œ ì„¤ì •í•´ì•¼ ë¹Œë³´ë“œ íšŒì „ ì‹œ ê·¸ë¦¼ìê°€ ì–‡ì•„ì§€ê±°ë‚˜ ì‚¬ë¼ì§€ëŠ” í˜„ìƒì„ ë§‰ì„ ìˆ˜ ìˆìŠµë‹ˆë‹¤.
             sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.TwoSided;
             sr.receiveShadows = true;
         }
@@ -22,8 +22,8 @@ public class Billboard : MonoBehaviour
     {
         if (mainCam == null) return;
 
-        // ½ºÇÁ¶óÀÌÆ®°¡ Ç×»ó Ä«¸Ş¶ó¿Í µ¿ÀÏÇÑ °¢µµ¸¦ À¯ÁöÇÏµµ·Ï È¸Àü°ªÀ» °íÁ¤ÇÕ´Ï´Ù.
-        // Ä³¸¯ÅÍ°¡ 3D °ø°£¿¡¼­ È¸ÀüÇÏ´õ¶óµµ ÀÏ·¯½ºÆ®´Â Ç×»ó À¯Àú¸¦ ¹Ù¶óº¾´Ï´Ù.
+        // ìŠ¤í”„ë¼ì´íŠ¸ê°€ í•­ìƒ ì¹´ë©”ë¼ì™€ ë™ì¼í•œ ê°ë„ë¥¼ ìœ ì§€í•˜ë„ë¡ íšŒì „ê°’ì„ ê³ ì •í•©ë‹ˆë‹¤.
+        // ìºë¦­í„°ê°€ 3D ê³µê°„ì—ì„œ íšŒì „í•˜ë”ë¼ë„ ì¼ëŸ¬ìŠ¤íŠ¸ëŠ” í•­ìƒ ìœ ì €ë¥¼ ë°”ë¼ë´…ë‹ˆë‹¤.
         transform.rotation = mainCam.transform.rotation;
     }
 }

@@ -1,4 +1,4 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
 public class MobTracker : MonoBehaviour
 {
@@ -9,7 +9,7 @@ public class MobTracker : MonoBehaviour
         waveManager = manager;
     }
 
-    // ¡Ú ¼öÁ¤: OnDestroy() ´ë½Å ¿ÀºêÁ§Æ® Ç®¿¡ ÀÇÇØ ºñÈ°¼ºÈ­µÉ ¶§ È£ÃâµÇ´Â OnDisable() »ç¿ë
+    // â˜… ìˆ˜ì •: OnDestroy() ëŒ€ì‹  ì˜¤ë¸Œì íŠ¸ í’€ì— ì˜í•´ ë¹„í™œì„±í™”ë  ë•Œ í˜¸ì¶œë˜ëŠ” OnDisable() ì‚¬ìš©
     private void OnDisable()
     {
         if (waveManager != null)
