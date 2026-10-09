@@ -14,6 +14,9 @@ public class PlayerWeaponManager : MonoBehaviour
     public LayerMask tpsAimIgnoreLayers;
 
     private int currentWeaponIndex = 0;
+
+    // ★ 무기별 남은 탄약 기억 (무기 교체로 탄창이 공짜로 채워지는 버그 방지). -1 = 아직 안 든 무기
+    private int[] savedAmmo;
     private GameObject currentWeaponInstance;
     private Weapon currentWeapon;
     private WeaponVisual currentVisual;
@@ -60,6 +63,9 @@ public class PlayerWeaponManager : MonoBehaviour
             currentVisual.Refresh();
         }
 
+        // 이동 중이면 이동 탄퍼짐 적용
+        currentWeapon.SetOwnerMoving(playerController != null && playerController.IsMoving);
+
         if (currentWeapon.playerWepData == null) return;
 
         // R키 수동 장전
@@ -88,8 +94,13 @@ public class PlayerWeaponManager : MonoBehaviour
     {
         if (weaponPrefabs == null || index < 0 || index >= weaponPrefabs.Length || weaponPrefabs[index] == null) return;
 
+        EnsureAmmoSlots();
+
         if (currentWeaponInstance != null)
         {
+            // 들고 있던 무기의 남은 탄약 저장 (재장전 도중 교체하면 재장전은 취소됨)
+            if (currentWeapon != null && currentWeaponIndex < savedAmmo.Length)
+                savedAmmo[currentWeaponIndex] = currentWeapon.currentAmmo;
             Destroy(currentWeaponInstance);
         }
 
@@ -117,6 +128,10 @@ public class PlayerWeaponManager : MonoBehaviour
             if (data != null)
             {
                 currentWeapon.InitPlayerWeapon(data);
+
+                // 전에 들었던 무기라면 남은 탄약 복원
+                if (data.UsesAmmo && savedAmmo[index] >= 0)
+                    currentWeapon.currentAmmo = Mathf.Min(savedAmmo[index], data.maxAmmo);
                 Debug.Log($"무기 장착: [{data.weaponID}] {data.inGameName} / 탄약: {(data.UsesAmmo ? currentWeapon.currentAmmo.ToString() : "∞")}");
             }
             else
@@ -130,6 +145,14 @@ public class PlayerWeaponManager : MonoBehaviour
 
     // 현재 들고 있는 무기 (HUD 등에서 탄약 표시용)
     public Weapon CurrentWeapon => currentWeapon;
+
+    private void EnsureAmmoSlots()
+    {
+        int count = weaponPrefabs != null ? weaponPrefabs.Length : 0;
+        if (savedAmmo != null && savedAmmo.Length == count) return;
+        savedAmmo = new int[count];
+        for (int i = 0; i < count; i++) savedAmmo[i] = -1;
+    }
 
     private void EnsureMountPoint()
     {

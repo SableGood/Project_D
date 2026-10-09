@@ -44,6 +44,15 @@ public class Weapon : MonoBehaviour
     private float spreadAngle = 0f;
     private bool canPierce = false;
     private float projectileSpeedOverride = 0f;
+    private float moveSpreadAngle = 0f;     // 이동 중 추가 탄퍼짐
+    private float knockbackDistance = 0f;   // 명중 시 넉백 거리
+    private float armorPenetration = 0f;    // 방어구 무시 (방어력에서 이만큼 빼고 계산)
+    private bool isOwnerMoving = false;     // PlayerWeaponManager가 매 프레임 알려줌
+
+    // 한 번 발사(산탄 포함)에 같은 대상이 여러 번 넉백되지 않도록 기록
+    private readonly HashSet<Health> knockedThisShot = new HashSet<Health>();
+    // 관통 레이 하나에 같은 대상이 여러 콜라이더로 중복 피격되지 않도록 기록
+    private readonly HashSet<Health> hitThisRay = new HashSet<Health>();
 
     // 궤적(트레이서) 표시용
     private static Material tracerMaterial;
@@ -86,6 +95,9 @@ public class Weapon : MonoBehaviour
         this.spreadAngle = Mathf.Max(0f, data.spread);
         this.canPierce = data.canPierce;
         this.projectileSpeedOverride = data.projectileSpeed;
+        this.moveSpreadAngle = Mathf.Max(0f, data.moveSpread);
+        this.knockbackDistance = Mathf.Max(0f, data.knockback);
+        this.armorPenetration = Mathf.Max(0f, data.armorPenetration);
 
         // Fire Mode(CSV)가 실제 발사 방식을 결정합니다.
         if (data.IsProjectile)
@@ -100,6 +112,15 @@ public class Weapon : MonoBehaviour
             this.fireMode = FireMode.Hitscan;
         }
     }
+
+    // 소유자(플레이어)가 이동 중인지 → 이동 탄퍼짐 적용 여부
+    public void SetOwnerMoving(bool moving)
+    {
+        isOwnerMoving = moving;
+    }
+
+    // 현재 실제로 적용되는 탄퍼짐 (HUD 크로스헤어 등에서 활용 가능)
+    public float CurrentSpread => spreadAngle + (isOwnerMoving ? moveSpreadAngle : 0f);
 
     void Update()
     {
@@ -195,6 +216,7 @@ public class Weapon : MonoBehaviour
     private void PerformAttack(Transform targetTransform, Vector3 manualTargetPosition)
     {
         tracerIndex = 0;
+        knockedThisShot.Clear();
 
         // 투사체 갯수만큼 발사 (산탄총 등). 몹/타워는 1발.
         int count = Mathf.Max(1, pelletCount);
@@ -223,8 +245,9 @@ public class Weapon : MonoBehaviour
     // 탄퍼짐: 수평(Y축 기준)으로 ±spread/2 범위에서 무작위 회전
     private Vector3 ApplySpread(Vector3 direction)
     {
-        if (spreadAngle <= 0f) return direction;
-        float half = spreadAngle * 0.5f;
+        float spread = CurrentSpread;
+        if (spread <= 0f) return direction;
+        float half = spread * 0.5f;
         return Quaternion.AngleAxis(Random.Range(-half, half), Vector3.up) * direction;
     }
 
@@ -238,12 +261,18 @@ public class Weapon : MonoBehaviour
         if (canPierce)
         {
             // 관통: 사거리 안의 모든 대상에게 피해
-            RaycastHit[] hits = Physics.RaycastAll(fireOrigin, direction, attackRange, targetLayer);
-            foreach (RaycastHit h in hits) ApplyDamage(h.transform);
+            hitThisRay.Clear();
+            RaycastHit[] hits = Physics.RaycastAll(fireOrigin, direction, attackRange, targetLayer, QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit h in hits)
+            {
+                Health hp = h.transform.GetComponentInParent<Health>();
+                if (hp == null || !hitThisRay.Add(hp)) continue; // 같은 대상 중복 피격 방지
+                ApplyDamage(hp, direction);
+            }
         }
-        else if (Physics.Raycast(fireOrigin, direction, out RaycastHit hit, attackRange, targetLayer))
+        else if (Physics.Raycast(fireOrigin, direction, out RaycastHit hit, attackRange, targetLayer, QueryTriggerInteraction.Ignore))
         {
-            ApplyDamage(hit.transform);
+            ApplyDamage(hit.transform, direction);
             endPoint = hit.point;
         }
 
@@ -277,22 +306,45 @@ public class Weapon : MonoBehaviour
         {
             ConfigureProjectile(projectile);
             if (projectileSpeedOverride > 0f) projectile.speed = projectileSpeedOverride;
+            projectile.armorPenetration = armorPenetration;
+            projectile.knockbackDistance = knockbackDistance;
 
             if (targetTransform != null) projectile.InitializeAuto(targetTransform);
             else projectile.InitializeManual(aimPos);
         }
     }
 
+    // 기존 호출부 호환용 (넉백 방향 없음)
     public void ApplyDamage(Transform target)
     {
-        Health targetHealth = target.GetComponent<Health>();
-        if (targetHealth != null) targetHealth.TakeDamage(attackDamage);
+        ApplyDamage(target, Vector3.zero);
+    }
+
+    public void ApplyDamage(Transform target, Vector3 hitDirection)
+    {
+        if (target == null) return;
+        ApplyDamage(target.GetComponentInParent<Health>(), hitDirection);
+    }
+
+    // 피해(방어력/방어구 무시 반영) + 넉백(한 번 발사에 대상당 1회)
+    private void ApplyDamage(Health targetHealth, Vector3 hitDirection)
+    {
+        if (targetHealth == null || targetHealth.IsDead) return;
+
+        targetHealth.TakeDamage(attackDamage, armorPenetration);
+
+        if (knockbackDistance > 0f && hitDirection != Vector3.zero && knockedThisShot.Add(targetHealth))
+        {
+            KnockbackReceiver.TryApply(targetHealth.transform, hitDirection, knockbackDistance);
+        }
     }
 
     private void ConfigureProjectile(Projectile projectile)
     {
         projectile.attackDamage = this.attackDamage;
         projectile.targetLayer = this.targetLayer;
+        projectile.armorPenetration = 0f;
+        projectile.knockbackDistance = 0f;
 
         switch (fireMode)
         {

@@ -1,8 +1,48 @@
-코드명,이름,인게임 별칭 (임시),역할,Tag,Layer,Aim Type,Fire Mode,발사방식,유효거리,공격력,재장전속도,장탄수,공격속도,투사체 갯수,타겟 관통 여부,방어구 무시,투사체 속도,Projectile Prefab,장비 설명,Sprite,무기 크기,탄퍼짐
-W001,Knife,코알라 대검,기본 근접무장 ,Untagged,Default,Multi,Hitscan,Auto,1,30,,0,1,1,TRUE,10,-,-,- 날이 무뎌지고 군데 군데 녹이 슨 군용 대검이다. 왜 인지는 모르지만 손잡이에 코알라 얼굴이 달려있다.,,0.6,0
-W002,HG,콜트,기본 권총,Untagged,Default,Multi,Hitscan,Semi,6,20,1.5,7,1,1,FALSE,0,-,Projectile_Ball,,Pic_Colt,0.5,0
-W003,SMG,톰슨,기본 기관단총,Untagged,Default,Multi,Hitscan,Auto,6,10,2,20,1.8,1,FALSE,0,-,Projectile_Ball,,Pic_Thompson,0.85,0
-W004,AR,스토너,기본 돌격소총,Untagged,Default,Multi,Hitscan,Auto,8,15,2,20,1.5,1,FALSE,0,-,Projectile_Ball,,Pic_Eugene,1,0
-W005,MG,람보,기본 기관총,Untagged,Default,Multi,Hitscan,Auto,8,10,4,,2.2,1,FALSE,0,-,Projectile_Ball,,Pic_MAG,1.2,0
-W006,RF,개런드,기본 저격총,Untagged,Default,Multi,Hitscan,Semi,10,50,3,,1,1,TRUE,20,-,Projectile_Pene,,Pic_Garand,1.2,0
-W007,SG,모스버그,기본 산탄총,Untagged,Default,Multi,Hitscan,Semi,4,10,3,,1,4,FALSE,5,-,Projectile_Shot,,Pic_Mossburg,1,20
+코드명,이름,인게임 별칭 (임시),역할,Tag,Layer,Aim Type,Fire Mode,발사방식,유효거리,공격력,재장전속도,장탄수,공격속도,투사체 갯수,타겟 관통 여부,방어구 무시,투사체 속도,Projectile Prefab,장비 설명,Sprite,무기 크기,탄퍼짐,이동 탄퍼짐,넉백
+W001,Knife,코알라 대검,기본 근접무장 ,Melee,Default,Multi,Hitscan,Auto,1.2,18,,0,1.6,1,TRUE,10,-,-,- 날이 무뎌지고 군데 군데 녹이 슨 군용 대검이다. 왜 인지는 모르지만 손잡이에 코알라 얼굴이 달려있다.,,0.5,0,0,0
+W0011,Axe,도끼,기본 근접무장,Melee,Default,Multi,Hitscan,Auto,1.5,40,,0,0.8,1,TRUE,5,-,-,,Pic_Axe,0.7,0,0,0.5
+W0012,Axe_Modern,도끼-모던,2티어 근접무장,Melee,Default,Multi,Hitscan,Auto,1.6,48,,0,0.9,1,TRUE,5,-,-,,Pic_Axe_2,0.7,0,0,0.6
+W0013,Bbadda,빠따,기본 근접무장,Melee,Default,Multi,Hitscan,Auto,1.6,28,,0,1,1,TRUE,0,-,-,,Pic_Bbadda,0.9,0,0,2
+W0014,Bbadda_Modern,빠따-모던,2티어 근접무장,Melee,Default,Multi,Hitscan,Auto,1.7,34,,0,1.1,1,TRUE,0,-,-,,Pic_Bbadda_2,0.9,0,0,2.5
+,,,,,,,,,,,,,,,,,,,,,,,,
+W002,Colt,콜트,기본 권총,HG,Default,Multi,Hitscan,Semi,7,18,1.1,8,2.2,1,FALSE,0,-,Projectile_Ball,기본형,Pic_Colt,0.5,3,4,0
+W0021,Colt_Modern,콜트-모던,2티어 권총,HG,Default,Multi,Hitscan,Semi,7.5,21,1,9,2.2,1,FALSE,0,-,Projectile_Ball,Modern 시리즈 : 기본 총기에서 조금의 성능 향상 + 현대적 외관,Pic_Colt_2_Modern,0.5,3,4,0
+W0022,Colt_Assault,콜트-어썰트,3티어 돌격형 권총,HG,Default,Multi,Hitscan,Semi,7.5,22,0.8,9,2.8,1,FALSE,0,-,Projectile_Ball,Assault 시리즈 : 이동 사격 시 집탄율 + 재장전속도 + 발사속도 상승,Pic_Colt_2_Modern,0.5,2.7,1.6,0
+W0023,Colt_Ranger,콜트-레인저 ,3티어 기본형 권총,HG,Default,Multi,Hitscan,Semi,7.5,26,1,11,2.2,1,FALSE,3,-,Projectile_Ball,Ranger 시리즈 : 전반적인 능력치 상승 (공격력+장탄수+반동제어),Pic_Colt_3_Ranger,0.5,1.8,3.2,0
+W0024,Colt_Ballista,콜트-발리스타,3티어 화력형 권총,HG,Default,Multi,Hitscan,Semi,10,23,1.1,12,2.1,1,FALSE,5,-,Projectile_Ball,Ballista 시리즈 : 넉백 추가 (소량) + 사거리 증가 + 장탄수 증가,Pic_Colt_3_Ballista,0.6,3,4,0.5
+,,,,,,,,,,,,,,,,,,,,,,,,
+W003,Thompson,톰슨 ,기본 기관단총,SMG,Default,Multi,Hitscan,Auto,6,7,1.8,30,5,1,FALSE,0,-,Projectile_Ball,기본형,Pic_Thompson,0.9,6,6,0
+W0031,Thompson_Modern,톰슨-모던,2티어 기관단총,SMG,Default,Multi,Hitscan,Auto,6.5,8,1.7,33,5,1,FALSE,0,-,Projectile_Ball,Modern 시리즈 : 기본 총기에서 조금의 성능 향상 + 현대적 외관,Pic_Thompson_2_Modern,0.9,6,6,0
+W0032,Thompson_Assault,톰슨-어썰트,3티어 돌격형 기관단총,SMG,Default,Multi,Hitscan,Auto,6.5,8,1.3,33,6.3,1,FALSE,0,-,Projectile_Ball,Assault 시리즈 : 이동 사격 시 집탄율 + 재장전속도 + 발사속도 상승,Pic_Thompson_3_Assault,0.9,5.4,2.4,0
+W0033,Thompson_Ranger,톰슨-레인저 ,3티어 기본형 기관단총,SMG,Default,Multi,Hitscan,Auto,6.5,10,1.7,41,5,1,FALSE,3,-,Projectile_Ball,Ranger 시리즈 : 전반적인 능력치 상승 (공격력+장탄수+반동제어),Pic_Thompson_3_Ranger,0.9,3.6,4.8,0
+W0034,Thompson_Ballista,톰슨-발리스타,3티어 화력형 기관단총,SMG,Default,Multi,Hitscan,Auto,8.5,9,1.9,46,4.8,1,FALSE,5,-,Projectile_Ball,Ballista 시리즈 : 넉백 추가 (소량) + 사거리 증가 + 장탄수 증가,Pic_Thompson_3_Ballista,0.9,6,6,0.3
+,,,,,,,,,,,,,,,,,,,,,,,,
+W004,Eugene,유진 ,기본 돌격소총,AR,Default,Multi,Hitscan,Auto,9,12,2,25,3,1,FALSE,2,-,Projectile_Ball,기본형,Pic_Eugene,1,2.5,6,0
+W0041,Eugene_Modern,유진-모던,2티어 소총,AR,Default,Multi,Hitscan,Auto,9.5,14,1.9,28,3,1,FALSE,2,-,Projectile_Ball,Modern 시리즈 : 기본 총기에서 조금의 성능 향상 + 현대적 외관,Pic_Eugene_2_Modern,1,2.5,6,0
+W0042,Eugene_Assault,유진-어썰트,3티어 돌격형 소총,AR,Default,Multi,Hitscan,Auto,9.5,14,1.4,28,3.8,1,FALSE,2,-,Projectile_Ball,Assault 시리즈 : 이동 사격 시 집탄율 + 재장전속도 + 발사속도 상승,Pic_Eugene_3_Assault,1,2.3,2.4,0
+W0043,Eugene_Ranger,유진-레인저 ,3티어 기본형 소총,AR,Default,Multi,Hitscan,Auto,9.5,17,1.9,34,3,1,FALSE,5,-,Projectile_Ball,Ranger 시리즈 : 전반적인 능력치 상승 (공격력+장탄수+반동제어),Pic_Eugene_3_Ranger,1,1.5,4.8,0
+W0044,Eugene_Ballista,유진-발리스타,3티어 화력형 소총,AR,Default,Multi,Hitscan,Auto,12.5,15,2.1,38,2.9,1,FALSE,7,-,Projectile_Ball,Ballista 시리즈 : 넉백 추가 (소량) + 사거리 증가 + 장탄수 증가,Pic_Eugene_3_Ballista,1.1,2.5,6,0.6
+,,,,,,,,,,,,,,,,,,,,,,,,
+W005,MAG,람보 ,기본 기관총,MG,Default,Multi,Hitscan,Auto,9,10,4,60,4,1,FALSE,3,-,Projectile_Ball,기본형,Pic_MAG,1.2,6,12,0
+W0051,MAG_Modern,람보-모던,2티어 기관총,MG,Default,Multi,Hitscan,Auto,9.5,12,3.8,66,4,1,FALSE,3,-,Projectile_Ball,Modern 시리즈 : 기본 총기에서 조금의 성능 향상 + 현대적 외관,Pic_MAG_2_Modern,1.2,6,12,0
+W0052,MAG_Assault,람보-어썰트,3티어 돌격형 기관총,MG,Default,Multi,Hitscan,Auto,9.5,12,2.9,66,5,1,FALSE,3,-,Projectile_Ball,Assault 시리즈 : 이동 사격 시 집탄율 + 재장전속도 + 발사속도 상승,Pic_MAG_3_Assault,1.2,5.4,4.8,0
+W0053,MAG_Ranger,람보-레인저 ,3티어 기본형 기관총,MG,Default,Multi,Hitscan,Auto,9.5,14,3.8,82,4,1,FALSE,6,-,Projectile_Ball,Ranger 시리즈 : 전반적인 능력치 상승 (공격력+장탄수+반동제어),Pic_MAG_3_Ranger,1.2,3.6,9.6,0
+W0054,MAG_Ballista,람보-발리스타,3티어 화력형 기관총,MG,Default,Multi,Hitscan,Auto,12.5,13,4.2,92,3.8,1,FALSE,8,-,Projectile_Ball,Ballista 시리즈 : 넉백 추가 (소량) + 사거리 증가 + 장탄수 증가,Pic_MAG_2_Modern,1.3,6,12,0.5
+,,,,,,,,,,,,,,,,,,,,,,,,
+W006,Garand,개런드 ,기본 저격총,RF,Default,Multi,Hitscan,Semi,13,55,2.5,5,0.8,1,TRUE,15,-,Projectile_Pene,기본형,Pic_Garand,1.2,0,8,0
+W0061,Garand_Modern,개런드-모던,2티어 저격총,RF,Default,Multi,Hitscan,Semi,13.5,63,2.4,6,0.8,1,TRUE,15,-,Projectile_Pene,Modern 시리즈 : 기본 총기에서 조금의 성능 향상 + 현대적 외관,Pic_Garand_2_Modern,1.2,0,8,0
+W0062,Garand_Assault,개런드-어썰트,3티어 돌격형 저격총,RF,Default,Multi,Hitscan,Semi,13.5,66,1.8,6,1,1,TRUE,15,-,Projectile_Pene,Assault 시리즈 : 이동 사격 시 집탄율 + 재장전속도 + 발사속도 상승,Pic_Garand_3_Assault,1.2,0,3.2,0
+W0063,Garand_Ranger,개런드-레인저 ,3티어 기본형 저격총,RF,Default,Multi,Hitscan,Semi,13.5,79,2.4,7,0.8,1,TRUE,18,-,Projectile_Pene,Ranger 시리즈 : 전반적인 능력치 상승 (공격력+장탄수+반동제어),Pic_Garand_3_Ranger,1.2,0,6.4,0
+W0064,Garand_Ballista,개런드-발리스타,3티어 화력형 저격총,RF,Default,Multi,Hitscan,Semi,17.5,70,2.6,8,0.8,1,TRUE,20,-,Projectile_Pene,Ballista 시리즈 : 넉백 추가 (소량) + 사거리 증가 + 장탄수 증가,Pic_Garand_3_Ballista,1.3,0,8,1.5
+,,,,,,,,,,,,,,,,,,,,,,,,
+W007,Mossberg,모스버그 ,기본 산탄총,SG,Default,Multi,Hitscan,Semi,4.5,9,2.8,6,1,6,FALSE,0,-,Projectile_Shot,기본형,Pic_Mossberg,1,24,4,0
+W0071,Mossberg_Modern,모스버그-모던,2티어 산탄총,SG,Default,Multi,Hitscan,Semi,5,10,2.7,7,1,6,FALSE,0,-,Projectile_Shot,Modern 시리즈 : 기본 총기에서 조금의 성능 향상 + 현대적 외관,Pic_Mossberg_2_Modern,1,24,4,0
+W0072,Mossberg_Assault,모스버그-어썰트,3티어 돌격형 산탄총,SG,Default,Multi,Hitscan,Semi,5,11,2,7,1.3,6,FALSE,0,-,Projectile_Shot,Assault 시리즈 : 이동 사격 시 집탄율 + 재장전속도 + 발사속도 상승,Pic_Mossberg_3_Assault,1,21.6,1.6,0
+W0073,Mossberg_Ranger,모스버그-레인저 ,3티어 기본형 산탄총,SG,Default,Multi,Hitscan,Semi,5,13,2.7,8,1,6,FALSE,3,-,Projectile_Shot,Ranger 시리즈 : 전반적인 능력치 상승 (공격력+장탄수+반동제어),Pic_Mossberg_3_Ranger,1,14.4,3.2,0
+W0074,Mossberg_Ballista,모스버그-발리스타,3티어 화력형 산탄총,SG,Default,Multi,Hitscan,Semi,6.5,11,2.9,9,1,6,FALSE,5,-,Projectile_Shot,Ballista 시리즈 : 넉백 추가 (소량) + 사거리 증가 + 장탄수 증가,Pic_Mossberg_2_Modern,1.1,24,4,0.3
+,,,,,,,,,,,,,,,,,,,,,,,,
+W008,Battle,배틀 ,기본 전투소총,BR,Default,Multi,Hitscan,Auto,10,22,2.4,20,1.6,1,FALSE,5,-,Projectile_Ball,기본형,Pic_Battle,1.1,1.5,7,0
+W0081,Battle_Modern,배틀-모던,2티어 전투소총,BR,Default,Multi,Hitscan,Auto,10.5,25,2.3,22,1.6,1,FALSE,5,-,Projectile_Ball,Modern 시리즈 : 기본 총기에서 조금의 성능 향상 + 현대적 외관,Pic_Battle_2_Modern,1.1,1.5,7,0
+W0082,Battle_Assault,배틀-어썰트,3티어 돌격형 전투소총,BR,Default,Multi,Hitscan,Auto,10.5,27,1.7,22,2,1,FALSE,5,-,Projectile_Ball,Assault 시리즈 : 이동 사격 시 집탄율 + 재장전속도 + 발사속도 상승,Pic_Battle_3_Assault,1.1,1.4,2.8,0
+W0083,Battle_Ranger,배틀-레인저 ,3티어 기본형 전투소총,BR,Default,Multi,Hitscan,Auto,10.5,32,2.3,28,1.6,1,FALSE,8,-,Projectile_Ball,Ranger 시리즈 : 전반적인 능력치 상승 (공격력+장탄수+반동제어),Pic_Battle_3_Normal,1.1,0.9,5.6,0
+W0084,Battle_Ballista,배틀-발리스타,3티어 화력형 전투소총,BR,Default,Multi,Hitscan,Auto,13.5,28,2.5,31,1.5,1,FALSE,10,-,Projectile_Ball,Ballista 시리즈 : 넉백 추가 (소량) + 사거리 증가 + 장탄수 증가,Pic_Battle_3_Ballista,1.2,1.5,7,0.8

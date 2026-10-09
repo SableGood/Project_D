@@ -27,6 +27,7 @@ public class TowerBuilder : MonoBehaviour
     private int currentTowerIndex = 0;         // 현재 선택된 타워 번호 (0 ~ 4)
     private bool isBuildMode = false;
     private bool canBuild = false;
+    private Material appliedPreviewMat;        // 미리보기에 현재 칠해진 색 (바뀔 때만 다시 칠함)
     private bool waitForMouseRelease = false; // 건설 클릭 후 버튼을 뗄 때까지 사격 차단
 
     // ★ 건설 모드이거나, 방금 건설한 클릭을 아직 누르고 있으면 true → PlayerWeaponManager가 사격하지 않음
@@ -106,6 +107,7 @@ public class TowerBuilder : MonoBehaviour
 
         // ProBuilder로 만든 타워는 자식 오브젝트 여러 개로 이루어져 있을 수 있으므로 GetComponentsInChildren 사용
         currentPreviewRenderers = currentPreviewObj.GetComponentsInChildren<Renderer>();
+        appliedPreviewMat = null; // 새 미리보기는 다시 칠하도록
     }
 
     private void CancelBuildMode()
@@ -161,21 +163,19 @@ public class TowerBuilder : MonoBehaviour
 
             canBuild = !isOverlapping;
 
-            // ★ 수정됨: 하나의 오브젝트가 3개의 머티리얼을 가지고 있어도 모두 교체하도록 대응
-            if (currentPreviewRenderers != null)
+            // ★ 하나의 오브젝트가 여러 머티리얼을 가져도 모두 초록/빨강으로 교체
+            //   (최적화) 색이 바뀔 때만 칠하고, materials 대신 sharedMaterials를 써서 매 프레임 머티리얼 복제(메모리 누수)를 막음
+            Material targetMat = canBuild ? matGreen : matRed;
+            if (currentPreviewRenderers != null && targetMat != appliedPreviewMat)
             {
-                Material targetMat = canBuild ? matGreen : matRed;
                 for (int i = 0; i < currentPreviewRenderers.Length; i++)
                 {
                     Renderer r = currentPreviewRenderers[i];
-                    Material[] mats = r.materials;
-                    // 메쉬가 가진 머티리얼 개수(3개)만큼 반복해서 전부 초록/빨강으로 덮어씌움
-                    for (int j = 0; j < mats.Length; j++)
-                    {
-                        mats[j] = targetMat;
-                    }
-                    r.materials = mats;
+                    Material[] mats = new Material[r.sharedMaterials.Length];
+                    for (int j = 0; j < mats.Length; j++) mats[j] = targetMat;
+                    r.sharedMaterials = mats;
                 }
+                appliedPreviewMat = targetMat;
             }
         }
     }

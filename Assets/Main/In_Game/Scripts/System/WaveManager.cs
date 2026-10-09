@@ -109,22 +109,28 @@ public class WaveManager : MonoBehaviour
             ? currentWaveData.waveSpawnPoints
             : defaultSpawnPoints;
 
+        // ★ 스폰 포인트가 없으면 몹이 하나도 안 나와서 웨이브가 영원히 끝나지 않으므로, 시작 전에 중단
+        if (targetSpawnPoints == null || targetSpawnPoints.Length == 0)
+        {
+            Debug.LogError("지정된 스폰 포인트가 없습니다! WaveManager의 Default Spawn Points를 확인하세요.");
+            isWaveActive = false;
+            if (waveStartButton != null) waveStartButton.gameObject.SetActive(true);
+            yield break;
+        }
+
         foreach (WaveMobInfo info in currentWaveData.mobList)
         {
-            remainingMobCount += info.spawnCount;
+            if (info.mobPrefab != null) remainingMobCount += info.spawnCount;
         }
 
         Debug.Log($"[Stage {currentStage} - {currentWaveNumber} 웨이브] 총 소환될 몹 마릿수: {remainingMobCount}");
 
         foreach (WaveMobInfo info in currentWaveData.mobList)
         {
+            if (info.mobPrefab == null) continue; // 프리팹이 비어 있는 항목은 건너뜀 (위에서 마릿수에도 안 넣음)
+
             for (int i = 0; i < info.spawnCount; i++)
             {
-                if (targetSpawnPoints == null || targetSpawnPoints.Length == 0)
-                {
-                    Debug.LogWarning("지정된 스폰 포인트가 없습니다!");
-                    break;
-                }
 
                 Transform sp = targetSpawnPoints[Random.Range(0, targetSpawnPoints.Length)];
 

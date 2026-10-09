@@ -93,6 +93,8 @@ public class WeaponDataImporter
             data.fireRate = header.GetFloat(row, "공격속도");
             data.projectileCount = Mathf.Max(1, (int)header.GetFloat(row, "투사체 갯수"));
             data.spread = header.GetFloat(row, "탄퍼짐");
+            data.moveSpread = header.GetFloat(row, "이동 탄퍼짐");
+            data.knockback = header.GetFloat(row, "넉백");
             data.canPierce = header.Get(row, "타겟 관통 여부").ToUpper() == "TRUE";
             data.armorPenetration = header.GetFloat(row, "방어구 무시");
             data.projectileSpeed = header.GetFloat(row, "투사체 속도");

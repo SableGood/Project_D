@@ -8,6 +8,9 @@ public class PooledObject : MonoBehaviour
     // Destroy(gameObject) 대신 호출할 함수
     public void ReleaseToPool()
     {
+        // 이미 풀에 돌아간(비활성) 오브젝트를 또 반환하면 풀에 중복 등록되므로 무시
+        if (!gameObject.activeSelf) return;
+
         if (pool != null)
             pool.Release(gameObject);
         else

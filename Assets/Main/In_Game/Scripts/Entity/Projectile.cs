@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections.Generic;
 
 public class Projectile : MonoBehaviour
 {
@@ -11,6 +12,8 @@ public class Projectile : MonoBehaviour
     // 외부(Weapon)에서 주입받는 동적 스펙
     [HideInInspector] public int attackDamage;
     [HideInInspector] public LayerMask targetLayer;
+    [HideInInspector] public float armorPenetration;   // 방어구 무시
+    [HideInInspector] public float knockbackDistance;  // 명중 시 넉백 거리
 
     private Transform target;
     private Vector3 straightDir;
@@ -43,6 +46,9 @@ public class Projectile : MonoBehaviour
 
     void Update()
     {
+        // ★ 타겟이 풀로 반환(비활성화)되면 파괴된 것과 같이 취급 (재활용된 몹을 쫓아가는 버그 방지)
+        if (target != null && !target.gameObject.activeInHierarchy) target = null;
+
         switch (projectileType)
         {
             case ProjectileType.Homing:
@@ -55,6 +61,9 @@ public class Projectile : MonoBehaviour
                 FlyParabolic();
                 break;
         }
+
+        // ★ 위에서 이미 명중/소멸해 풀로 돌아갔다면 여기서 종료 (같은 프레임 이중 반환 → 풀에 중복 등록되는 버그 방지)
+        if (!gameObject.activeInHierarchy) return;
 
         // ★ [핵심] 수동 조준 등 락온 타겟이 없을 경우 비행 도중 충돌(명중) 검사를 별도로 수행
         if (target == null)
@@ -137,25 +146,33 @@ public class Projectile : MonoBehaviour
     // 특정 명중 대상(hitTransform)이 있을 경우 우선 데미지 처리
     private void HitTarget(Transform hitTransform = null)
     {
+        Vector3 hitDir = transform.forward;
+        Health directHealth = null;
+
         if (hitTransform != null)
         {
-            Health targetHealth = hitTransform.GetComponent<Health>();
-            if (targetHealth != null)
+            directHealth = hitTransform.GetComponentInParent<Health>();
+            if (directHealth != null && !directHealth.IsDead)
             {
-                targetHealth.TakeDamage(attackDamage);
+                directHealth.TakeDamage(attackDamage, armorPenetration);
+                KnockbackReceiver.TryApply(directHealth.transform, hitDir, knockbackDistance);
             }
         }
 
         if (isAreaOfEffect)
         {
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, targetLayer);
+            HashSet<Health> damaged = new HashSet<Health>();
+            if (directHealth != null) damaged.Add(directHealth); // ★ 직격 대상은 폭발 피해 중복 제외
+
             foreach (Collider hit in colliders)
             {
-                Health areaHealth = hit.GetComponent<Health>();
-                if (areaHealth != null)
-                {
-                    areaHealth.TakeDamage(attackDamage); // 범위 내 추가 데미지
-                }
+                Health areaHealth = hit.GetComponentInParent<Health>();
+                if (areaHealth == null || areaHealth.IsDead || !damaged.Add(areaHealth)) continue;
+
+                areaHealth.TakeDamage(attackDamage, armorPenetration);
+                // 폭발은 중심에서 바깥쪽으로 밀어냄
+                KnockbackReceiver.TryApply(areaHealth.transform, areaHealth.transform.position - transform.position, knockbackDistance);
             }
         }
 

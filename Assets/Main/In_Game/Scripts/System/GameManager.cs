@@ -131,7 +131,10 @@ public class GameManager : MonoBehaviour
         if (playerPrefabs != null && playerPrefabs.Length > index && playerPrefabs[index] != null)
         {
             GameObject prefab = playerPrefabs[index];
-            Vector3 finalSpawnPos = spawnPoint.position;
+            // 스폰 지점 미지정 시 원점에서 스폰 (NullReference 방지)
+            Vector3 finalSpawnPos = spawnPoint != null ? spawnPoint.position : Vector3.zero;
+            Quaternion spawnRot = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
+            if (spawnPoint == null) Debug.LogWarning("GameManager: spawnPoint가 비어 있어 (0,0,0)에 스폰합니다.");
 
             // 프리팹 원본에서 CharacterController 컴포넌트를 찾아 크기 정보를 가져옵니다.
             CharacterController controller = prefab.GetComponent<CharacterController>();
@@ -144,7 +147,7 @@ public class GameManager : MonoBehaviour
                 finalSpawnPos.y += yOffset;
             }
 
-            currentPlayer = Instantiate(prefab, finalSpawnPos, spawnPoint.rotation);
+            currentPlayer = Instantiate(prefab, finalSpawnPos, spawnRot);
             currentPlayer.tag = "Player";
 
             // 스폰 직후 안전하게 트랜스폼 동기화 등록

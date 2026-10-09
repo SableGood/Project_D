@@ -18,6 +18,9 @@ public class PlayerController : MonoBehaviour
     // ★ [추가] 스폰 시점의 정상적인 바닥 높이를 기억할 변수
     private float defaultYPos;
 
+    // ★ 이동 입력 중인지 (무기 이동 탄퍼짐 등에서 사용)
+    public bool IsMoving { get; private set; }
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -81,6 +84,7 @@ public class PlayerController : MonoBehaviour
 
         float h = Input.GetAxisRaw("Horizontal");
         float v = Input.GetAxisRaw("Vertical");
+        IsMoving = Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f;
         Vector3 moveDirection;
 
         if (isTPS)

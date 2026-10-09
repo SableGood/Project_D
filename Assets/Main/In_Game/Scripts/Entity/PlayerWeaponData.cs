@@ -25,6 +25,8 @@ public class PlayerWeaponData : ScriptableObject
 
     public int projectileCount;       // 투사체 갯수 (한 번 쏠 때 나가는 탄 수)
     public float spread;              // 탄퍼짐 (각도, 0 = 정확히 조준점으로)
+    public float moveSpread;          // 이동 탄퍼짐 (이동 중 추가되는 각도)
+    public float knockback;           // 넉백 (명중 시 밀어내는 거리, 유닛)
     public bool canPierce;            // 타겟 관통 여부
     public float armorPenetration;    // 방어구 무시
     public float projectileSpeed;     // 투사체 속도 (0 = 기본값)
