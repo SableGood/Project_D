@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.EventSystems;
 
 public class PlayerWeaponManager : MonoBehaviour
 {
@@ -89,6 +90,10 @@ public class PlayerWeaponManager : MonoBehaviour
 
         // 타워 건설 중(또는 방금 건설한 클릭)에는 사격하지 않음
         if (towerBuilder != null && towerBuilder.BlocksFiring) return;
+
+        // 탑뷰에서 UI(버튼 등) 위를 클릭할 때는 사격하지 않음
+        bool firstPerson = playerController != null && playerController.isFirstPerson;
+        if (!firstPerson && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
         // 발사 방식(Auto/Semi)
         if (currentWeapon.playerWepData.IsAuto)

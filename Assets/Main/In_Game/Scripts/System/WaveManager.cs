@@ -34,6 +34,9 @@ public class WaveManager : MonoBehaviour
 
         // 시작 스테이지 지정 로직 실행
         SetStartStage(startStage);
+
+        // 몹 테스트 패널 (Wave Start 버튼 아래)
+        if (showMobTestPanel) MobTestPanel.Create(waveStartButton);
     }
 
     void Update()
@@ -131,10 +134,11 @@ public class WaveManager : MonoBehaviour
 
             for (int i = 0; i < info.spawnCount; i++)
             {
+                // ★ CSV에 지정된 스폰 포인트 사용 (지정 없으면 무작위) + 겹치지 않게 주변으로 살짝 흩뿌림
+                Transform sp = GetSpawnPoint(targetSpawnPoints, info.spawnPointIndex);
+                Vector3 spawnPos = GetScatteredPosition(sp.position);
 
-                Transform sp = targetSpawnPoints[Random.Range(0, targetSpawnPoints.Length)];
-
-                GameObject spawnedMob = PoolManager.Instance.Spawn(info.mobPrefab, sp.position, sp.rotation);
+                GameObject spawnedMob = PoolManager.Instance.Spawn(info.mobPrefab, spawnPos, sp.rotation);
 
                 MobTracker tracker = spawnedMob.GetComponent<MobTracker>();
                 if (tracker == null)
@@ -146,6 +150,37 @@ public class WaveManager : MonoBehaviour
                 yield return new WaitForSeconds(0.5f);
             }
         }
+    }
+
+    [Header("테스트")]
+    [Tooltip("Wave Start 아래에 몹 테스트 패널 표시 (F2로 숨기기). 출시 빌드에서는 끄세요.")]
+    public bool showMobTestPanel = true;
+
+    [Header("스폰 흩뿌리기")]
+    [Tooltip("같은 스폰 포인트에서 나오는 몹들이 겹치지 않도록 퍼뜨리는 반경")]
+    public float spawnScatterRadius = 1.5f;
+
+    // 스폰 포인트 번호(1부터)에 해당하는 지점. 이름이 "..._번호"로 끝나는 오브젝트를 우선 찾고, 없으면 목록 순서로
+    private Transform GetSpawnPoint(Transform[] points, int index)
+    {
+        if (index > 0)
+        {
+            foreach (Transform p in points)
+                if (p != null && p.name.EndsWith("_" + index)) return p;
+            if (index - 1 < points.Length && points[index - 1] != null) return points[index - 1];
+            Debug.LogWarning($"스폰 포인트 {index}번을 찾을 수 없어 무작위 지점에서 스폰합니다.");
+        }
+        return points[Random.Range(0, points.Length)];
+    }
+
+    // 스폰 지점 주변의 무작위 위치 (네비메시 위로 보정)
+    private Vector3 GetScatteredPosition(Vector3 center)
+    {
+        Vector2 r = Random.insideUnitCircle * spawnScatterRadius;
+        Vector3 pos = center + new Vector3(r.x, 0f, r.y);
+        if (UnityEngine.AI.NavMesh.SamplePosition(pos, out UnityEngine.AI.NavMeshHit hit, 3f, UnityEngine.AI.NavMesh.AllAreas))
+            return hit.position;
+        return center;
     }
 
     public void UnregisterMob(GameObject mob)

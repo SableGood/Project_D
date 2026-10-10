@@ -26,6 +26,7 @@ public class WaveDataImporter : MonoBehaviour
 
         int currentStageIndex = 1;
         int currentWaveIndex = -1;
+        int currentSpawnPoint = 0; // ★ D열(Spawn Point). 0 = 지정 없음(무작위)
 
         for (int i = 1; i < rows.Length; i++)
         {
@@ -46,6 +47,13 @@ public class WaveDataImporter : MonoBehaviour
             {
                 currentWaveIndex = (int)parsedWave;
                 waveToStageDict[currentWaveIndex] = currentStageIndex;
+                currentSpawnPoint = 0; // 새 웨이브가 시작되면 스폰 포인트 초기화
+            }
+
+            // ★ D열(인덱스 3) 파싱: 스폰 포인트 번호 갱신 (아래 행들은 같은 포인트를 이어서 사용)
+            if (!string.IsNullOrEmpty(cols[3].Trim()) && float.TryParse(cols[3].Trim(), out float parsedPoint))
+            {
+                currentSpawnPoint = (int)parsedPoint;
             }
 
             if (currentWaveIndex == -1) continue;
@@ -71,13 +79,15 @@ public class WaveDataImporter : MonoBehaviour
                     WaveMobInfo info = new WaveMobInfo();
                     info.mobPrefab = prefab;
                     info.spawnCount = count;
+                    info.spawnPointIndex = currentSpawnPoint;
 
                     if (!waveDict.ContainsKey(currentWaveIndex))
                     {
                         waveDict[currentWaveIndex] = new List<WaveMobInfo>();
                     }
 
-                    WaveMobInfo existingInfo = waveDict[currentWaveIndex].Find(x => x.mobPrefab == prefab);
+                    // 같은 몹이라도 스폰 포인트가 다르면 별도 항목으로 유지
+                    WaveMobInfo existingInfo = waveDict[currentWaveIndex].Find(x => x.mobPrefab == prefab && x.spawnPointIndex == currentSpawnPoint);
                     if (existingInfo != null)
                     {
                         existingInfo.spawnCount += count;

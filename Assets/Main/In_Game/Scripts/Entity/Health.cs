@@ -15,8 +15,14 @@ public class Health : MonoBehaviour
     [Header("디버그")]
     [Tooltip("켜면 피격할 때마다 콘솔에 피해량을 출력합니다. (연사 무기 테스트 시 콘솔이 많이 쌓이므로 기본은 꺼둠)")]
     public bool logDamage = false;
+    [Tooltip("켜면 피해를 받아도 체력이 줄지 않음 (피격 이벤트는 그대로 발생 → 테스트 패널에서 받은 피해량 확인 가능)")]
+    public bool invincible = false;
+
+    // 피격 시 실제 받은 피해량을 알림 (피격 번쩍임, 데미지 숫자 등 연출용)
+    public event System.Action<float> OnDamaged;
 
     public float Defense => defense;
+    public float CurrentHealth => currentHealth;
     public bool IsDead => isDead;
 
     // MobAI/PlayerController/TurretAI 가 스폰될 때 이 함수를 불러서 스탯을 꽂아줍니다.
@@ -25,6 +31,15 @@ public class Health : MonoBehaviour
         this.maxHealth = data.maxHp;
         this.currentHealth = data.maxHp;
         this.defense = data.defense;
+        this.isDead = false;
+    }
+
+    // 데이터 없이 직접 지정 (임시 타워 등)
+    public void InitStats(float hp, float def)
+    {
+        this.maxHealth = hp;
+        this.currentHealth = hp;
+        this.defense = def;
         this.isDead = false;
     }
 
@@ -41,8 +56,14 @@ public class Health : MonoBehaviour
         if (isDead) return;
 
         float finalDamage = CalculateDamage(damage, defense, armorPenetration);
+        if (invincible)
+        {
+            OnDamaged?.Invoke(finalDamage);
+            return;
+        }
         currentHealth -= finalDamage;
         currentHealth = Mathf.Max(currentHealth, 0);
+        OnDamaged?.Invoke(finalDamage);
 
         if (logDamage)
             Debug.Log($"{gameObject.name} 피격! 공격 {damage} → 실제 {finalDamage} (방어 {defense}, 관통 {armorPenetration}) / 남은 체력 {currentHealth}/{maxHealth}");

@@ -99,6 +99,7 @@ public class WeaponHUD : MonoBehaviour
         Canvas canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = -1; // 일시정지·게임오버 화면(기본 0)이 HUD를 덮도록 한 단계 아래
+        canvas.pixelPerfect = true; // 글자 번짐 방지 (몹 테스트 패널과 동일)
 
         CanvasScaler scaler = gameObject.AddComponent<CanvasScaler>();
         scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;

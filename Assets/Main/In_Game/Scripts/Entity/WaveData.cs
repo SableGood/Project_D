@@ -7,6 +7,8 @@ public class WaveMobInfo
 {
     public GameObject mobPrefab; // 생성할 몹 프리팹
     public int spawnCount;       // 마릿수
+    [Tooltip("Wave_Data.csv의 Spawn Point 번호 (1부터). 0이면 기본 스폰 포인트 중 무작위")]
+    public int spawnPointIndex;  // 스폰 포인트 번호
 }
 
 // 웨이브 하나의 전체 정보를 담는 ScriptableObject 데이터 파일 (에러 해결의 핵심)

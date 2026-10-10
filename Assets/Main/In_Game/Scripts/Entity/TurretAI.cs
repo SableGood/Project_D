@@ -21,12 +21,13 @@ public class TurretAI : MonoBehaviour
 
     void OnEnable()
     {
-        if (myData != null && weapon != null)
+        if (weapon != null)
         {
-            // 데이터 주입 및 타워 체력 세팅 (Health 스크립트가 있다면 연동)
-            weapon.InitWeapon(myData.defaultWeapon);
+            // 데이터 주입 (데이터가 없으면 무기 프리팹의 기본값 사용)
+            if (myData != null) weapon.InitWeapon(myData.defaultWeapon);
 
             // ★ 핵심: 포탑이 목표를 바라본 후 직접 쏘게 만들기 위해 강제로 Manual(수동) 모드로 변경합니다.
+            //   (데이터가 없어도 적용 → 무기가 회전 없이 혼자 자동 사격하는 일 방지)
             weapon.aimType = Weapon.AimType.Manual;
         }
 

@@ -12,9 +12,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cb89eec06a012e843b7b9e1e909ce88c, type: 3}
   m_Name: Wave_06
   m_EditorClassIdentifier: Assembly-CSharp::WaveData
+  stageNumber: 1
   waveSpawnPoints: []
   mobList:
   - mobPrefab: {fileID: 1749953442760117039, guid: 20c0c2587e2a5484db304c3e7f8703d3, type: 3}
-    spawnCount: 2
+    spawnCount: 1
+    spawnPointIndex: 1
   - mobPrefab: {fileID: 1749953442760117039, guid: 3145b27ff520d2a4a91c0ca81116a02a, type: 3}
-    spawnCount: 8
+    spawnCount: 4
+    spawnPointIndex: 1
+  - mobPrefab: {fileID: 1749953442760117039, guid: 20c0c2587e2a5484db304c3e7f8703d3, type: 3}
+    spawnCount: 1
+    spawnPointIndex: 2
+  - mobPrefab: {fileID: 1749953442760117039, guid: 3145b27ff520d2a4a91c0ca81116a02a, type: 3}
+    spawnCount: 4
+    spawnPointIndex: 2
+  - mobPrefab: {fileID: 2610851043922675693, guid: 624c65916566e594cbd73e3b50883385, type: 3}
+    spawnCount: 1
+    spawnPointIndex: 3
+  - mobPrefab: {fileID: 2610851043922675693, guid: 82eb556ce3f8dfd408f0a5edd321ca9d, type: 3}
+    spawnCount: 1
+    spawnPointIndex: 4

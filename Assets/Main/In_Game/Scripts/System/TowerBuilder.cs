@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.EventSystems;
 using System.Collections.Generic;
 
 public class TowerBuilder : MonoBehaviour
@@ -72,7 +73,8 @@ public class TowerBuilder : MonoBehaviour
         {
             UpdatePreviewPosition();
 
-            if (Input.GetMouseButtonDown(0) && canBuild)
+            bool pointerOnUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            if (Input.GetMouseButtonDown(0) && canBuild && !pointerOnUI)
             {
                 BuildTower();
                 CancelBuildMode();
@@ -121,6 +123,7 @@ public class TowerBuilder : MonoBehaviour
         if (instantiatedPreviews[currentTowerIndex] == null)
         {
             instantiatedPreviews[currentTowerIndex] = Instantiate(previewPrefabs[currentTowerIndex]);
+            MakePreviewOnly(instantiatedPreviews[currentTowerIndex]);
         }
 
         // 현재 미리보기 객체 갱신 및 활성화
@@ -131,6 +134,18 @@ public class TowerBuilder : MonoBehaviour
         currentPreviewRenderers = currentPreviewObj.GetComponentsInChildren<Renderer>();
         appliedPreviewMat = null; // 새 미리보기는 다시 칠하도록
         previewBottomOffset = GetBottomOffset(currentPreviewObj);
+    }
+
+    // ★ 미리보기는 '보이기만' 하도록 전투 기능을 제거
+    //   (미리보기 프리팹 안에 무기 프리팹(P_Weapon_Rapid 등)이 들어 있으면, 무기가 자동 사격 모드라 몹을 공격하던 버그)
+    private static void MakePreviewOnly(GameObject preview)
+    {
+        foreach (TurretAI t in preview.GetComponentsInChildren<TurretAI>(true)) { t.enabled = false; Destroy(t); }
+        foreach (Weapon w in preview.GetComponentsInChildren<Weapon>(true)) { w.enabled = false; Destroy(w); }
+        foreach (Health h in preview.GetComponentsInChildren<Health>(true)) { h.enabled = false; Destroy(h); }
+        // 충돌체도 끔 (조준 레이·몹 탐색·설치 검사에 걸리지 않도록)
+        foreach (Collider c in preview.GetComponentsInChildren<Collider>(true)) c.enabled = false;
+        foreach (UnityEngine.AI.NavMeshObstacle o in preview.GetComponentsInChildren<UnityEngine.AI.NavMeshObstacle>(true)) o.enabled = false;
     }
 
     private void CancelBuildMode()
@@ -220,6 +235,14 @@ public class TowerBuilder : MonoBehaviour
 
         // ★ 겹침 버그 수정: 타워 프리팹이 Default 레이어라 충돌 판정에 안 잡히던 문제 → 설치 시 Tower 레이어로 변경
         if (builtTowerLayer >= 0) SetLayerRecursively(tower, builtTowerLayer);
+
+        // ★ 타워 체력: 프리팹에 Health가 없으면 붙이고, 포탑 데이터(Mob_Data의 TR 항목)로 체력/방어력 설정
+        //    → 몹(특히 공성 몹)이 타워를 공격해 파괴할 수 있게 됨
+        Health towerHealth = tower.GetComponent<Health>();
+        if (towerHealth == null) towerHealth = tower.AddComponent<Health>();
+        TurretAI turret = tower.GetComponent<TurretAI>();
+        if (turret != null && turret.myData != null) towerHealth.InitStats(turret.myData);
+        else towerHealth.InitStats(200f, 0f); // 데이터가 없으면 임시 체력
 
         // (풀에서 재사용된 타워라면 예전 칸 기록은 지움)
         List<Vector2Int> stale = new List<Vector2Int>();
