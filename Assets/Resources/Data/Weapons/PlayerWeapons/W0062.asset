@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0062
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0062
+  weaponName: Garand_Assault
+  inGameName: "\uAC1C\uB7F0\uB4DC-\uC5B4\uC370\uD2B8"
+  role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uC800\uACA9\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Semi
+  range: 13.5
+  damage: 66
+  reloadTime: 1.8
+  maxAmmo: 6
+  fireRate: 1
+  projectileCount: 1
+  spread: 0
+  moveSpread: 3.2
+  knockback: 0
+  canPierce: 1
+  armorPenetration: 15
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Pene
+  spriteName: Pic_Garand_3_Assault
+  spriteLength: 1.2
+  weaponSprite: {fileID: 21300000, guid: d09e179014b78264b911340e12c6ad2f, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 1fc262461d9318f4fa5dce8c9d2cba0d, type: 3}
+  description: "Assault \uC2DC\uB9AC\uC988 : \uC774\uB3D9 \uC0AC\uACA9 \uC2DC \uC9D1\uD0C4\uC728
+    + \uC7AC\uC7A5\uC804\uC18D\uB3C4 + \uBC1C\uC0AC\uC18D\uB3C4 \uC0C1\uC2B9"

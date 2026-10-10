@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0044
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0044
+  weaponName: Eugene_Ballista
+  inGameName: "\uC720\uC9C4-\uBC1C\uB9AC\uC2A4\uD0C0"
+  role: "3\uD2F0\uC5B4 \uD654\uB825\uD615 \uC18C\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Auto
+  range: 12.5
+  damage: 15
+  reloadTime: 2.1
+  maxAmmo: 38
+  fireRate: 2.9
+  projectileCount: 1
+  spread: 2.5
+  moveSpread: 6
+  knockback: 0.6
+  canPierce: 0
+  armorPenetration: 7
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Ball
+  spriteName: Pic_Eugene_3_Ballista
+  spriteLength: 1.1
+  weaponSprite: {fileID: 21300000, guid: 4688521e9f08a37438ef746e496e630d, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
+  description: "Ballista \uC2DC\uB9AC\uC988 : \uB109\uBC31 \uCD94\uAC00 (\uC18C\uB7C9)
+    + \uC0AC\uAC70\uB9AC \uC99D\uAC00 + \uC7A5\uD0C4\uC218 \uC99D\uAC00"

@@ -1,0 +1,42 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W001
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W001
+  weaponName: Knife
+  inGameName: "\uCF54\uC54C\uB77C \uB300\uAC80"
+  role: "\uAE30\uBCF8 \uADFC\uC811\uBB34\uC7A5"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Auto
+  range: 1.2
+  damage: 18
+  reloadTime: 0
+  maxAmmo: 0
+  fireRate: 1.6
+  projectileCount: 1
+  spread: 0
+  moveSpread: 0
+  knockback: 0
+  canPierce: 1
+  armorPenetration: 10
+  projectileSpeed: 0
+  projectilePrefabName: 
+  spriteName: 
+  spriteLength: 0.5
+  weaponSprite: {fileID: 0}
+  projectilePrefab: {fileID: 0}
+  description: "- \uB0A0\uC774 \uBB34\uB38C\uC9C0\uACE0 \uAD70\uB370 \uAD70\uB370
+    \uB179\uC774 \uC2A8 \uAD70\uC6A9 \uB300\uAC80\uC774\uB2E4. \uC65C \uC778\uC9C0\uB294
+    \uBAA8\uB974\uC9C0\uB9CC \uC190\uC7A1\uC774\uC5D0 \uCF54\uC54C\uB77C \uC5BC\uAD74\uC774
+    \uB2EC\uB824\uC788\uB2E4."

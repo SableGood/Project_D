@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0022
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0022
+  weaponName: Colt_Assault
+  inGameName: "\uCF5C\uD2B8-\uC5B4\uC370\uD2B8"
+  role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uAD8C\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Semi
+  range: 7.5
+  damage: 22
+  reloadTime: 0.8
+  maxAmmo: 9
+  fireRate: 2.8
+  projectileCount: 1
+  spread: 2.7
+  moveSpread: 1.6
+  knockback: 0
+  canPierce: 0
+  armorPenetration: 0
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Ball
+  spriteName: Pic_Colt_2_Modern
+  spriteLength: 0.5
+  weaponSprite: {fileID: 21300000, guid: cb99aa094cd7ad144b94d2c0f330d6fc, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
+  description: "Assault \uC2DC\uB9AC\uC988 : \uC774\uB3D9 \uC0AC\uACA9 \uC2DC \uC9D1\uD0C4\uC728
+    + \uC7AC\uC7A5\uC804\uC18D\uB3C4 + \uBC1C\uC0AC\uC18D\uB3C4 \uC0C1\uC2B9"

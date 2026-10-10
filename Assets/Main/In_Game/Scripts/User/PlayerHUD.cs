@@ -9,13 +9,8 @@ public class PlayerHUD : MonoBehaviour
     public GameObject[] crosshairs;
     public int currentCrosshairIndex = 0;
 
-    [Header("탄약 UI (선택 - 비워두면 표시 안 함)")]
-    [Tooltip("예: '12 / 30', 재장전 중이면 '재장전...', 무한이면 '∞'")]
-    public Text ammoText;
-
     private Health playerHealth;
     private PlayerController playerController;
-    private PlayerWeaponManager weaponManager;
 
     void Start()
     {
@@ -33,7 +28,6 @@ public class PlayerHUD : MonoBehaviour
                 GameObject player = GameManager.Instance.playerTransform.gameObject;
                 playerHealth = player.GetComponent<Health>();
                 playerController = player.GetComponent<PlayerController>();
-                weaponManager = player.GetComponent<PlayerWeaponManager>();
                 Debug.Log("PlayerHUD: GameManager를 통해 플레이어를 성공적으로 찾았습니다.");
             }
             return; // 플레이어를 찾는 동안은 아래 UI 갱신 로직을 건너뜀
@@ -41,24 +35,7 @@ public class PlayerHUD : MonoBehaviour
 
         // 2. 실시간으로 플레이어 체력 및 크로스헤어 상태 갱신
         UpdatePlayerHUD();
-        UpdateAmmoText();
         SyncCrosshairVisibility();
-    }
-
-    private void UpdateAmmoText()
-    {
-        if (ammoText == null) return;
-
-        Weapon weapon = weaponManager != null ? weaponManager.CurrentWeapon : null;
-        if (weapon == null || weapon.playerWepData == null)
-        {
-            ammoText.text = "";
-            return;
-        }
-
-        if (!weapon.playerWepData.UsesAmmo) ammoText.text = "∞";
-        else if (weapon.isReloading) ammoText.text = "재장전...";
-        else ammoText.text = $"{weapon.currentAmmo} / {weapon.playerWepData.maxAmmo}";
     }
 
     public void ChangeCrosshair(int index)
@@ -80,7 +57,7 @@ public class PlayerHUD : MonoBehaviour
     {
         if (playerController == null || crosshairs.Length == 0) return;
 
-        bool shouldBeVisible = playerController.isTPS;
+        bool shouldBeVisible = playerController.isFirstPerson; // 크로스헤어는 1인칭에서만
 
         for (int i = 0; i < crosshairs.Length; i++)
         {

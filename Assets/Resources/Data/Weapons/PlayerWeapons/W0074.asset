@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0074
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0074
+  weaponName: Mossberg_Ballista
+  inGameName: "\uBAA8\uC2A4\uBC84\uADF8-\uBC1C\uB9AC\uC2A4\uD0C0"
+  role: "3\uD2F0\uC5B4 \uD654\uB825\uD615 \uC0B0\uD0C4\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Semi
+  range: 6.5
+  damage: 11
+  reloadTime: 2.9
+  maxAmmo: 9
+  fireRate: 1
+  projectileCount: 6
+  spread: 24
+  moveSpread: 4
+  knockback: 0.3
+  canPierce: 0
+  armorPenetration: 5
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Shot
+  spriteName: Pic_Mossberg_2_Modern
+  spriteLength: 1.1
+  weaponSprite: {fileID: 21300000, guid: 0b257971f86b7614dbc63a0c0a21221a, type: 3}
+  projectilePrefab: {fileID: 0}
+  description: "Ballista \uC2DC\uB9AC\uC988 : \uB109\uBC31 \uCD94\uAC00 (\uC18C\uB7C9)
+    + \uC0AC\uAC70\uB9AC \uC99D\uAC00 + \uC7A5\uD0C4\uC218 \uC99D\uAC00"

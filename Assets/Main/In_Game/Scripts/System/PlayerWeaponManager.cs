@@ -9,8 +9,16 @@ public class PlayerWeaponManager : MonoBehaviour
     [Tooltip("Tools/플레이어/2. 테스트: 모든 플레이어 무기 장착 메뉴로 자동으로 채울 수 있습니다.")]
     public GameObject[] weaponPrefabs;
 
+    [Header("1인칭 무기 위치 (모든 무기 공통) - 플레이 중에 조절해 보고 값을 기록해 두세요")]
+    [Tooltip("카메라 기준 위치 (x: 오른쪽, y: 위, z: 앞). x를 줄이면 몸 안쪽으로, z를 줄이면 몸 가까이로 옵니다.")]
+    public Vector3 fpsHoldOffset = new Vector3(0.16f, -0.2f, 0.42f);
+    [Tooltip("카메라 기준 회전. Y를 -90에 가깝게 하면 총구가 정면을 향하고, -180에 가깝게 하면 옆모습이 보입니다. Z는 무기 기울기.")]
+    public Vector3 fpsHoldRotation = new Vector3(0f, -108f, -4f);
+    [Tooltip("1인칭에서의 무기 크기 배율 (탑뷰 크기 기준)")]
+    public float fpsHoldScale = 0.4f;
+
     [Header("조준")]
-    [Tooltip("TPS 조준 레이가 무시할 레이어 (자기 자신 등)")]
+    [Tooltip("1인칭 조준 레이가 무시할 레이어 (자기 자신 등)")]
     public LayerMask tpsAimIgnoreLayers;
 
     private int currentWeaponIndex = 0;
@@ -29,6 +37,9 @@ public class PlayerWeaponManager : MonoBehaviour
         towerBuilder = GetComponent<TowerBuilder>();
 
         if (tpsAimIgnoreLayers.value == 0) tpsAimIgnoreLayers = LayerMask.GetMask("Player");
+
+        // 탄약/재장전 HUD 자동 생성 및 연결
+        WeaponHUD.Attach(this);
 
         EnsureMountPoint();
 
@@ -60,6 +71,8 @@ public class PlayerWeaponManager : MonoBehaviour
         if (currentVisual != null)
         {
             currentVisual.SetAimPoint(aimPoint);
+            currentVisual.SetFirstPersonPose(fpsHoldOffset, fpsHoldRotation, fpsHoldScale);
+            currentVisual.SetFirstPerson(playerController != null && playerController.isFirstPerson);
             currentVisual.Refresh();
         }
 
@@ -146,6 +159,15 @@ public class PlayerWeaponManager : MonoBehaviour
     // 현재 들고 있는 무기 (HUD 등에서 탄약 표시용)
     public Weapon CurrentWeapon => currentWeapon;
 
+    // 인스펙터에서 컴포넌트 우클릭 → 이 메뉴로 1인칭 무기 위치를 기본값으로 되돌릴 수 있습니다.
+    [ContextMenu("1인칭 무기 위치 기본값으로")]
+    private void ResetFirstPersonHold()
+    {
+        fpsHoldOffset = new Vector3(0.16f, -0.2f, 0.42f);
+        fpsHoldRotation = new Vector3(0f, -108f, -4f);
+        fpsHoldScale = 0.4f;
+    }
+
     private void EnsureAmmoSlots()
     {
         int count = weaponPrefabs != null ? weaponPrefabs.Length : 0;
@@ -166,7 +188,7 @@ public class PlayerWeaponManager : MonoBehaviour
         Camera cam = Camera.main;
         if (cam == null) return transform.position + transform.forward * 10f;
 
-        if (playerController != null && playerController.isTPS)
+        if (playerController != null && playerController.isFirstPerson)
         {
             Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, ~tpsAimIgnoreLayers, QueryTriggerInteraction.Ignore)) return hit.point;

@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0023
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0023
+  weaponName: Colt_Ranger
+  inGameName: "\uCF5C\uD2B8-\uB808\uC778\uC800"
+  role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uAD8C\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Semi
+  range: 7.5
+  damage: 26
+  reloadTime: 1
+  maxAmmo: 11
+  fireRate: 2.2
+  projectileCount: 1
+  spread: 1.8
+  moveSpread: 3.2
+  knockback: 0
+  canPierce: 0
+  armorPenetration: 3
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Ball
+  spriteName: Pic_Colt_3_Ranger
+  spriteLength: 0.5
+  weaponSprite: {fileID: 21300000, guid: 7da9af2a316b4b34f92cb2d970ab0597, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
+  description: "Ranger \uC2DC\uB9AC\uC988 : \uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58
+    \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"

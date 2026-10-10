@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0064
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0064
+  weaponName: Garand_Ballista
+  inGameName: "\uAC1C\uB7F0\uB4DC-\uBC1C\uB9AC\uC2A4\uD0C0"
+  role: "3\uD2F0\uC5B4 \uD654\uB825\uD615 \uC800\uACA9\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Semi
+  range: 17.5
+  damage: 70
+  reloadTime: 2.6
+  maxAmmo: 8
+  fireRate: 0.8
+  projectileCount: 1
+  spread: 0
+  moveSpread: 8
+  knockback: 1.5
+  canPierce: 1
+  armorPenetration: 20
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Pene
+  spriteName: Pic_Garand_3_Ballista
+  spriteLength: 1.3
+  weaponSprite: {fileID: 21300000, guid: c5cf548555a53254eb1ad6320784b84d, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 1fc262461d9318f4fa5dce8c9d2cba0d, type: 3}
+  description: "Ballista \uC2DC\uB9AC\uC988 : \uB109\uBC31 \uCD94\uAC00 (\uC18C\uB7C9)
+    + \uC0AC\uAC70\uB9AC \uC99D\uAC00 + \uC7A5\uD0C4\uC218 \uC99D\uAC00"

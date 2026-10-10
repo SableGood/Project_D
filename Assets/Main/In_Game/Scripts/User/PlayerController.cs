@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Serialization;
 
 public class PlayerController : MonoBehaviour
 {
@@ -6,9 +7,12 @@ public class PlayerController : MonoBehaviour
     public float moveSpeed = 5.0f;
     public float mouseSensitivity = 2.0f;
 
-    [Header("현재 시점 상태")]
-    public bool isTPS = false;
-    public float cameraPitch = 15f;
+    [Header("현재 시점 상태 (Tab: 탑뷰 ↔ 1인칭)")]
+    [FormerlySerializedAs("isTPS")]
+    public bool isFirstPerson = false;
+    public float cameraPitch = 0f;
+    [Tooltip("1인칭에서 위/아래로 볼 수 있는 최대 각도")]
+    public float maxPitch = 80f;
 
     [Header("플레이어 데이터 설정")]
     public EntityData myData; // 인스펙터에서 연결할 플레이어 전용 ScriptableObject
@@ -21,6 +25,10 @@ public class PlayerController : MonoBehaviour
     // ★ 이동 입력 중인지 (무기 이동 탄퍼짐 등에서 사용)
     public bool IsMoving { get; private set; }
 
+    // 1인칭일 때 숨길 내 캐릭터 일러스트 (그림자는 남김)
+    private SpriteRenderer[] bodySprites;
+    private UnityEngine.Rendering.ShadowCastingMode[] bodyShadowModes;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -28,7 +36,8 @@ public class PlayerController : MonoBehaviour
         {
             controller = gameObject.AddComponent<CharacterController>();
         }
-        UpdateCursorState();
+        CacheBodySprites();
+        ApplyViewMode();
 
         // 게임 시작 시, GameManager에 자신의 Transform(위치)을 등록합니다.
         if (GameManager.Instance != null)
@@ -56,11 +65,11 @@ public class PlayerController : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Tab))
         {
-            isTPS = !isTPS;
-            UpdateCursorState();
+            isFirstPerson = !isFirstPerson;
+            ApplyViewMode();
         }
 
-        if (isTPS)
+        if (isFirstPerson)
         {
             float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
             float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
@@ -68,7 +77,7 @@ public class PlayerController : MonoBehaviour
             transform.Rotate(Vector3.up * mouseX);
 
             cameraPitch -= mouseY;
-            cameraPitch = Mathf.Clamp(cameraPitch, -45f, 60f);
+            cameraPitch = Mathf.Clamp(cameraPitch, -maxPitch, maxPitch);
         }
         else
         {
@@ -87,7 +96,7 @@ public class PlayerController : MonoBehaviour
         IsMoving = Mathf.Abs(h) > 0.01f || Mathf.Abs(v) > 0.01f;
         Vector3 moveDirection;
 
-        if (isTPS)
+        if (isFirstPerson)
         {
             moveDirection = (transform.forward * v + transform.right * h).normalized;
         }
@@ -126,10 +135,10 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private void UpdateCursorState()
+    // 시점 전환 시: 커서 상태 + 내 일러스트 표시 여부
+    private void ApplyViewMode()
     {
-        // UI 조작은 PlayerHUD로 이관하고, 여기서는 마우스 커서 상태만 제어합니다.
-        if (isTPS)
+        if (isFirstPerson)
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
@@ -138,6 +147,30 @@ public class PlayerController : MonoBehaviour
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+        }
+
+        // 1인칭에서는 내 일러스트가 카메라를 가리므로 숨기고, 바닥 그림자만 남깁니다.
+        if (bodySprites == null) return;
+        for (int i = 0; i < bodySprites.Length; i++)
+        {
+            if (bodySprites[i] == null) continue;
+            bodySprites[i].shadowCastingMode = isFirstPerson
+                ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly
+                : bodyShadowModes[i];
+        }
+    }
+
+    // 캐릭터 일러스트 = Billboard가 붙은 SpriteRenderer (무기 이미지는 제외됨)
+    private void CacheBodySprites()
+    {
+        Billboard[] boards = GetComponentsInChildren<Billboard>(true);
+        bodySprites = new SpriteRenderer[boards.Length];
+        bodyShadowModes = new UnityEngine.Rendering.ShadowCastingMode[boards.Length];
+        for (int i = 0; i < boards.Length; i++)
+        {
+            bodySprites[i] = boards[i].GetComponent<SpriteRenderer>();
+            // Billboard.Start에서 TwoSided로 바꾸므로 기본값을 TwoSided로 기억
+            bodyShadowModes[i] = UnityEngine.Rendering.ShadowCastingMode.TwoSided;
         }
     }
 }

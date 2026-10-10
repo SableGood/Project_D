@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0043
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0043
+  weaponName: Eugene_Ranger
+  inGameName: "\uC720\uC9C4-\uB808\uC778\uC800"
+  role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uC18C\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Auto
+  range: 9.5
+  damage: 17
+  reloadTime: 1.9
+  maxAmmo: 34
+  fireRate: 3
+  projectileCount: 1
+  spread: 1.5
+  moveSpread: 4.8
+  knockback: 0
+  canPierce: 0
+  armorPenetration: 5
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Ball
+  spriteName: Pic_Eugene_3_Ranger
+  spriteLength: 1
+  weaponSprite: {fileID: 21300000, guid: 4fa4fa9d0466d4243b8af4281bde7d6e, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
+  description: "Ranger \uC2DC\uB9AC\uC988 : \uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58
+    \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"

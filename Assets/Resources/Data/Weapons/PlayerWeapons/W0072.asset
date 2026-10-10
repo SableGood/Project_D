@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0072
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0072
+  weaponName: Mossberg_Assault
+  inGameName: "\uBAA8\uC2A4\uBC84\uADF8-\uC5B4\uC370\uD2B8"
+  role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uC0B0\uD0C4\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Semi
+  range: 5
+  damage: 11
+  reloadTime: 2
+  maxAmmo: 7
+  fireRate: 1.3
+  projectileCount: 6
+  spread: 21.6
+  moveSpread: 1.6
+  knockback: 0
+  canPierce: 0
+  armorPenetration: 0
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Shot
+  spriteName: Pic_Mossberg_3_Assault
+  spriteLength: 1
+  weaponSprite: {fileID: 21300000, guid: 7e3571ace8ef76147a73a0ddbf56a73c, type: 3}
+  projectilePrefab: {fileID: 0}
+  description: "Assault \uC2DC\uB9AC\uC988 : \uC774\uB3D9 \uC0AC\uACA9 \uC2DC \uC9D1\uD0C4\uC728
+    + \uC7AC\uC7A5\uC804\uC18D\uB3C4 + \uBC1C\uC0AC\uC18D\uB3C4 \uC0C1\uC2B9"

@@ -112,3 +112,15 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# ------------------------------------------------------------------
+# [Project_D 추가] 하위 폴더에 실수로 생긴 Unity 프로젝트의 캐시도 무시
+# (예: "My project/Library" 처럼 최상위가 아닌 곳의 Library/Temp/Logs 등은
+#  위의 "/[Ll]ibrary/" 규칙으로 걸러지지 않아 100MB 초과 오류가 났었음)
+# ------------------------------------------------------------------
+**/[Ll]ibrary/
+**/[Tt]emp/
+**/[Oo]bj/
+**/[Ll]ogs/
+**/[Uu]ser[Ss]ettings/
+/My project/

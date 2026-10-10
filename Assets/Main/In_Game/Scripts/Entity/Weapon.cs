@@ -37,6 +37,17 @@ public class Weapon : MonoBehaviour
     public Color tracerColor = new Color(1f, 0.9f, 0.5f, 1f);
 
     private float lastAttackTime = -999f;
+    private float reloadStartTime;
+
+    // 재장전 진행도 0~1 (HUD 표시용)
+    public float ReloadProgress
+    {
+        get
+        {
+            if (!isReloading || playerWepData == null || playerWepData.reloadTime <= 0f) return 0f;
+            return Mathf.Clamp01((Time.time - reloadStartTime) / playerWepData.reloadTime);
+        }
+    }
     private Collider[] hitColliders;
 
     // 플레이어 데이터에서 읽어오는 값 (몹/타워는 기본값 = 기존 동작과 동일)
@@ -166,13 +177,12 @@ public class Weapon : MonoBehaviour
         if (isReloading || playerWepData == null || playerWepData.maxAmmo <= 0) yield break;
 
         isReloading = true;
-        Debug.Log("재장전 시작!");
+        reloadStartTime = Time.time;
 
         yield return new WaitForSeconds(playerWepData.reloadTime);
 
         currentAmmo = playerWepData.maxAmmo;
         isReloading = false;
-        Debug.Log("재장전 완료!");
     }
 
     // =========================================================

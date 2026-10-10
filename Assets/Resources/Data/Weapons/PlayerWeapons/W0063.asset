@@ -1,0 +1,40 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0063
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0063
+  weaponName: Garand_Ranger
+  inGameName: "\uAC1C\uB7F0\uB4DC-\uB808\uC778\uC800"
+  role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uC800\uACA9\uCD1D"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Semi
+  range: 13.5
+  damage: 79
+  reloadTime: 2.4
+  maxAmmo: 7
+  fireRate: 0.8
+  projectileCount: 1
+  spread: 0
+  moveSpread: 6.4
+  knockback: 0
+  canPierce: 1
+  armorPenetration: 18
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Pene
+  spriteName: Pic_Garand_3_Ranger
+  spriteLength: 1.2
+  weaponSprite: {fileID: 21300000, guid: 1c80170f3821c7946bd43f98e2818907, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 1fc262461d9318f4fa5dce8c9d2cba0d, type: 3}
+  description: "Ranger \uC2DC\uB9AC\uC988 : \uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58
+    \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"
