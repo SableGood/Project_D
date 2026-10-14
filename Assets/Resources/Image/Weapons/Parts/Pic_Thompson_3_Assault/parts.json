@@ -1,0 +1,22 @@
+{
+ "magType": "Box",
+ "ppu": 100,
+ "side": {
+  "magOffset": [
+   10.5,
+   -42.5
+  ],
+  "gunWidth": 655,
+  "gunLeft": 0
+ },
+ "fps": {
+  "magOffset": [
+   2.5,
+   -87.0
+  ],
+  "muzzle": [
+   -155.0,
+   86.5
+  ]
+ }
+}

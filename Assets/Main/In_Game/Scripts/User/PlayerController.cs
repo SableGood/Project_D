@@ -14,6 +14,12 @@ public class PlayerController : MonoBehaviour
     [Tooltip("1인칭에서 위/아래로 볼 수 있는 최대 각도")]
     public float maxPitch = 80f;
 
+    [Header("충돌 크기")]
+    [Tooltip("켜면 시작할 때 충돌 반경을 그림의 발 폭에 맞춤 (기존 0.8은 그림보다 훨씬 넓어 포탑에 닿기 전에 막혔음)")]
+    public bool fitColliderToSprite = true;
+    [Tooltip("몸 반경(미터). 캐릭터 크기(스케일)와 상관없이 이 값이 실제 반경")]
+    public float bodyRadius = 0.35f;
+
     [Header("플레이어 데이터 설정")]
     public EntityData myData; // 인스펙터에서 연결할 플레이어 전용 ScriptableObject
 
@@ -35,6 +41,11 @@ public class PlayerController : MonoBehaviour
         if (controller == null)
         {
             controller = gameObject.AddComponent<CharacterController>();
+        }
+        if (fitColliderToSprite)
+        {
+            float s = Mathf.Max(0.01f, Mathf.Abs(transform.lossyScale.x));
+            controller.radius = bodyRadius / s;
         }
         CacheBodySprites();
         ApplyViewMode();

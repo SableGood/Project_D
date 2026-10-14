@@ -3892,6 +3892,7 @@ MonoBehaviour:
   - {fileID: 779880084}
   - {fileID: 1950522396}
   currentCrosshairIndex: 0
+  showInTopDown: 1
 --- !u!1 &799825441
 GameObject:
   m_ObjectHideFlags: 0
@@ -6853,7 +6854,7 @@ MonoBehaviour:
   m_OverrideVoxelSize: 0
   m_VoxelSize: 0.16666667
   m_MinRegionArea: 2
-  m_NavMeshData: {fileID: 23800000, guid: 38c25e621c4d3584e847004ec50dd882, type: 2}
+  m_NavMeshData: {fileID: 23800000, guid: 3c0d1f9299b2f8a40ae3df037c00ef23, type: 2}
   m_BuildHeightMesh: 0
 --- !u!1 &1594943959
 GameObject:

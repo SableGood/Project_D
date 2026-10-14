@@ -65,8 +65,17 @@ public class SpriteFrameAnimator : MonoBehaviour
     [Tooltip("이 속도(m/s) 이상일 때만 걷는 것으로 판단")]
     public float moveThreshold = 0.15f;
 
+    [Header("걷기 그림이 없을 때")]
+    [Tooltip("걷기 클립이 없으면 기본 이미지를 위아래로 들썩여 걷는 느낌을 줌 (보스 1·2페이즈 등)")]
+    public bool bobWhenNoClip = true;
+    [Tooltip("들썩임 높이 (그림 높이 대비 비율)")]
+    public float bobHeight = 0.025f;
+    public float bobStepsPerSecond = 3.3f;
+
     private SpriteRenderer sr;
     private NavMeshAgent agent;
+    private Billboard board;
+    private float bobPhase;
     private Vector3 lastPos;
     private float phase;
     private int shownStep = -1;
@@ -88,6 +97,7 @@ public class SpriteFrameAnimator : MonoBehaviour
     {
         sr = GetComponent<SpriteRenderer>();
         agent = GetComponentInParent<NavMeshAgent>();
+        board = GetComponent<Billboard>();
         if (idleSprite == null) idleSprite = sr.sprite;
     }
 
@@ -109,7 +119,9 @@ public class SpriteFrameAnimator : MonoBehaviour
         lastPos = transform.position;
 
         SpriteClip clip = CurrentClip;
-        if (clip == null || clip.Length == 0 || speed < moveThreshold)
+        bool noClip = clip == null || clip.Length == 0;
+        UpdateBob(noClip && speed >= moveThreshold, speed);
+        if (noClip || speed < moveThreshold)
         {
             IsWalking = false;
             phase = 0f;
@@ -130,6 +142,39 @@ public class SpriteFrameAnimator : MonoBehaviour
         shownStep = step;
         Sprite s = clip.frames[clip.FrameAt(step)];
         if (s != null) sr.sprite = s;
+    }
+
+    // 걷기 그림이 없을 때: 한 걸음마다 살짝 들썩
+    private void UpdateBob(bool walking, float speed)
+    {
+        if (board == null) return;
+        if (!bobWhenNoClip || !walking)
+        {
+            board.bobOffset = 0f;
+            bobPhase = 0f;
+            return;
+        }
+        float rate = bobStepsPerSecond * TestSpeedMultiplier;
+        if (agent != null && agent.speed > 0.01f) rate *= Mathf.Clamp(speed / agent.speed, 0.4f, 1.5f);
+        bobPhase += rate * Time.deltaTime;
+        float h = sr.sprite != null ? sr.bounds.size.y : 1f;
+        board.bobOffset = Mathf.Abs(Mathf.Sin(bobPhase * Mathf.PI)) * bobHeight * h;
+    }
+
+    void OnDisable()
+    {
+        if (board != null) board.bobOffset = 0f;
+    }
+
+    // 보스 페이즈 등에서 그림 세트를 통째로 교체
+    public void SetSprites(Sprite idle, List<SpriteClip> clips)
+    {
+        idleSprite = idle;
+        walkClips = clips ?? new List<SpriteClip>();
+        walkClipIndex = 0;
+        shownStep = -1;
+        phase = 0f;
+        if (!IsWalking || walkClips.Count == 0) ShowIdle();
     }
 
     private void ShowIdle()

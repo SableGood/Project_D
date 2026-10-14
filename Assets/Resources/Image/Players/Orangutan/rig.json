@@ -1,0 +1,93 @@
+{
+ "ppu": 240.0,
+ "hipLocal": [
+  0.0,
+  0.3917
+ ],
+ "upperPivotY": 29,
+ "upperSize": [
+  268,
+  216
+ ],
+ "lowerWaistTop": 2,
+ "lowerSize": [
+  268,
+  208
+ ],
+ "walkFps": 10.0,
+ "standFrame": 1,
+ "dirs": [
+  {
+   "name": "Idle",
+   "sprite": "Upper_Idle",
+   "hand": [
+    0.0762,
+    0.3018
+   ]
+  },
+  {
+   "name": "Up",
+   "sprite": "Upper_Up",
+   "hand": [
+    -0.0713,
+    0.7086
+   ]
+  },
+  {
+   "name": "UpRight",
+   "sprite": "Upper_UpRight",
+   "hand": [
+    0.504,
+    0.5864
+   ]
+  },
+  {
+   "name": "Right",
+   "sprite": "Upper_Right",
+   "hand": [
+    0.4351,
+    0.1753
+   ]
+  },
+  {
+   "name": "DownRight",
+   "sprite": "Upper_DownRight",
+   "hand": [
+    0.3828,
+    0.2036
+   ]
+  },
+  {
+   "name": "Down",
+   "sprite": "Upper_Down",
+   "hand": [
+    -0.002,
+    0.054
+   ]
+  },
+  {
+   "name": "DownLeft",
+   "sprite": "Upper_DownLeft",
+   "hand": [
+    -0.3832,
+    0.2037
+   ]
+  },
+  {
+   "name": "Left",
+   "sprite": "Upper_Left",
+   "hand": [
+    -0.4348,
+    0.1755
+   ]
+  },
+  {
+   "name": "UpLeft",
+   "sprite": "Upper_UpLeft",
+   "hand": [
+    -0.5199,
+    0.5864
+   ]
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+{
+ "magType": "Box",
+ "ppu": 100,
+ "side": {
+  "magOffset": [
+   -33.0,
+   -57.0
+  ]
+ }
+}

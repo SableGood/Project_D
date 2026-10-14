@@ -16,6 +16,10 @@ using System.IO;
 //   7) 프레임 애니메이션: Assets/Resources/Image/Mobs/Anim/{코드}/{클립}_{번호}.png 가 있으면
 //      SpriteFrameAnimator를 붙이고 클립을 채움 (Walk로 시작하는 클립 = 걷기)
 //   6) 그림자용 머티리얼(Mat_2D_Mob, 셰이더 Project_D/Sprite Shadow)을 적용 → 바닥에 그림자가 생김
+//   8) 보스(MB…): 체력 단계별 페이즈(BossPhases) 구성
+//        그림: Pic_MB001.png(1페이즈), Pic_MB001_P2.png, Pic_MB001_P3.png
+//        걷기: Anim/MB001_P2/…, Anim/MB001_P3/… (1페이즈는 Anim/MB001/ 또는 Anim/MB001_P1/)
+//   9) 프리팹이 없는 몹(ME002 등)은 비슷한 몹 프리팹을 복사해 새로 만듦 (데이터는 Ent_{코드}로 연결)
 //  여러 번 실행해도 안전합니다. (이미지만 바꾼 뒤 다시 실행하면 이미지가 갱신됨)
 public static class MobPrefabTools
 {
@@ -38,6 +42,9 @@ public static class MobPrefabTools
             AssetDatabase.CreateFolder("Assets/Resources/Image", "Mobs");
             Debug.Log($"[몹] 이미지 폴더를 만들었습니다: {MobImageFolder}  (여기에 Pic_MM001.png 처럼 넣으세요)");
         }
+
+        // 이미지는 있는데 프리팹이 없는 몹은 비슷한 몹을 복사해서 만듦
+        EnsurePrefab("ME002", "MR001"); // 엘리트 원거리 ← 원거리 기본 몹 기반
 
         string[] guids = AssetDatabase.FindAssets("t:Prefab", new[] { MobPrefabFolder });
         int withImage = 0, withoutImage = 0;
@@ -70,6 +77,7 @@ public static class MobPrefabTools
                         : (sprite.bounds.size.y > 0.0001f ? bodyHeight / sprite.bounds.size.y : 1f);
                     ApplySprite(root, sprite, scale, shadowMat);
                     ApplyAnimations(root, code, sprite);
+                    if (code.StartsWith("MB")) SetupBossPhases(root, code, sprite);
                     withImage++;
                 }
                 else
@@ -267,7 +275,47 @@ public static class MobPrefabTools
             list.Add(file.Replace('\\', '/'));
         }
 
+        var clips = BuildClips(code, groups);
+        if (clips.Count == 0)
+        {
+            if (anim != null) Object.DestroyImmediate(anim, true);
+            return;
+        }
+
+        if (anim == null) anim = spriteT.gameObject.AddComponent<SpriteFrameAnimator>();
+        anim.idleSprite = idleSprite;
+        anim.walkClips = clips;
+        anim.walkClipIndex = Mathf.Clamp(anim.walkClipIndex, 0, clips.Count - 1);
+
+        var names = new System.Collections.Generic.List<string>();
+        foreach (var c in clips) names.Add($"{c.name}({c.frames.Length}장, {c.fps}fps)");
+        Debug.Log($"[몹] {code}: 걷기 애니메이션 적용 - {string.Join(", ", names)}");
+    }
+
+    // 폴더 안의 "{클립}_{번호}.png" 파일들 → 클립 이름별 묶음 (폴더가 없으면 null)
+    private static System.Collections.Generic.SortedDictionary<string, System.Collections.Generic.List<string>> GroupFrames(string folder)
+    {
+        if (!Directory.Exists(folder)) return null;
+        var groups = new System.Collections.Generic.SortedDictionary<string, System.Collections.Generic.List<string>>();
+        foreach (string file in Directory.GetFiles(folder))
+        {
+            string ext = Path.GetExtension(file).ToLowerInvariant();
+            if (ext != ".png" && ext != ".jpg" && ext != ".jpeg") continue;
+            string fname = Path.GetFileNameWithoutExtension(file);
+            int us = fname.LastIndexOf('_');
+            if (us <= 0) continue;
+            string clipName = fname.Substring(0, us);
+            if (!groups.TryGetValue(clipName, out var list)) groups[clipName] = list = new System.Collections.Generic.List<string>();
+            list.Add(file.Replace('\\', '/'));
+        }
+        return groups;
+    }
+
+    // 묶음 → 걷기 클립 목록 (프레임 많은 클립이 먼저)
+    private static System.Collections.Generic.List<SpriteClip> BuildClips(string code, System.Collections.Generic.SortedDictionary<string, System.Collections.Generic.List<string>> groups)
+    {
         var clips = new System.Collections.Generic.List<SpriteClip>();
+        if (groups == null) return clips;
         foreach (var kv in groups)
         {
             if (!kv.Key.StartsWith("Walk"))
@@ -291,23 +339,77 @@ public static class MobPrefabTools
                 clips.Add(new SpriteClip { name = kv.Key + " 왕복", frames = frames.ToArray(), pingPong = true, fps = Mathf.Round((frames.Count * 2 - 2) / WalkCycleSeconds) });
         }
 
-        if (clips.Count == 0)
-        {
-            if (anim != null) Object.DestroyImmediate(anim, true);
-            return;
-        }
-
         // 프레임이 많은 클립을 기본으로
         clips.Sort((a, b) => b.frames.Length.CompareTo(a.frames.Length));
+        return clips;
+    }
 
+    // ------------------------------------------------------------------
+    // 8) 보스 페이즈
+    // ------------------------------------------------------------------
+    private static void SetupBossPhases(GameObject root, string code, Sprite phase1Sprite)
+    {
+        Transform spriteT = root.transform.Find("Sprite");
+        if (spriteT == null) return;
+
+        BossPhases bp = root.GetComponent<BossPhases>();
+        if (bp == null) bp = root.AddComponent<BossPhases>();
+        if (bp.phases == null || bp.phases.Count != 3) bp.SetupDefaultPhases();
+        bp.displayName = $"{code}  기본 보스";
+
+        Sprite last = phase1Sprite;
+        int animated = 0;
+        for (int i = 0; i < bp.phases.Count; i++)
+        {
+            Sprite sp = i == 0 ? phase1Sprite : LoadMobSprite($"{code}_P{i + 1}");
+            if (sp == null) sp = last; // 그림이 없으면 이전 페이즈 그림 유지
+            last = sp;
+            var groups = GroupFrames($"{MobImageFolder}/Anim/{code}_P{i + 1}");
+            if (groups == null && i == 0) groups = GroupFrames($"{MobImageFolder}/Anim/{code}");
+            bp.phases[i].idleSprite = sp;
+            bp.phases[i].walkClips = BuildClips(code, groups);
+            if (bp.phases[i].walkClips.Count > 0) animated++;
+        }
+
+        // 그림 교체·들썩임을 위해 애니메이터는 항상 둠 (1페이즈 그림으로 시작)
+        SpriteFrameAnimator anim = spriteT.GetComponent<SpriteFrameAnimator>();
         if (anim == null) anim = spriteT.gameObject.AddComponent<SpriteFrameAnimator>();
-        anim.idleSprite = idleSprite;
-        anim.walkClips = clips;
-        anim.walkClipIndex = Mathf.Clamp(anim.walkClipIndex, 0, clips.Count - 1);
+        anim.idleSprite = bp.phases[0].idleSprite;
+        anim.walkClips = new System.Collections.Generic.List<SpriteClip>(bp.phases[0].walkClips);
+        anim.walkClipIndex = 0;
+        spriteT.GetComponent<SpriteRenderer>().sprite = bp.phases[0].idleSprite;
 
-        var names = new System.Collections.Generic.List<string>();
-        foreach (var c in clips) names.Add($"{c.name}({c.frames.Length}장, {c.fps}fps)");
-        Debug.Log($"[몹] {code}: 걷기 애니메이션 적용 - {string.Join(", ", names)}");
+        Debug.Log($"[몹] {code}: 보스 페이즈 {bp.phases.Count}단계 설정 (걷기 프레임 있는 페이즈 {animated}개, 나머지는 들썩임 걷기)");
+    }
+
+    // ------------------------------------------------------------------
+    // 9) 프리팹이 없는 몹: 비슷한 몹 프리팹을 복사해서 생성
+    // ------------------------------------------------------------------
+    private static void EnsurePrefab(string code, string templateCode)
+    {
+        string path = $"{MobPrefabFolder}/Ent_{code}.prefab";
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(path) != null) return;
+        if (LoadMobSprite(code) == null) return; // 이미지가 없으면 만들지 않음
+        string template = $"{MobPrefabFolder}/Ent_{templateCode}.prefab";
+        if (AssetDatabase.LoadAssetAtPath<GameObject>(template) == null || !AssetDatabase.CopyAsset(template, path))
+        {
+            Debug.LogWarning($"[몹] {code}: 프리팹을 만들 수 없습니다. (복사할 {template} 없음)");
+            return;
+        }
+        AssetDatabase.ImportAsset(path);
+
+        GameObject root = PrefabUtility.LoadPrefabContents(path);
+        try
+        {
+            root.name = $"Ent_{code}";
+            EntityData data = AssetDatabase.LoadAssetAtPath<EntityData>($"Assets/Resources/Data/Entities/Mobs/Ent_{code}.asset");
+            MobAI ai = root.GetComponent<MobAI>();
+            if (ai != null) ai.myData = data;
+            // 이전 몹의 그림/애니메이션은 이후 단계에서 새 이미지로 교체됨
+            PrefabUtility.SaveAsPrefabAsset(root, path);
+        }
+        finally { PrefabUtility.UnloadPrefabContents(root); }
+        Debug.Log($"[몹] {code}: Ent_{templateCode}를 복사해 새 프리팹을 만들었습니다. (데이터 Ent_{code} 연결)");
     }
 
     public const float WalkCycleSeconds = 0.6f;

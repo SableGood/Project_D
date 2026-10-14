@@ -158,7 +158,7 @@ public static class TurretSetupTools
         if (mode == SupportTower.Mode.SlowAura)
         {
             s.slowPercent = 0.15f;
-            s.spinSpeed = 90f;
+            s.spinSpeed = 40f;   // 수리 포탑(TR050)과 같은 회전 속도
             s.pulseColor = new Color(0.45f, 0.8f, 1f, 0.9f);
         }
         else

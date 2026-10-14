@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 
+// 무기 그림(WeaponVisual, 100)이 자리를 잡은 뒤에 총구 화염·궤적을 총구에 다시 붙이도록 더 늦게 실행
+[DefaultExecutionOrder(110)]
 public class Weapon : MonoBehaviour
 {
     public enum FireMode { StraightFast, RapidBullet, ParabolicShell, HomingMissile, Hitscan }
@@ -38,10 +40,30 @@ public class Weapon : MonoBehaviour
     [Tooltip("켜면 플레이어 무기가 아니어도 궤적 표시 (저격 포탑 등)")]
     public bool alwaysShowTracer = false;
 
+    [Header("총구 화염 (발사 순간 번쩍)")]
+    [Tooltip("켜면 쏠 때마다 총구에 짧게 화염이 보임 (포탑은 TurretAI가 켬)")]
+    public bool muzzleFlash = false;
+    [Tooltip("비워두면 코드로 만든 도트 화염 그림을 사용")]
+    public Sprite muzzleFlashSprite;
+    public float muzzleFlashSize = 0.7f;     // 월드 크기(미터)
+    public float muzzleFlashDuration = 0.05f;
+    public Color muzzleFlashColor = Color.white;
+
     [Header("명중 시 이동 둔화 (포탑 제압 사격 등)")]
     [Tooltip("0.2 = 명중한 몹이 20% 느려짐. 0이면 없음 (TurretAI가 자동 설정)")]
     [Range(0f, 0.9f)] public float hitSlowPercent = 0f;
     public float hitSlowDuration = 1f;
+
+    [Header("플레이어 총기: 조준점(커서)에서 탄이 멈춤")]
+    [Tooltip("켜면 플레이어 총탄이 커서(조준점)까지만 날아가고, 그 자리나 도중의 포탑·바닥에 작은 회색 착탄 이펙트")]
+    public bool stopAtAimPoint = true;
+
+    // 플레이어 무기가 한 번 발사할 때마다 (반동·탄피 연출용, PlayerWeaponManager가 구독)
+    public event System.Action<Weapon> Fired;
+    // 마지막 발사 방향 (수평 기준이 아닌 실제 방향)
+    public Vector3 LastFireDirection { get; private set; } = Vector3.forward;
+    // 총기인지 (탄창이 있는 무기 = 총. 근접무기는 반동·탄피·착탄 없음)
+    public bool IsGun => playerWepData != null && playerWepData.UsesAmmo;
 
     private float lastAttackTime = -999f;
     private float reloadStartTime;
@@ -75,6 +97,8 @@ public class Weapon : MonoBehaviour
     // 궤적(트레이서) 표시용
     private static Material tracerMaterial;
     private readonly List<LineRenderer> tracers = new List<LineRenderer>();
+    private readonly List<Vector3> tracerStartLocal = new List<Vector3>(); // 총구 기준 궤적 시작점 (움직여도 총구를 따라감)
+    private Vector3 flashLocal;                                            // 총구 기준 화염 위치
     private int tracerIndex;
     private Coroutine tracerRoutine;
 
@@ -140,8 +164,31 @@ public class Weapon : MonoBehaviour
     // 현재 실제로 적용되는 탄퍼짐 (HUD 크로스헤어 등에서 활용 가능)
     public float CurrentSpread => spreadAngle + (isOwnerMoving ? moveSpreadAngle : 0f);
 
+    // 이동하면서 쏴도 화염·궤적이 쏜 자리에 남지 않고 총구를 따라가게 (매 프레임 마지막에 다시 붙임)
+    void LateUpdate()
+    {
+        if (muzzle == null) return;
+        if (flashRenderer != null && flashRenderer.enabled)
+        {
+            flashRenderer.transform.position = muzzle.TransformPoint(flashLocal);
+            Camera c = Camera.main;
+            if (c != null)
+            {
+                float roll = Vector3.SignedAngle(c.transform.up, Vector3.ProjectOnPlane(flashRenderer.transform.up, c.transform.forward), c.transform.forward);
+                flashRenderer.transform.rotation = c.transform.rotation * Quaternion.Euler(0f, 0f, roll);
+            }
+        }
+        for (int i = 0; i < tracers.Count && i < tracerStartLocal.Count; i++)
+        {
+            LineRenderer lr = tracers[i];
+            if (lr != null && lr.enabled) lr.SetPosition(0, muzzle.TransformPoint(tracerStartLocal[i]));
+        }
+    }
+
     void Update()
     {
+        if (flashRenderer != null && flashRenderer.enabled && Time.time >= flashHideTime) flashRenderer.enabled = false;
+
         if (aimType == AimType.Auto && Time.time >= lastAttackTime + attackCooldown)
         {
             AutoAttackUpdate();
@@ -249,6 +296,11 @@ public class Weapon : MonoBehaviour
             if (fireMode == FireMode.Hitscan) FireHitscan(targetTransform, manualTargetPosition);
             else FireProjectile(targetTransform, manualTargetPosition);
         }
+        Vector3 aimForFx = targetTransform != null ? targetTransform.position : manualTargetPosition;
+        if (muzzleFlash) ShowMuzzleFlash(aimForFx);
+        Vector3 fd = aimForFx - GetFireOrigin(fireMode == FireMode.Hitscan);
+        if (fd.sqrMagnitude > 0.0001f) LastFireDirection = fd.normalized;
+        if (playerWepData != null) Fired?.Invoke(this);
 
         if (tracerIndex > 0)
         {
@@ -280,13 +332,28 @@ public class Weapon : MonoBehaviour
         Vector3 aimPos = targetTransform != null ? targetTransform.position + Vector3.up * 0.5f : manualTargetPosition;
         Vector3 fireOrigin = GetFireOrigin(true);
         Vector3 direction = ApplySpread((aimPos - fireOrigin).normalized);
-        Vector3 endPoint = fireOrigin + direction * attackRange;
+
+        // 플레이어 총기: 커서(조준점)까지만 날아감. 도중에 포탑·바닥·벽에 막히면 그 자리에서 멈춤
+        bool stopAtAim = stopAtAimPoint && IsGun && targetTransform == null;
+        float maxDist = attackRange;
+        bool blocked = false;
+        if (stopAtAim)
+        {
+            maxDist = Mathf.Min(attackRange, Vector3.Distance(fireOrigin, aimPos));
+            if (Physics.Raycast(fireOrigin, direction, out RaycastHit obstacle, maxDist, ObstacleMask(), QueryTriggerInteraction.Ignore))
+            {
+                maxDist = obstacle.distance;
+                blocked = true;
+            }
+        }
+        Vector3 endPoint = fireOrigin + direction * maxDist;
+        bool hitTarget = false;
 
         if (canPierce)
         {
             // 관통: 사거리 안의 모든 대상에게 피해
             hitThisRay.Clear();
-            RaycastHit[] hits = Physics.RaycastAll(fireOrigin, direction, attackRange, targetLayer, QueryTriggerInteraction.Ignore);
+            RaycastHit[] hits = Physics.RaycastAll(fireOrigin, direction, maxDist, targetLayer, QueryTriggerInteraction.Ignore);
             foreach (RaycastHit h in hits)
             {
                 Health hp = h.transform.GetComponentInParent<Health>();
@@ -294,14 +361,32 @@ public class Weapon : MonoBehaviour
                 ApplyDamage(hp, direction);
             }
         }
-        else if (Physics.Raycast(fireOrigin, direction, out RaycastHit hit, attackRange, targetLayer, QueryTriggerInteraction.Ignore))
+        else if (Physics.Raycast(fireOrigin, direction, out RaycastHit hit, maxDist, targetLayer, QueryTriggerInteraction.Ignore))
         {
             ApplyDamage(hit.transform, direction);
             endPoint = hit.point;
+            hitTarget = true;
         }
+
+        // 몹에 맞지 않은 탄: 멈춘 자리(커서·포탑·바닥)에 작은 회색 착탄
+        if (stopAtAim && !hitTarget) HitEffects.Impact(endPoint, blocked);
 
         Debug.DrawLine(fireOrigin, endPoint, Color.green, 0.5f);
         if (showTracer && (playerWepData != null || alwaysShowTracer)) ShowTracer(fireOrigin, endPoint);
+    }
+
+    // 착탄 판정에 쓰는 '막는 물체' 레이어: 대상(몹)·플레이어·Ignore Raycast를 뺀 모든 것 (포탑, 바닥, 지형)
+    private int obstacleMask = 0;
+    private int ObstacleMask()
+    {
+        if (obstacleMask == 0)
+        {
+            int ignore = targetLayer.value | (1 << 2);
+            int playerLayer = LayerMask.NameToLayer("Player");
+            if (playerLayer >= 0) ignore |= 1 << playerLayer;
+            obstacleMask = ~ignore;
+        }
+        return obstacleMask;
     }
 
     private void FireProjectile(Transform targetTransform, Vector3 manualTargetPosition)
@@ -335,6 +420,10 @@ public class Weapon : MonoBehaviour
 
             if (targetTransform != null) projectile.InitializeAuto(targetTransform);
             else projectile.InitializeManual(aimPos);
+
+            // 플레이어 총탄: 커서(조준점)에서 멈추고 착탄 이펙트
+            if (stopAtAimPoint && IsGun && targetTransform == null)
+                projectile.stopDistance = Mathf.Min(attackRange, Vector3.Distance(spawnPos, manualTargetPosition));
         }
     }
 
@@ -372,6 +461,7 @@ public class Weapon : MonoBehaviour
         projectile.knockbackDistance = 0f;
         projectile.hitSlowPercent = hitSlowPercent;
         projectile.hitSlowDuration = hitSlowDuration;
+        projectile.stopDistance = 0f;
 
         switch (fireMode)
         {
@@ -395,6 +485,90 @@ public class Weapon : MonoBehaviour
     }
 
     // =========================================================
+    // 총구 화염 (도트 스타일, 카메라를 바라보는 작은 그림)
+    // =========================================================
+    private SpriteRenderer flashRenderer;
+    private float flashHideTime;
+    private static Sprite generatedFlash;
+    private static Material flashMaterial;
+
+    private void ShowMuzzleFlash(Vector3 aimPos)
+    {
+        Vector3 origin = GetFireOrigin(fireMode == FireMode.Hitscan);
+        Vector3 dir = aimPos - origin; dir.y = 0f;
+        if (dir.sqrMagnitude > 0.0001f) origin += dir.normalized * 0.08f; // 총구 바로 앞
+
+        if (flashRenderer == null)
+        {
+            // 부모 없이 생성 (포탑 부품의 비균일 크기에 찌그러지지 않게). 무기가 사라지면 함께 삭제
+            GameObject go = new GameObject("MuzzleFlash");
+            go.layer = 2; // Ignore Raycast
+            flashRenderer = go.AddComponent<SpriteRenderer>();
+            if (flashMaterial == null) flashMaterial = new Material(Shader.Find("Sprites/Default"));
+            flashRenderer.sharedMaterial = flashMaterial;
+            flashRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            flashRenderer.receiveShadows = false;
+            flashRenderer.sortingOrder = 10;
+        }
+
+        Sprite sprite = muzzleFlashSprite != null ? muzzleFlashSprite : GetGeneratedFlash();
+        flashRenderer.sprite = sprite;
+        flashRenderer.color = muzzleFlashColor;
+
+        Transform t = flashRenderer.transform;
+        Camera cam = Camera.main;
+        t.position = origin;
+        if (muzzle != null) flashLocal = muzzle.InverseTransformPoint(origin);
+        float roll = Random.Range(0, 4) * 90f + (Random.value < 0.5f ? 0f : 45f); // 도트가 깨지지 않게 45도 단위
+        t.rotation = (cam != null ? cam.transform.rotation : Quaternion.identity) * Quaternion.Euler(0f, 0f, roll);
+        float spriteSize = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
+        t.localScale = Vector3.one * (muzzleFlashSize * Random.Range(0.85f, 1.15f) / Mathf.Max(0.0001f, spriteSize));
+
+        flashRenderer.enabled = true;
+        flashHideTime = Time.time + muzzleFlashDuration;
+    }
+
+    // 16x16 도트 화염 (흰 중심 → 노랑 → 주황 테두리, 십자 + 대각선 불꽃)
+    void OnDisable()
+    {
+        if (flashRenderer != null) flashRenderer.enabled = false; // 포탑이 풀로 돌아갈 때 화염이 남지 않게
+    }
+
+    void OnDestroy()
+    {
+        if (flashRenderer != null) Destroy(flashRenderer.gameObject);
+    }
+
+    private static Sprite GetGeneratedFlash()
+    {
+        if (generatedFlash != null) return generatedFlash;
+        const int N = 16;
+        Texture2D tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
+        tex.filterMode = FilterMode.Point;
+        tex.wrapMode = TextureWrapMode.Clamp;
+        Color clear = new Color(0, 0, 0, 0);
+        Color white = new Color(1f, 1f, 0.92f, 1f), yellow = new Color(1f, 0.85f, 0.25f, 1f), orange = new Color(1f, 0.5f, 0.1f, 1f);
+        float c = (N - 1) * 0.5f;
+        for (int y = 0; y < N; y++)
+        for (int x = 0; x < N; x++)
+        {
+            float dx = Mathf.Abs(x - c), dy = Mathf.Abs(y - c);
+            float r = Mathf.Sqrt(dx * dx + dy * dy);
+            bool cross = (dx < 1f && dy < 7.6f) || (dy < 1f && dx < 7.6f);           // 십자 불꽃
+            bool diag = Mathf.Abs(dx - dy) < 0.8f && r < 6.2f;                       // 대각선 짧은 불꽃
+            Color col = clear;
+            if (r < 2.2f) col = white;
+            else if (r < 3.6f || (cross && r < 5f)) col = yellow;
+            else if (cross || diag) col = orange;
+            tex.SetPixel(x, y, col);
+        }
+        tex.Apply();
+        generatedFlash = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+        generatedFlash.name = "GeneratedMuzzleFlash";
+        return generatedFlash;
+    }
+
+    // =========================================================
     // 히트스캔 궤적 (짧게 번쩍이는 선)
     // =========================================================
 
@@ -402,6 +576,8 @@ public class Weapon : MonoBehaviour
     {
         LineRenderer lr = GetTracer(tracerIndex++);
         lr.SetPosition(0, from);
+        while (tracerStartLocal.Count < tracers.Count) tracerStartLocal.Add(Vector3.zero);
+        if (muzzle != null) tracerStartLocal[tracerIndex - 1] = muzzle.InverseTransformPoint(from);
         lr.SetPosition(1, to);
         lr.enabled = true;
     }

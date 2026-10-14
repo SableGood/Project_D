@@ -18,6 +18,22 @@ public class PlayerWeaponManager : MonoBehaviour
     [Tooltip("1인칭에서의 무기 크기 배율 (탑뷰 크기 기준)")]
     public float fpsHoldScale = 0.4f;
 
+    [Header("발사 연출 (총기만, 근접무기 제외)")]
+    [Tooltip("총구 화염 크기 (미터). 포탑(0.7)보다 작게")]
+    public float muzzleFlashSize = 0.32f;
+    [Tooltip("반동 세기 배율 (무기 위력에 따라 자동 계산된 값에 곱함)")]
+    public float recoilMultiplier = 1f;
+    [Tooltip("탄피 배출")]
+    public bool ejectCasings = true;
+    [Tooltip("탄피 길이 (미터): 권총탄(권총·기관단총) / 소총탄(소총·기관총·저격총·전투소총) / 산탄")]
+    public float pistolCasingSize = 0.045f;
+    public float rifleCasingSize = 0.075f;
+    public float shotgunCasingSize = 0.08f;
+
+    [Header("무기 크기 (모든 캐릭터 공통)")]
+    [Tooltip("탑뷰에서 무기 그림의 실제 크기 배율. 캐릭터 크기(루트 스케일)와 상관없이 이 크기로 맞춤")]
+    public float weaponWorldScale = 1.56f;
+
     [Header("조준")]
     [Tooltip("1인칭 조준 레이가 무시할 레이어 (자기 자신 등)")]
     public LayerMask tpsAimIgnoreLayers;
@@ -77,6 +93,9 @@ public class PlayerWeaponManager : MonoBehaviour
             currentVisual.Refresh();
         }
 
+        // 총구 화염 크기: 1인칭에서는 카메라 앞 무기 크기에 맞춤
+        currentWeapon.muzzleFlashSize = muzzleFlashSize * ((playerController != null && playerController.isFirstPerson) ? fpsHoldScale : 1f);
+
         // 이동 중이면 이동 탄퍼짐 적용
         currentWeapon.SetOwnerMoving(playerController != null && playerController.IsMoving);
 
@@ -127,9 +146,13 @@ public class PlayerWeaponManager : MonoBehaviour
         currentWeaponInstance = Instantiate(weaponPrefabs[index], weaponMountPoint, false);
         currentWeaponInstance.transform.localPosition = Vector3.zero;
         currentWeaponInstance.transform.localRotation = Quaternion.identity;
+        // 무기 크기 통일: 캐릭터 크기(원숭이 0.7, 오랑우탄 1.3 …)를 상쇄하고 공통 배율로
+        float ownerScale = Mathf.Max(0.0001f, Mathf.Abs(weaponMountPoint.lossyScale.x));
+        currentWeaponInstance.transform.localScale = weaponPrefabs[index].transform.localScale * (weaponWorldScale / ownerScale);
 
         currentWeapon = currentWeaponInstance.GetComponent<Weapon>();
         currentVisual = currentWeaponInstance.GetComponentInChildren<WeaponVisual>();
+        if (currentWeapon != null) currentWeapon.Fired += OnWeaponFired;
 
         if (currentWeapon != null)
         {
@@ -146,6 +169,8 @@ public class PlayerWeaponManager : MonoBehaviour
             if (data != null)
             {
                 currentWeapon.InitPlayerWeapon(data);
+                // 총기: 작은 총구 화염 (근접무기는 없음)
+                currentWeapon.muzzleFlash = data.UsesAmmo;
 
                 // 전에 들었던 무기라면 남은 탄약 복원
                 if (data.UsesAmmo && savedAmmo[index] >= 0)
@@ -159,6 +184,61 @@ public class PlayerWeaponManager : MonoBehaviour
         }
 
         currentWeaponIndex = index;
+    }
+
+    // ---- 발사 연출: 반동(무기 밀림 + 크로스헤어 요동) + 탄피 ----
+    private void OnWeaponFired(Weapon w)
+    {
+        if (w == null || !w.IsGun) return;
+        float strength = RecoilStrength(w.playerWepData) * recoilMultiplier;
+
+        if (currentVisual != null) currentVisual.Kick(strength);
+        PlayerHUD.Recoil(strength);
+        if (ejectCasings) EjectCasing(w, strength);
+    }
+
+    // 한 발의 위력(공격력 × 탄 수)이 클수록 반동이 큼. 권총(18) ≈ 1.2, 기관단총 ≈ 0.75, 저격·산탄 ≈ 2
+    private static float RecoilStrength(PlayerWeaponData d)
+    {
+        if (d == null) return 1f;
+        float power = Mathf.Max(1f, d.damage) * Mathf.Max(1, d.projectileCount);
+        return Mathf.Clamp(Mathf.Sqrt(power / 12f), 0.6f, 2.2f);
+    }
+
+    private void EjectCasing(Weapon w, float strength)
+    {
+        Transform muzzle = w.muzzle != null ? w.muzzle : w.transform;
+        Transform grip = currentVisual != null ? currentVisual.transform : w.transform;
+        // 탄피 배출구 = 손잡이와 총구 사이
+        Vector3 pos = Vector3.Lerp(grip.position, muzzle.position, 0.45f);
+
+        Vector3 fwd = w.LastFireDirection; fwd.y = 0f;
+        if (fwd.sqrMagnitude < 0.0001f) fwd = transform.forward;
+        fwd.Normalize();
+        Vector3 right = Vector3.Cross(Vector3.up, fwd); // 총의 오른쪽으로 배출
+        Vector3 vel = right * Random.Range(1.4f, 2.2f) - fwd * Random.Range(0.2f, 0.6f) + Vector3.up * Random.Range(1.8f, 2.6f);
+
+        HitEffects.CasingType type = CasingTypeOf(w.playerWepData);
+        float size = type == HitEffects.CasingType.Shotgun ? shotgunCasingSize
+                   : type == HitEffects.CasingType.Rifle ? rifleCasingSize : pistolCasingSize;
+        HitEffects.EjectCasing(pos, vel, type, size * Random.Range(0.95f, 1.05f), FloorHeight());
+    }
+
+    // 무기 종류(CSV '역할')로 탄피 종류 결정: 산탄총 → 산탄, 권총·기관단총 → 권총탄, 그 외(소총·기관총·저격총·전투소총) → 소총탄
+    private static HitEffects.CasingType CasingTypeOf(PlayerWeaponData d)
+    {
+        if (d == null) return HitEffects.CasingType.Rifle;
+        string role = d.role ?? "";
+        if (d.projectileCount > 1 || role.Contains("산탄")) return HitEffects.CasingType.Shotgun;
+        if (role.Contains("권총") || role.Contains("기관단총")) return HitEffects.CasingType.Pistol;
+        return HitEffects.CasingType.Rifle;
+    }
+
+    private CharacterController cc;
+    private float FloorHeight()
+    {
+        if (cc == null) cc = GetComponent<CharacterController>();
+        return cc != null ? cc.bounds.min.y : transform.position.y;
     }
 
     // 현재 들고 있는 무기 (HUD 등에서 탄약 표시용)

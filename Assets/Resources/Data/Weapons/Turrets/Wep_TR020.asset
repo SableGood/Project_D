@@ -15,6 +15,6 @@ MonoBehaviour:
   weaponName: TR020_Weapon
   attackType: 3
   attackPower: 10
-  attackSpeed: 3
+  attackSpeed: 6
   attackRange: 5
   projectilePrefab: {fileID: 0}

@@ -31,6 +31,7 @@ public class WaveManager : MonoBehaviour
     {
         if (waveText != null) waveText.gameObject.SetActive(false);
         if (waveStartButton != null) waveStartButton.onClick.AddListener(StartWave);
+        MenuSkin.SkinWaveStartButton(waveStartButton); // 왼쪽 위 고정 + UI 디자인 통일
 
         // 시작 스테이지 지정 로직 실행
         SetStartStage(startStage);

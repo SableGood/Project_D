@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 4418655656364599108}
   - component: {fileID: -8464586736815281784}
   - component: {fileID: 6286891616539273437}
+  - component: {fileID: 41457312412319053}
   m_Layer: 8
   m_Name: Ent_MB001
   m_TagString: Untagged
@@ -37,6 +38,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 8426989325130084898}
   - {fileID: 3857296203179834008}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -59,7 +61,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 3, y: 3, z: 3}
+  m_Size: {x: 3, y: 2.8672564, z: 3}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &4183292829491422645
 MonoBehaviour:
@@ -89,8 +91,10 @@ MonoBehaviour:
   windupColor: {r: 1, g: 0.35, b: 0.35, a: 1}
   hitFlashColor: {r: 1, g: 0.6, b: 0.6, a: 1}
   hitFlashOverlay: {r: 1, g: 1, b: 1, a: 1}
-  hitFlashStrength: 0.85
+  hitFlashStrength: 0.5
   hitFlashDuration: 0.08
+  hitShakeAmount: 0.07
+  hitShakeDuration: 0.15
   aimLineColor: {r: 1, g: 0.1, b: 0.1, a: 0.9}
 --- !u!195 &1688468789999469998
 NavMeshAgent:
@@ -110,8 +114,8 @@ NavMeshAgent:
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
   m_AutoRepath: 1
-  m_Height: 3
-  m_BaseOffset: 1.5
+  m_Height: 2.8672564
+  m_BaseOffset: 1.4336282
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
 --- !u!114 &5440832648424069655
@@ -156,6 +160,14 @@ MonoBehaviour:
   tracerDuration: 0.05
   tracerWidth: 0.03
   tracerColor: {r: 1, g: 0.9, b: 0.5, a: 1}
+  alwaysShowTracer: 0
+  muzzleFlash: 0
+  muzzleFlashSprite: {fileID: 0}
+  muzzleFlashSize: 0.7
+  muzzleFlashDuration: 0.05
+  muzzleFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitSlowPercent: 0
+  hitSlowDuration: 1
 --- !u!114 &4418655656364599108
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -212,6 +224,78 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::KnockbackReceiver
   resistance: 0.85
   duration: 0.12
+--- !u!114 &41457312412319053
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1749953442760117039}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 012e47497782cff4c8111185427e2694, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BossPhases
+  displayName: "MB001  \uAE30\uBCF8 \uBCF4\uC2A4"
+  phases:
+  - name: "1\uD398\uC774\uC988"
+    hpThreshold: 1
+    idleSprite: {fileID: 21300000, guid: be8faa660da155746b7033672e2b4f17, type: 3}
+    walkClips:
+    - name: Walk6
+      frames:
+      - {fileID: 21300000, guid: 40c54147ba091da49a1c23bd4f58fb92, type: 3}
+      - {fileID: 21300000, guid: 7fa8aff897f9e2848925fd32b5dda253, type: 3}
+      - {fileID: 21300000, guid: 9a38c05d687fefa4e87234c37ed0f775, type: 3}
+      - {fileID: 21300000, guid: a0620fb978ae8e8428613e309d4849f1, type: 3}
+      - {fileID: 21300000, guid: 6e80358d07474ad4a830e36f5f9fc220, type: 3}
+      - {fileID: 21300000, guid: 92275113c14684f41af7fea5c4950e36, type: 3}
+      fps: 10
+      pingPong: 0
+    moveSpeedMul: 1
+    attackSpeedMul: 1
+    damageMul: 1
+    knockbackResistance: 0.85
+  - name: "2\uD398\uC774\uC988"
+    hpThreshold: 0.6
+    idleSprite: {fileID: 21300000, guid: 4b72a1aeda8b98b439454826e543c172, type: 3}
+    walkClips:
+    - name: Walk6
+      frames:
+      - {fileID: 21300000, guid: 358ef96b78efe4e4cb98428c696e459b, type: 3}
+      - {fileID: 21300000, guid: d30e45b5a16396442bed5bb4d554158d, type: 3}
+      - {fileID: 21300000, guid: 026f4be3d206a754bae3fcf611b49775, type: 3}
+      - {fileID: 21300000, guid: adb91a52ab773a948a5fdd80cce812e6, type: 3}
+      - {fileID: 21300000, guid: 84c9e588f28f1f34c86a650ac12e3969, type: 3}
+      - {fileID: 21300000, guid: 2e3a0e44f64c4534a8b2d887c6536b26, type: 3}
+      fps: 10
+      pingPong: 0
+    moveSpeedMul: 1.15
+    attackSpeedMul: 1.25
+    damageMul: 1.2
+    knockbackResistance: 0.9
+  - name: "3\uD398\uC774\uC988"
+    hpThreshold: 0.3
+    idleSprite: {fileID: 21300000, guid: 46c884285155338468e3db0ccf98e531, type: 3}
+    walkClips:
+    - name: Walk6
+      frames:
+      - {fileID: 21300000, guid: 79587878f25e106428adf88bc556dd5c, type: 3}
+      - {fileID: 21300000, guid: 54dc13ac6b72b7c48b27b5b0bf1047d9, type: 3}
+      - {fileID: 21300000, guid: 0e7050e98b00c9548b30a002c9ce624f, type: 3}
+      - {fileID: 21300000, guid: 5ebc30c7a51a6244792819906d124edb, type: 3}
+      - {fileID: 21300000, guid: 2eb66ff4b68b3be42acf31ea0010a569, type: 3}
+      - {fileID: 21300000, guid: be1c293f9a727544ebc436425d9a2803, type: 3}
+      fps: 10
+      pingPong: 0
+    moveSpeedMul: 1.3
+    attackSpeedMul: 1.5
+    damageMul: 1.4
+    knockbackResistance: 0.95
+  transitionStun: 1.2
+  transitionInvulnerable: 1.2
+  shockwaveColor: {r: 1, g: 0.25, b: 0.15, a: 0.9}
+  shockwaveRadius: 6
 --- !u!1 &5016722761614600274
 GameObject:
   m_ObjectHideFlags: 0
@@ -229,7 +313,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &3857296203179834008
 Transform:
   m_ObjectHideFlags: 0
@@ -302,3 +386,142 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &7189406601129922623
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8426989325130084898}
+  - component: {fileID: 7949852865287838610}
+  - component: {fileID: 8464591073051777556}
+  - component: {fileID: 4393346272748652526}
+  m_Layer: 8
+  m_Name: Sprite
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8426989325130084898
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7189406601129922623}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0, z: 0}
+  m_LocalScale: {x: 0.44247785, y: 0.44247785, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 911130617991228909}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &7949852865287838610
+SpriteRenderer:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7189406601129922623}
+  m_Enabled: 1
+  m_CastShadows: 2
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 2ad89b0e7886a1f47aa67c308ea6d0ac, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_Sprite: {fileID: 21300000, guid: be8faa660da155746b7033672e2b4f17, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 8.28, y: 6.48}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_SpriteSortPoint: 0
+--- !u!114 &8464591073051777556
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7189406601129922623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1af4e3f331d8f447a7c488ad32cef9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  anchorAtFeet: 0
+  snapFeetToGround: 1
+  bobOffset: 0
+--- !u!114 &4393346272748652526
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7189406601129922623}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db90acee0dd6efd4eaa96e3d8cd2f199, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameAnimator
+  idleSprite: {fileID: 21300000, guid: be8faa660da155746b7033672e2b4f17, type: 3}
+  idleUsesFirstWalkFrame: 0
+  walkClips:
+  - name: Walk6
+    frames:
+    - {fileID: 21300000, guid: 40c54147ba091da49a1c23bd4f58fb92, type: 3}
+    - {fileID: 21300000, guid: 7fa8aff897f9e2848925fd32b5dda253, type: 3}
+    - {fileID: 21300000, guid: 9a38c05d687fefa4e87234c37ed0f775, type: 3}
+    - {fileID: 21300000, guid: a0620fb978ae8e8428613e309d4849f1, type: 3}
+    - {fileID: 21300000, guid: 6e80358d07474ad4a830e36f5f9fc220, type: 3}
+    - {fileID: 21300000, guid: 92275113c14684f41af7fea5c4950e36, type: 3}
+    fps: 10
+    pingPong: 0
+  walkClipIndex: 0
+  syncWithMoveSpeed: 1
+  moveThreshold: 0.15
+  bobWhenNoClip: 1
+  bobHeight: 0.025
+  bobStepsPerSecond: 3.3

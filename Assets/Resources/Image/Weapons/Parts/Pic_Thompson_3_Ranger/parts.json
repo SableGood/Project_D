@@ -1,0 +1,22 @@
+{
+ "magType": "Drum",
+ "ppu": 100,
+ "side": {
+  "magOffset": [
+   11.0,
+   -44.0
+  ],
+  "gunWidth": 662,
+  "gunLeft": 0
+ },
+ "fps": {
+  "magOffset": [
+   41.5,
+   -37.5
+  ],
+  "muzzle": [
+   -139.0,
+   68.0
+  ]
+ }
+}

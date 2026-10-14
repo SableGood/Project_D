@@ -37,6 +37,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 5334462409345401438}
   - {fileID: 2742997711367204336}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -59,7 +60,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1.5, y: 2, z: 1.5}
+  m_Size: {x: 1.5, y: 1.9646016, z: 1.5}
   m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &4183292829491422645
 MonoBehaviour:
@@ -89,8 +90,10 @@ MonoBehaviour:
   windupColor: {r: 1, g: 0.35, b: 0.35, a: 1}
   hitFlashColor: {r: 1, g: 0.6, b: 0.6, a: 1}
   hitFlashOverlay: {r: 1, g: 1, b: 1, a: 1}
-  hitFlashStrength: 0.85
+  hitFlashStrength: 0.5
   hitFlashDuration: 0.08
+  hitShakeAmount: 0.07
+  hitShakeDuration: 0.15
   aimLineColor: {r: 1, g: 0.1, b: 0.1, a: 0.9}
 --- !u!195 &1688468789999469998
 NavMeshAgent:
@@ -110,8 +113,8 @@ NavMeshAgent:
   m_AutoTraverseOffMeshLink: 1
   m_AutoBraking: 1
   m_AutoRepath: 1
-  m_Height: 2
-  m_BaseOffset: 1
+  m_Height: 1.9646016
+  m_BaseOffset: 0.9823008
   m_WalkableMask: 4294967295
   m_ObstacleAvoidanceType: 4
 --- !u!114 &5440832648424069655
@@ -156,6 +159,14 @@ MonoBehaviour:
   tracerDuration: 0.05
   tracerWidth: 0.03
   tracerColor: {r: 1, g: 0.9, b: 0.5, a: 1}
+  alwaysShowTracer: 0
+  muzzleFlash: 0
+  muzzleFlashSprite: {fileID: 0}
+  muzzleFlashSize: 0.7
+  muzzleFlashDuration: 0.05
+  muzzleFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitSlowPercent: 0
+  hitSlowDuration: 1
 --- !u!114 &4418655656364599108
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -229,7 +240,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2742997711367204336
 Transform:
   m_ObjectHideFlags: 0
@@ -302,3 +313,142 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &7501535104787657100
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5334462409345401438}
+  - component: {fileID: 7990194534273806873}
+  - component: {fileID: 2436803989569668551}
+  - component: {fileID: 2443219776789973487}
+  m_Layer: 8
+  m_Name: Sprite
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5334462409345401438
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7501535104787657100}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0, z: 0}
+  m_LocalScale: {x: 0.44247785, y: 0.44247785, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 911130617991228909}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!212 &7990194534273806873
+SpriteRenderer:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7501535104787657100}
+  m_Enabled: 1
+  m_CastShadows: 2
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 2ad89b0e7886a1f47aa67c308ea6d0ac, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_Sprite: {fileID: 21300000, guid: 1eb0ac6c2910b584fa5b3d3f723aa0ee, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 4.44, y: 4.44}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_SpriteSortPoint: 0
+--- !u!114 &2436803989569668551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7501535104787657100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f1af4e3f331d8f447a7c488ad32cef9b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  anchorAtFeet: 0
+  snapFeetToGround: 1
+  bobOffset: 0
+--- !u!114 &2443219776789973487
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7501535104787657100}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db90acee0dd6efd4eaa96e3d8cd2f199, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameAnimator
+  idleSprite: {fileID: 21300000, guid: 1eb0ac6c2910b584fa5b3d3f723aa0ee, type: 3}
+  idleUsesFirstWalkFrame: 0
+  walkClips:
+  - name: Walk6
+    frames:
+    - {fileID: 21300000, guid: ad80f64a8ce73ae4fb7234af6a0b905e, type: 3}
+    - {fileID: 21300000, guid: 415306c9e099a93478b5cad479d0b704, type: 3}
+    - {fileID: 21300000, guid: e9a45d1d3df7a164b8fd76ef01b37b75, type: 3}
+    - {fileID: 21300000, guid: 85e285a2f5a18594bb4f280b3ba32d80, type: 3}
+    - {fileID: 21300000, guid: 8b4f22892df1d004b8e8bfb5c65f082b, type: 3}
+    - {fileID: 21300000, guid: 0b2141b15f40ef248aae8b43a1fb65e1, type: 3}
+    fps: 10
+    pingPong: 0
+  walkClipIndex: 0
+  syncWithMoveSpeed: 1
+  moveThreshold: 0.15
+  bobWhenNoClip: 1
+  bobHeight: 0.025
+  bobStepsPerSecond: 3.3

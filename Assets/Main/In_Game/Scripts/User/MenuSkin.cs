@@ -55,8 +55,7 @@ public class MenuSkin : MonoBehaviour
     // ==================================================================
     private void Apply()
     {
-        font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Arial" }, 32);
-        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        EnsureFont();
 
         // 씬 캔버스: 해상도가 달라도 같은 비율로 보이게 (1920x1080 기준) + 글자 선명하게
         Canvas canvas = GetComponentInParent<Canvas>();
@@ -164,8 +163,47 @@ public class MenuSkin : MonoBehaviour
         }
     }
 
+    // ── WAVE START 버튼: 화면 왼쪽 위에 고정 + 메뉴/HUD와 같은 버튼 디자인 ──
+    //   (씬에서는 화면 가운데 기준 Top_Bar 안에 있어서, 창 크기를 바꾸면 가운데 쪽으로 끌려오던 문제)
+    public static readonly Vector2 WaveButtonPos = new Vector2(20f, -20f);   // 왼쪽 위 기준 (1920x1080)
+    public static readonly Vector2 WaveButtonSize = new Vector2(230f, 56f);
+
+    public static void SkinWaveStartButton(Button b)
+    {
+        if (b == null) return;
+        EnsureFont();
+
+        Canvas canvas = b.GetComponentInParent<Canvas>();
+        if (canvas != null) b.transform.SetParent(canvas.rootCanvas.transform, false);
+        RectTransform rt = (RectTransform)b.transform;
+        rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+        rt.pivot = new Vector2(0f, 1f);
+        rt.anchoredPosition = WaveButtonPos;
+        rt.sizeDelta = WaveButtonSize;
+        rt.localScale = Vector3.one;
+
+        if (b.GetComponent<GameHUDHoverRelay>() == null) StyleButton(b);
+        Text label = b.GetComponentInChildren<Text>(true);
+        if (label != null)
+        {
+            RectTransform lrt = label.rectTransform;
+            lrt.anchorMin = Vector2.zero; lrt.anchorMax = Vector2.one;
+            lrt.offsetMin = lrt.offsetMax = Vector2.zero;
+            label.supportRichText = true;
+            label.fontSize = 22;
+            label.text = "WAVE START  <size=15><color=#FFFFFFA6>F1</color></size>";
+        }
+    }
+
+    private static void EnsureFont()
+    {
+        if (font != null) return;
+        font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Arial" }, 32);
+        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+    }
+
     // ── 버튼: HUD 칸과 같은 테두리 + 어두운 배경, 마우스를 올리면 노란 테두리 ──
-    private void StyleButton(Button b)
+    private static void StyleButton(Button b)
     {
         Image img = b.GetComponent<Image>();
         if (img != null) { img.sprite = null; img.type = Image.Type.Simple; img.color = ButtonBg; }
@@ -212,9 +250,7 @@ public class MenuSkin : MonoBehaviour
         GameManager gm = GameManager.Instance != null ? GameManager.Instance : FindFirstObjectByType<GameManager>();
         if (gm != null && gm.playerPrefabs != null && index < gm.playerPrefabs.Length && gm.playerPrefabs[index] != null)
         {
-            Billboard board = gm.playerPrefabs[index].GetComponentInChildren<Billboard>(true);
-            SpriteRenderer sr = board != null ? board.GetComponent<SpriteRenderer>() : null;
-            if (sr != null) portrait = sr.sprite;
+            portrait = PlayerBodyAnimator.GetPortrait(gm.playerPrefabs[index]); // 상·하체 캐릭터는 지정 초상화
         }
         if (portrait == null)
         {

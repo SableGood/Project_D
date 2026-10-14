@@ -16,6 +16,7 @@ public class Projectile : MonoBehaviour
     [HideInInspector] public float knockbackDistance;  // 명중 시 넉백 거리
     [HideInInspector] public float hitSlowPercent;     // 명중 시 이동 둔화 (제압 사격)
     [HideInInspector] public float hitSlowDuration;
+    [HideInInspector] public float stopDistance;       // >0 이면 이 거리(조준점)에서 멈추고 착탄 이펙트 (플레이어 총탄)
 
     private Transform target;
     private Vector3 straightDir;
@@ -113,6 +114,14 @@ public class Projectile : MonoBehaviour
                 HitTarget(target);
                 return;
             }
+        }
+
+        if (stopDistance > 0f && target == null && Vector3.Distance(startPos, transform.position) >= stopDistance)
+        {
+            transform.position = startPos + straightDir * stopDistance;
+            HitEffects.Impact(transform.position, false);
+            ReturnToPool();
+            return;
         }
 
         if (Vector3.Distance(startPos, transform.position) > 30f)

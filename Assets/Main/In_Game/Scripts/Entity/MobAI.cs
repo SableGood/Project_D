@@ -30,6 +30,10 @@ public class MobAI : MonoBehaviour
     public TargetPriority targetPriority = TargetPriority.Player;
     [Tooltip("TowerFirst일 때 이 반경 안의 타워를 먼저 노림")]
     public float towerSearchRadius = 12f;
+    [Tooltip("플레이어를 쫓다가 포탑에 길이 막히면(제자리에서 못 나아가면) 그 포탑을 공격")]
+    public bool attackBlockingTowers = true;
+    [Tooltip("이 시간(초) 이상 막혀 있으면 길막 포탑을 공격 대상으로 전환")]
+    public float blockedDelay = 0.8f;
     [Tooltip("근거리 공격 전 예비동작 시간(초). 이 시간 안에 피하면 맞지 않음")]
     public float meleeWindup = 0.35f;
     [Tooltip("0보다 크면 저격형: 이 시간(초) 동안 제자리 조준 후 확정 타격")]
@@ -51,8 +55,12 @@ public class MobAI : MonoBehaviour
     public Color hitFlashColor = new Color(1f, 0.6f, 0.6f, 1f);
     [Tooltip("피격 시 일러스트가 이 색으로 번쩍임 (몹 전용 셰이더 사용 시). 공격 예비동작(붉은색)과 구분되도록 흰색 기본")]
     public Color hitFlashOverlay = Color.white;
-    [Range(0f, 1f)] public float hitFlashStrength = 0.85f;
+    [Tooltip("피격 번쩍임 진하기 (0.5 = 반투명하게 덮음)")]
+    [Range(0f, 1f)] public float hitFlashStrength = 0.5f;
     public float hitFlashDuration = 0.08f;
+    [Tooltip("피격 시 그림이 흔들리는 폭(미터). 0이면 흔들림 없음 (몸은 밀려나지 않고 그림만 흔들림)")]
+    public float hitShakeAmount = 0.07f;
+    public float hitShakeDuration = 0.15f;
     public Color aimLineColor = new Color(1f, 0.1f, 0.1f, 0.9f);
 
     private enum State { Chase, Attacking }
@@ -73,6 +81,7 @@ public class MobAI : MonoBehaviour
     private Weapon weapon;
     private KnockbackReceiver knockback;
     private SpriteRenderer bodySprite;
+    private Billboard bodyBoard;
     private Renderer bodyRenderer;       // 스프라이트가 없을 때(큐브 등) 색 변경용
     private Color bodyBaseColor = Color.white;
     private Camera cam;
@@ -85,6 +94,10 @@ public class MobAI : MonoBehaviour
     // 상태
     private State state = State.Chase;
     private Transform target;
+    private Transform blockingTower;     // 길을 막아서 공격 중인 포탑
+    private float stuckTime;
+    private float lastMoveCommandTime;
+    public bool IsAttackingBlocker => blockingTower != null && target == blockingTower;
     private Health targetHealth;
     private Collider[] targetColliders;
     private float nextRetargetTime;
@@ -97,7 +110,31 @@ public class MobAI : MonoBehaviour
     private float slowPercent;
     private float slowUntil;
     public float SlowPercent => Time.time < slowUntil ? slowPercent : 0f;
-    public float SpeedMultiplier => 1f - SlowPercent;
+    public float SpeedMultiplier => (1f - SlowPercent) * phaseMoveMul;
+
+    // 보스 페이즈 등에서 주는 능력치 배율 (BossPhases가 SetPhaseModifiers로 설정)
+    private float phaseMoveMul = 1f;
+    private float baseAttackCooldown = -1f;
+    private int baseAttackDamage = -1;
+    private float stunUntil;
+
+    // 이동속도·공격속도·공격력 배율 (1 = 기본). 풀에서 다시 나오면 1로 초기화됨
+    public void SetPhaseModifiers(float moveMul, float attackSpeedMul, float damageMul)
+    {
+        phaseMoveMul = Mathf.Max(0.05f, moveMul);
+        if (weapon != null && baseAttackCooldown > 0f)
+        {
+            weapon.attackCooldown = baseAttackCooldown / Mathf.Max(0.05f, attackSpeedMul);
+            weapon.attackDamage = Mathf.Max(0, Mathf.RoundToInt(baseAttackDamage * damageMul));
+        }
+    }
+
+    // 잠깐 행동 정지 (보스 페이즈 전환 연출 등)
+    public void Stun(float seconds)
+    {
+        stunUntil = Mathf.Max(stunUntil, Time.time + seconds);
+    }
+    public bool IsStunned => Time.time < stunUntil;
     private float movingTime;
     private Vector3 lastMoveDir;
     private Coroutine attackRoutine;
@@ -123,6 +160,7 @@ public class MobAI : MonoBehaviour
         if (board != null)
         {
             bodySprite = board.GetComponent<SpriteRenderer>();
+            bodyBoard = board;
             board.anchorAtFeet = true; // 탑뷰에서 발이 바닥에서 떠 보이지 않도록 발밑 기준으로 기울임
         }
         if (bodySprite != null && bodySprite.sharedMaterial != null)
@@ -160,11 +198,15 @@ public class MobAI : MonoBehaviour
         }
         slowPercent = 0f;
         slowUntil = 0f;
+        phaseMoveMul = 1f;
+        stunUntil = 0f;
 
         if (weapon != null)
         {
             // 공격 시점은 MobAI가 정하므로 무기의 자동 사격은 끔
             weapon.aimType = Weapon.AimType.Manual;
+            baseAttackCooldown = weapon.attackCooldown;   // 페이즈 배율의 기준값
+            baseAttackDamage = weapon.attackDamage;
             // 몹 무기는 플레이어와 타워만 공격 (프리팹 설정과 무관하게 보장)
             int mask = LayerMask.GetMask("Player", "Tower");
             if (mask != 0) weapon.targetLayer = mask;
@@ -181,6 +223,8 @@ public class MobAI : MonoBehaviour
 
         state = State.Chase;
         target = null;
+        blockingTower = null;
+        stuckTime = 0f;
         targetHealth = null;
         movingTime = 0f;
         LastAction = "-"; HitCount = 0; MissCount = 0; StateLabel = "대기";
@@ -203,6 +247,7 @@ public class MobAI : MonoBehaviour
         if (agent == null || !agent.isOnNavMesh) return;
         if (health != null && health.IsDead) { ReleaseSlot(); StopMoving(); return; }
         if (AiPaused) { StopMoving(); StateLabel = "AI 정지"; return; }
+        if (IsStunned) { StopMoving(); StateLabel = "경직"; return; }
         if (!accelerateWhileMoving) agent.speed = baseSpeed * SpeedMultiplier; // 둔화 반영
 
         UpdateTarget();
@@ -213,6 +258,8 @@ public class MobAI : MonoBehaviour
 
         float dist = SurfaceDistance();
         float reach = weapon != null ? weapon.attackRange : 1f;
+
+        CheckBlockedByTower(dist, reach);
 
         if (type == MobType.Ranged)
             UpdateRanged(dist, reach);
@@ -231,7 +278,17 @@ public class MobAI : MonoBehaviour
 
         Transform newTarget = null;
 
-        if (targetPriority == TargetPriority.TowerFirst && towerMask != 0)
+        // 길을 막은 포탑: 부서지거나 멀어질 때까지 우선 공격
+        if (blockingTower != null)
+        {
+            Health bh = blockingTower.GetComponent<Health>();
+            bool gone = !blockingTower.gameObject.activeInHierarchy || (bh != null && bh.IsDead)
+                        || FlatDistance(transform.position, blockingTower.position) > towerSearchRadius * 0.5f;
+            if (gone) blockingTower = null;
+            else newTarget = blockingTower;
+        }
+
+        if (newTarget == null && targetPriority == TargetPriority.TowerFirst && towerMask != 0)
             newTarget = FindNearestTower();
 
         if (newTarget == null && GameManager.Instance != null && GameManager.Instance.playerTransform != null)
@@ -251,6 +308,52 @@ public class MobAI : MonoBehaviour
             targetHealth = target != null ? target.GetComponentInParent<Health>() : null;
             targetColliders = target != null ? target.GetComponentsInChildren<Collider>() : null;
         }
+    }
+
+    // 플레이어를 쫓는 중인데 제자리에서 못 나아가고, 바로 앞에 포탑이 있으면 → 그 포탑을 공격
+    private void CheckBlockedByTower(float dist, float reach)
+    {
+        if (!attackBlockingTowers || towerMask == 0 || blockingTower != null || target == null) { stuckTime = 0f; return; }
+        if (target.GetComponent<PlayerController>() == null) { stuckTime = 0f; return; } // 플레이어 추격 중일 때만
+
+        bool tryingToMove = Time.time - lastMoveCommandTime < 0.3f && !agent.pathPending && dist > reach + 0.3f;
+        float speedNow = new Vector2(agent.velocity.x, agent.velocity.z).magnitude;
+        bool slow = speedNow < Mathf.Max(0.3f, agent.speed * 0.35f);
+        // 경로가 끊긴 경우(포탑이 길을 완전히 막아 내비메쉬가 갈라짐)도 막힌 것으로 봄
+        bool partial = agent.hasPath && agent.pathStatus != UnityEngine.AI.NavMeshPathStatus.PathComplete;
+
+        if (tryingToMove && (slow || partial)) stuckTime += Time.deltaTime;
+        else stuckTime = Mathf.Max(0f, stuckTime - Time.deltaTime * 2f);
+        if (stuckTime < blockedDelay) return;
+        stuckTime = 0f;
+
+        Transform tower = FindTowerAhead(target.position);
+        if (tower == null) return;
+        blockingTower = tower;
+        nextRetargetTime = 0f; // 바로 대상 교체
+        LastAction = $"길막 포탑 공격 → {tower.name.Replace("(Clone)", "")}";
+    }
+
+    // 플레이어 방향 앞쪽(±75도), 가까운 거리 안의 포탑
+    private Transform FindTowerAhead(Vector3 goal)
+    {
+        float radius = agent.radius + 2f;
+        int count = Physics.OverlapSphereNonAlloc(transform.position, radius, towerHits, towerMask, QueryTriggerInteraction.Ignore);
+        Vector3 toGoal = goal - transform.position; toGoal.y = 0f;
+        Transform best = null;
+        float bestSqr = float.MaxValue;
+        for (int i = 0; i < count; i++)
+        {
+            Transform root = towerHits[i].transform.root;
+            if (!root.gameObject.activeInHierarchy) continue;
+            Health h = root.GetComponent<Health>();
+            if (h == null || h.IsDead) continue;
+            Vector3 to = towerHits[i].ClosestPoint(transform.position) - transform.position; to.y = 0f;
+            if (to.sqrMagnitude > 0.0001f && toGoal.sqrMagnitude > 0.0001f && Vector3.Angle(toGoal, to) > 75f) continue;
+            float sqr = to.sqrMagnitude;
+            if (sqr < bestSqr) { bestSqr = sqr; best = root; }
+        }
+        return best;
     }
 
     private Transform FindNearestTower()
@@ -583,6 +686,7 @@ public class MobAI : MonoBehaviour
     private void MoveTo(Vector3 destination)
     {
         agent.isStopped = false;
+        lastMoveCommandTime = Time.time;
         if (Time.time >= nextPathTime) // 경로 계산은 0.2초마다 (매 프레임 계산 방지)
         {
             agent.SetDestination(destination);
@@ -656,6 +760,7 @@ public class MobAI : MonoBehaviour
         if (!isActiveAndEnabled) return;
         if (flashRoutine != null) StopCoroutine(flashRoutine);
         flashRoutine = StartCoroutine(HitFlashRoutine());
+        if (bodyBoard != null) bodyBoard.Shake(hitShakeAmount, hitShakeDuration); // 타격감: 그림만 흔들림
     }
 
     // 피격: 흰색으로 번쩍 (공격 예비동작의 붉은색과 구분)
@@ -680,11 +785,10 @@ public class MobAI : MonoBehaviour
     private void SetFlash(float amount)
     {
         if (bodySprite == null) return;
-        if (amount <= 0f) { bodySprite.SetPropertyBlock(null); return; } // 번쩍임 해제
         if (flashBlock == null) flashBlock = new MaterialPropertyBlock();
-        // 번쩍임 값만 담음 (스프라이트 이미지는 SpriteRenderer가 따로 넣으므로 애니메이션 프레임 교체와 충돌 없음)
-        flashBlock.Clear();
-        flashBlock.SetFloat(FlashAmountId, amount);
+        // 기존 값(Billboard가 넣는 발 위치 등)은 유지하고 번쩍임 값만 바꿈
+        bodySprite.GetPropertyBlock(flashBlock);
+        flashBlock.SetFloat(FlashAmountId, Mathf.Max(0f, amount));
         flashBlock.SetColor(FlashColorId, hitFlashOverlay);
         bodySprite.SetPropertyBlock(flashBlock);
     }

@@ -23,6 +23,11 @@ public class TurretAI : MonoBehaviour
     [Tooltip("CSV의 공격력이 비어 있을 때(0) 대신 쓰는 공격력. CSV에 값을 넣으면 그 값이 우선합니다.")]
     public float fallbackDamage = 10f;
 
+    [Header("발포 연출")]
+    [Tooltip("쏠 때 총구 화염 표시")]
+    public bool muzzleFlash = true;
+    public float muzzleFlashSize = 0.7f;
+
     [Header("제압 사격 (명중 시 이동 둔화)")]
     [Tooltip("0.3 = 명중한 몹이 30% 느려짐. 0이면 없음")]
     [Range(0f, 0.9f)] public float hitSlowPercent = 0f;
@@ -44,6 +49,39 @@ public class TurretAI : MonoBehaviour
     {
         // 3중 구조(몸통 -> 포탑 -> 무기) 중 하위에 있는 Weapon 컴포넌트를 모두 찾아옵니다.
         weapons = GetComponentsInChildren<Weapon>(true);
+
+        // 총구 위치가 지정되지 않은 무기(TR010 등)는 포신 끝을 찾아 자동으로 만듦
+        //  → 탄과 총구 화염이 실제 포신 끝에서 나감
+        foreach (Weapon w in weapons)
+            if (w != null && w.muzzle == null) w.muzzle = CreateAutoMuzzle(w);
+    }
+
+    // 포탑 머리 아래 모델 중 '앞쪽(+Z)으로 가장 멀리 나온 부분' = 포신 끝
+    private Transform CreateAutoMuzzle(Weapon w)
+    {
+        Transform head = Head;
+        float bestZ = float.MinValue;
+        Vector3 best = Vector3.zero;
+        foreach (Renderer r in head.GetComponentsInChildren<Renderer>(true))
+        {
+            if (r is LineRenderer || r is TrailRenderer || r is ParticleSystemRenderer || r is SpriteRenderer) continue;
+            Bounds b = r.bounds;
+            Vector3 c = head.InverseTransformPoint(b.center);
+            // 바운드 모서리 중 앞쪽 끝
+            float frontZ = float.MinValue;
+            for (int i = 0; i < 8; i++)
+            {
+                Vector3 corner = b.center + Vector3.Scale(b.extents, new Vector3((i & 1) == 0 ? -1 : 1, (i & 2) == 0 ? -1 : 1, (i & 4) == 0 ? -1 : 1));
+                frontZ = Mathf.Max(frontZ, head.InverseTransformPoint(corner).z);
+            }
+            if (frontZ > bestZ) { bestZ = frontZ; best = new Vector3(c.x, c.y, frontZ); }
+        }
+        if (bestZ == float.MinValue) return null;
+
+        GameObject go = new GameObject("AutoMuzzle");
+        go.transform.SetParent(head, false);
+        go.transform.localPosition = best;
+        return go.transform;
     }
 
     void OnEnable()
@@ -66,6 +104,8 @@ public class TurretAI : MonoBehaviour
             if (w.targetLayer.value == 0 && mobMask != 0) w.targetLayer = mobMask;
             w.hitSlowPercent = hitSlowPercent;
             w.hitSlowDuration = hitSlowDuration;
+            w.muzzleFlash = muzzleFlash;
+            w.muzzleFlashSize = muzzleFlashSize;
         }
 
         // ★ 포탑 체력 초기화 (없으면 체력 0 상태라 첫 피격에 바로 파괴됨)

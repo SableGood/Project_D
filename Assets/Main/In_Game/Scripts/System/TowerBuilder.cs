@@ -255,7 +255,8 @@ public class TowerBuilder : MonoBehaviour
             Vector3 center = new Vector3(checkPos.x, currentGroundY + halfExtents.y + 0.05f, checkPos.z); // 지면 바로 위 공간 검사
             bool isOverlapping = Physics.CheckBox(center, halfExtents, Quaternion.identity, obstacleLayer, QueryTriggerInteraction.Ignore);
 
-            placementOk = !isOverlapping && !IsCellOccupied(ToCell(checkPos));
+            placementOk = !isOverlapping && !IsCellOccupied(ToCell(checkPos))
+                          && PlayArea.IsInside(checkPos, gridSize * 0.5f); // 플레이 구역(Floor) 밖에는 설치 불가
             bool affordable = GoldManager.Instance == null || GoldManager.Instance.CanAfford(GetTowerCost(currentTowerIndex));
             canBuild = placementOk && affordable; // 골드가 부족해도 미리보기는 빨간색
 
@@ -308,6 +309,11 @@ public class TowerBuilder : MonoBehaviour
         EntityData towerData = GetTowerData(currentTowerIndex);
         if (towerData != null && towerData.maxHp > 0f) towerHealth.InitStats(towerData);
         else towerHealth.InitStats(200f, 0f); // 데이터가 없으면 임시 체력
+
+        // ★ 포탑 머리 위 상태 표시 (이름 + 체력)
+        TowerStatusBar.Attach(tower, towerData);
+        // ★ 3D 외곽선이 모서리에서 끊기지 않도록 부드러운 노멀 준비 (같은 메쉬는 1회만 계산)
+        OutlineNormals.Bake(tower);
 
         // (풀에서 재사용된 타워라면 예전 칸 기록은 지움)
         List<Vector2Int> stale = new List<Vector2Int>();

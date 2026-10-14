@@ -6,8 +6,8 @@ using UnityEngine.EventSystems;
 //
 //   (배경 판은 반투명 50%, panelAlpha로 조절)
 //   [체력 숫자] [========= 체력바 =========]                [골드]
-//   Shift  Q   E   R  Passive   [ 초상화 ]   1   2   3   4   5          [ 무기 카드 ]
-//   [ ] [ ] [ ] [ ] [ ]                       [포탑 슬롯 x5]           (오른쪽 아래)
+//   Shift  Q   E   R  Passive   [ 초상화 ]   1   2   3   4   5   │ [ 무기 카드 ]
+//   [ ] [ ] [ ] [ ] [ ]                       [포탑 슬롯 x5]    │ (상태창 오른쪽 남는 공간)
 //
 //  - 플레이어가 생기면 자동으로 연결됩니다. (TowerBuilder / PlayerWeaponManager가 Ensure() 호출)
 //  - 씬에 직접 만든 상태창(PanelDesign)은 실행 중에만 숨깁니다. (씬 파일은 그대로, hideScenePanel 끄면 다시 보임)
@@ -83,8 +83,11 @@ public class GameHUD : MonoBehaviour
     private int lastGold = int.MinValue, lastSelected = int.MinValue;
 
     // 무기
-    private Text weaponNameText, weaponIndexText, ammoText, weaponHintText;
+    private Text weaponNameText, ammoText, weaponHintText;
     private Image weaponIcon;
+    // 탄창 분리 이미지가 있는 무기: 본체(탄창 없음) + 탄창을 따로 그려 재장전 모습까지 보여줌
+    private RectTransform iconPartsRoot;
+    private Image iconBody, iconMag;
     private GameObject reloadBarRoot;
     private RectTransform reloadFill;
 
@@ -130,14 +133,8 @@ public class GameHUD : MonoBehaviour
         trailRatio = 1f;
         lastGold = lastSelected = int.MinValue;
 
-        // 초상화: 플레이어 일러스트 (Billboard가 붙은 스프라이트)
-        Sprite portrait = null;
-        if (player != null)
-        {
-            Billboard board = player.GetComponentInChildren<Billboard>(true);
-            SpriteRenderer sr = board != null ? board.GetComponent<SpriteRenderer>() : null;
-            if (sr != null) portrait = sr.sprite;
-        }
+        // 초상화: 상·하체 애니메이션이 있으면 지정 초상화, 없으면 플레이어 일러스트 (Billboard가 붙은 스프라이트)
+        Sprite portrait = player != null ? PlayerBodyAnimator.GetPortrait(player.gameObject) : null;
         portraitImage.sprite = portrait;
         portraitImage.color = portrait != null ? Color.white : new Color(1f, 1f, 1f, 0f);
 
@@ -198,6 +195,32 @@ public class GameHUD : MonoBehaviour
         else infoText.text = "";
     }
 
+    // 무기 칸 그림: 본체 + 탄창 (무기 그림의 재장전 상태를 그대로 따라감)
+    private void UpdatePartsIcon(WeaponVisual wv)
+    {
+        if (!iconPartsRoot.gameObject.activeSelf) iconPartsRoot.gameObject.SetActive(true);
+        Sprite body = wv.SideNoMagSprite, mag = wv.SideMagSprite;
+        if (iconBody.sprite != body) iconBody.sprite = body;
+        if (iconMag.sprite != mag) iconMag.sprite = mag;
+
+        Rect box = iconPartsRoot.rect;
+        Vector2 bodyPx = body.rect.size;
+        float s = Mathf.Min(box.width / Mathf.Max(1f, bodyPx.x), box.height / Mathf.Max(1f, bodyPx.y));
+        iconBody.rectTransform.sizeDelta = bodyPx * s;
+        iconBody.rectTransform.anchoredPosition = Vector2.zero;
+
+        bool showMag = mag != null && !wv.MagHidden;
+        iconMag.enabled = showMag;
+        if (showMag)
+        {
+            Vector2 magPx = mag.rect.size;
+            iconMag.rectTransform.sizeDelta = magPx * s;
+            Vector2 off = wv.SideMagOffsetPx;
+            off.y -= wv.MagDrop * magPx.y * 1.2f;
+            iconMag.rectTransform.anchoredPosition = off * s;
+        }
+    }
+
     private void UpdateWeapon()
     {
         Weapon weapon = weaponManager != null ? weaponManager.CurrentWeapon : null;
@@ -205,7 +228,6 @@ public class GameHUD : MonoBehaviour
         if (data == null)
         {
             weaponNameText.text = "무기 없음";
-            weaponIndexText.text = "";
             ammoText.text = "";
             weaponHintText.text = "";
             weaponIcon.color = new Color(1f, 1f, 1f, 0f);
@@ -214,11 +236,19 @@ public class GameHUD : MonoBehaviour
         }
 
         weaponNameText.text = string.IsNullOrEmpty(data.inGameName) ? data.weaponID : data.inGameName;
-        int count = weaponManager.WeaponCount;
-        weaponIndexText.text = count > 1 ? $"휠  {weaponManager.CurrentIndex + 1} / {count}" : "";
 
-        if (weaponIcon.sprite != data.weaponSprite) weaponIcon.sprite = data.weaponSprite;
-        weaponIcon.color = data.weaponSprite != null ? Color.white : new Color(1f, 1f, 1f, 0f);
+        WeaponVisual wv = weapon.GetComponentInChildren<WeaponVisual>();
+        if (wv != null && wv.SideNoMagSprite != null && iconPartsRoot != null)
+        {
+            weaponIcon.color = new Color(1f, 1f, 1f, 0f);
+            UpdatePartsIcon(wv);
+        }
+        else
+        {
+            if (iconPartsRoot != null && iconPartsRoot.gameObject.activeSelf) iconPartsRoot.gameObject.SetActive(false);
+            if (weaponIcon.sprite != data.weaponSprite) weaponIcon.sprite = data.weaponSprite;
+            weaponIcon.color = data.weaponSprite != null ? Color.white : new Color(1f, 1f, 1f, 0f);
+        }
 
         if (!data.UsesAmmo)
         {
@@ -444,33 +474,50 @@ public class GameHUD : MonoBehaviour
         }
     }
 
-    // 무기 카드: 하단 패널 위, 포탑 칸 쪽(오른쪽)에 붙여서 배치 (화면 비율이 달라도 포탑 칸과 겹치지 않음)
+    // 무기 카드: 하단 상태창 오른쪽의 남는 공간을 꽉 채움 (상태창과 같은 높이·바닥선)
+    //  - 화면 오른쪽 아래에 붙어서, 창 크기/비율이 바뀌어도 상태창과 겹치지 않고 남는 폭에 맞춰 늘어나고 줄어듦
+    private const float CardGap = 12f, CardMargin = 12f, CardPad = 14f, CardIconW = 170f;
+
     private void BuildWeaponCard(float panelWidth, float panelHeight)
     {
-        const float w = 340f, h = 120f;
-        weaponCard = Place(NewRect("WeaponCard", root), panelWidth - w, panelHeight + 36f, w, h);
+        weaponCard = NewRect("WeaponCard", transform);
+        weaponCard.anchorMin = new Vector2(0.5f, 0f);  // 왼쪽 끝 = 화면 가운데 + 상태창 절반 + 간격
+        weaponCard.anchorMax = new Vector2(1f, 0f);    // 오른쪽 끝 = 화면 오른쪽 - 여백
+        weaponCard.pivot = new Vector2(0f, 0f);
+        weaponCard.offsetMin = new Vector2(Mathf.Round(panelWidth * 0.5f + CardGap), root.anchoredPosition.y);
+        weaponCard.offsetMax = new Vector2(-CardMargin, root.anchoredPosition.y + panelHeight);
         AddImage(weaponCard, new Color(0f, 0f, 0f, panelAlpha), false);
 
-        weaponNameText = AddText(Place(NewRect("Name", weaponCard), 14f, h - 34f, w - 120f, 26f), "", 20, TextAnchor.MiddleLeft, Color.white);
+        float h = panelHeight;
+        // 무기 이름 (위쪽 줄, 폭 전체)
+        weaponNameText = AddText(Band(NewRect("Name", weaponCard), CardPad, CardPad, h - CardPad - 28f, 28f), "", 22, TextAnchor.MiddleLeft, Color.white);
         weaponNameText.fontStyle = FontStyle.Bold;
         AddShadow(weaponNameText);
-        weaponIndexText = AddText(Place(NewRect("Index", weaponCard), w - 120f, h - 34f, 106f, 26f), "", 15, TextAnchor.MiddleRight, SubText);
-        AddShadow(weaponIndexText);
 
-        // 무기 그림 칸
-        RectTransform iconBox = Place(NewRect("IconBox", weaponCard), 14f, 14f, 150f, 64f);
+        // 무기 그림 칸 (왼쪽 아래)
+        float iconH = h - CardPad * 2f - 28f - 10f;
+        RectTransform iconBox = Place(NewRect("IconBox", weaponCard), CardPad, CardPad, CardIconW, iconH);
         AddImage(iconBox, FrameNormal, false);
         RectTransform iconInner = Inset(NewRect("Inner", iconBox), 2f);
         AddImage(iconInner, SlotBg, false);
         weaponIcon = AddImage(Inset(NewRect("Icon", iconInner), 6f), new Color(1f, 1f, 1f, 0f), false);
         weaponIcon.preserveAspect = true;
+        // 분리 이미지용: 탄창(뒤) → 본체(앞) 순서. 칸 밖으로 빠지는 탄창은 잘라냄
+        iconInner.gameObject.AddComponent<RectMask2D>();
+        iconPartsRoot = Inset(NewRect("IconParts", iconInner), 6f);
+        iconMag = AddImage(Centered(NewRect("Mag", iconPartsRoot)), Color.white, false);
+        iconBody = AddImage(Centered(NewRect("Body", iconPartsRoot)), Color.white, false);
+        iconPartsRoot.gameObject.SetActive(false);
 
-        ammoText = AddText(Place(NewRect("Ammo", weaponCard), 176f, 34f, w - 190f, 46f), "", 22, TextAnchor.MiddleRight, Color.white);
+        // 탄약 / 재장전 바 / 안내 (그림 오른쪽, 남는 폭 전체)
+        float textLeft = CardPad + CardIconW + 12f;
+        ammoText = AddText(Band(NewRect("Ammo", weaponCard), textLeft, CardPad, CardPad + 40f, 50f), "", 28, TextAnchor.MiddleRight, Color.white);
+        ammoText.fontStyle = FontStyle.Bold;
         AddShadow(ammoText);
-        weaponHintText = AddText(Place(NewRect("Hint", weaponCard), 176f, 6f, w - 190f, 20f), "", 15, TextAnchor.MiddleRight, Warn);
+        weaponHintText = AddText(Band(NewRect("Hint", weaponCard), textLeft, CardPad, CardPad, 22f), "", 16, TextAnchor.MiddleRight, Warn);
         AddShadow(weaponHintText);
 
-        RectTransform bar = Place(NewRect("ReloadBar", weaponCard), 176f, 28f, w - 190f, 5f);
+        RectTransform bar = Band(NewRect("ReloadBar", weaponCard), textLeft, CardPad, CardPad + 30f, 6f);
         AddImage(bar, TrackColor, false);
         reloadFill = Stretch(NewRect("Fill", bar));
         reloadFill.anchorMax = new Vector2(0f, 1f);
@@ -507,6 +554,17 @@ public class GameHUD : MonoBehaviour
         return (RectTransform)go.transform;
     }
 
+    // 부모 폭에 맞춰 가로로 늘어나는 띠: 왼쪽 여백 left, 오른쪽 여백 right, 바닥에서 y, 높이 h
+    private static RectTransform Band(RectTransform rt, float left, float right, float y, float h)
+    {
+        rt.anchorMin = new Vector2(0f, 0f);
+        rt.anchorMax = new Vector2(1f, 0f);
+        rt.pivot = new Vector2(0f, 0f);
+        rt.offsetMin = new Vector2(Mathf.Round(left), Mathf.Round(y));
+        rt.offsetMax = new Vector2(-Mathf.Round(right), Mathf.Round(y + h));
+        return rt;
+    }
+
     // 부모의 왼쪽 아래 기준 (x, y)에 (w, h) 크기로 배치
     private static RectTransform Place(RectTransform rt, float x, float y, float w, float h)
     {
@@ -521,6 +579,13 @@ public class GameHUD : MonoBehaviour
     {
         rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
         rt.offsetMin = rt.offsetMax = Vector2.zero;
+        return rt;
+    }
+
+    private static RectTransform Centered(RectTransform rt)
+    {
+        rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+        rt.pivot = new Vector2(0.5f, 0.5f);
         return rt;
     }
 

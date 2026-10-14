@@ -1809,6 +1809,6 @@ MonoBehaviour:
   healInterval: 2
   healSelf: 0
   spinner: {fileID: 7543833878565570437}
-  spinSpeed: 90
+  spinSpeed: 40
   pulseColor: {r: 0.45, g: 0.8, b: 1, a: 0.9}
   pulseDuration: 0.6

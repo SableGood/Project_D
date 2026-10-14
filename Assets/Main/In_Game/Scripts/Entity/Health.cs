@@ -22,6 +22,8 @@ public class Health : MonoBehaviour
     public event System.Action<float> OnDamaged;
     // 체력이 0이 되어 죽는 순간 1번 알림 (처치 보상 등). 풀 반환/웨이브 정리로 꺼질 때는 호출되지 않음
     public event System.Action OnDied;
+    // 누가 맞든 피격될 때마다 알림 (피격 이펙트 등 전역 연출용: HitEffects)
+    public static event System.Action<Health, float> AnyDamaged;
 
     public float Defense => defense;
     public float CurrentHealth => currentHealth;
@@ -61,11 +63,13 @@ public class Health : MonoBehaviour
         if (invincible)
         {
             OnDamaged?.Invoke(finalDamage);
+            AnyDamaged?.Invoke(this, finalDamage);
             return;
         }
         currentHealth -= finalDamage;
         currentHealth = Mathf.Max(currentHealth, 0);
         OnDamaged?.Invoke(finalDamage);
+        AnyDamaged?.Invoke(this, finalDamage);
 
         if (logDamage)
             Debug.Log($"{gameObject.name} 피격! 공격 {damage} → 실제 {finalDamage} (방어 {defense}, 관통 {armorPenetration}) / 남은 체력 {currentHealth}/{maxHealth}");

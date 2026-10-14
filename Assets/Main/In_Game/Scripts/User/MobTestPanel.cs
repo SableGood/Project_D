@@ -35,6 +35,7 @@ public class MobTestPanel : MonoBehaviour
     private Text animSpeedButtonText;
     private Text slotButtonText;
     private Text slotMarkerButtonText;
+    private Text crosshairButtonText;
     private GameObject lastPrefab;        // 마지막으로 소환한 몹 (무리 소환용)
     public int hordeCount = 10;           // 무리 소환 마릿수 (슬롯 8개 + 대기 2마리)
     private List<string> animClipNames;   // 테스트 패널에서 고를 수 있는 걷기 클립 이름 (몹 프리팹 기준)
@@ -478,11 +479,11 @@ public class MobTestPanel : MonoBehaviour
 
         // 패널 (내용 크기에 맞춰 세로로 늘어남)
         panel = NewRect("Panel", transform);
-        panel.anchorMin = panel.anchorMax = new Vector2(0.5f, 0.5f);
+        panel.anchorMin = panel.anchorMax = new Vector2(0f, 1f); // 화면 왼쪽 위 기준 (창 크기를 바꿔도 가장자리에 붙어 있음)
         panel.pivot = new Vector2(0f, 1f);
         panel.sizeDelta = new Vector2(panelWidth, 0f);
         Image bg = panel.gameObject.AddComponent<Image>();
-        bg.color = new Color(0f, 0f, 0f, 0.6f);
+        bg.color = new Color(0f, 0f, 0f, 0.5f); // 하단 HUD와 같은 반투명
         VerticalLayoutGroup vlg = panel.gameObject.AddComponent<VerticalLayoutGroup>();
         vlg.padding = new RectOffset(10, 10, 8, 10);
         vlg.spacing = 6f;
@@ -515,6 +516,9 @@ public class MobTestPanel : MonoBehaviour
         slotButtonText = NewButton(controls, "근접 슬롯", ToggleSlots);
         slotMarkerButtonText = NewButton(controls, "슬롯 표시", ToggleSlotMarkers);
         NewButton(controls, "골드 +500 (테스트)", () => { if (GoldManager.Instance != null) GoldManager.Instance.Add(500); });
+        NewButton(controls, "보스 체력 -20%", DamageBoss);
+        crosshairButtonText = NewButton(controls, "크로스헤어", CycleCrosshair);
+        UpdateCrosshairButton();
         UpdateSlotButtons();
 
         // 걷기 애니메이션 비교 (애니메이션이 있는 몹이 하나라도 있을 때만)
@@ -533,36 +537,49 @@ public class MobTestPanel : MonoBehaviour
         UpdatePanelPosition();
     }
 
-    // Wave Start 버튼 바로 아래에 배치 (버튼을 못 찾으면 화면 왼쪽 위)
+    // 화면 왼쪽 위, Wave Start 버튼 바로 아래에 고정 (버튼은 MenuSkin이 왼쪽 위에 고정)
+    //  - 웨이브 진행 중 버튼이 숨겨져도 같은 자리 유지 (버튼이 다시 나타날 때 위치가 튀지 않게)
     private void UpdatePanelPosition()
     {
-        Vector2 local;
-        if (anchorTarget != null && anchorTarget.gameObject.activeInHierarchy)
-        {
-            Vector3[] corners = new Vector3[4];
-            anchorTarget.GetWorldCorners(corners); // 0: 왼쪽 아래
-            Canvas c = anchorTarget.GetComponentInParent<Canvas>();
-            Camera cam = (c != null && c.renderMode != RenderMode.ScreenSpaceOverlay) ? c.worldCamera : null;
-            Vector2 screen = RectTransformUtility.WorldToScreenPoint(cam, corners[0]);
-            screen.y -= 8f;
-            RectTransformUtility.ScreenPointToLocalPointInRectangle(canvasRect, screen, null, out local);
-        }
-        else if (anchorTarget != null)
-        {
-            return; // 웨이브 진행 중(버튼 숨김)에는 마지막 위치 유지
-        }
-        else
-        {
-            local = new Vector2(-canvasRect.rect.width * 0.5f + 20f, canvasRect.rect.height * 0.5f - 20f);
-        }
+        Vector2 pos = anchorTarget != null
+            ? new Vector2(MenuSkin.WaveButtonPos.x, MenuSkin.WaveButtonPos.y - MenuSkin.WaveButtonSize.y - 8f)
+            : new Vector2(20f, -20f);
 
-        // 화면 밖으로 나가지 않도록 보정
-        float halfW = canvasRect.rect.width * 0.5f, halfH = canvasRect.rect.height * 0.5f;
-        float h = panel.rect.height;
-        local.x = Mathf.Clamp(local.x, -halfW + 10f, halfW - panelWidth - 10f);
-        local.y = Mathf.Clamp(local.y, -halfH + h + 10f, halfH - 10f);
+        // 화면이 작아 아래로 넘치면 위로 올림
+        float maxDown = canvasRect.rect.height - panel.rect.height - 10f;
+        if (-pos.y > maxDown) pos.y = -Mathf.Max(10f, maxDown);
         // 정수 좌표로 (소수점 위치는 글자를 흐리게 만듦)
-        panel.anchoredPosition = new Vector2(Mathf.Round(local.x), Mathf.Round(local.y));
+        panel.anchoredPosition = new Vector2(Mathf.Round(pos.x), Mathf.Round(pos.y));
+    }
+
+    // 크로스헤어 종류 바꾸기 (씬의 PlayerHUD에 등록된 크로스헤어 순서대로)
+    private void CycleCrosshair()
+    {
+        PlayerHUD hud = FindFirstObjectByType<PlayerHUD>();
+        if (hud == null) { Debug.Log("[몹 테스트] PlayerHUD를 찾지 못했습니다."); return; }
+        hud.NextCrosshair();
+        UpdateCrosshairButton();
+    }
+
+    private void UpdateCrosshairButton()
+    {
+        if (crosshairButtonText == null) return;
+        PlayerHUD hud = FindFirstObjectByType<PlayerHUD>();
+        crosshairButtonText.text = hud != null && hud.CrosshairCount > 0
+            ? $"크로스헤어: {hud.CrosshairName(hud.currentCrosshairIndex)} ({hud.currentCrosshairIndex + 1}/{hud.CrosshairCount})"
+            : "크로스헤어: 없음";
+    }
+
+    // 보스 페이즈 테스트: 살아있는 보스에게 최대 체력의 20% 피해 (방어력 무시, 페이즈 전환 중 무적이면 무시됨)
+    private void DamageBoss()
+    {
+        foreach (BossPhases b in BossPhases.Active)
+        {
+            if (b == null || b.Health == null || b.Health.IsDead) continue;
+            b.Health.TakeDamage(b.Health.maxHealth * 0.2f, 99999f); // 전환 중 무적이면 들어가지 않음 (실제 게임과 동일)
+            return;
+        }
+        Debug.Log("[몹 테스트] 살아있는 보스가 없습니다. MB001을 먼저 소환하세요.");
     }
 
     private static RectTransform NewRect(string name, Transform parent)

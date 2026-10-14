@@ -106,6 +106,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
   anchorAtFeet: 0
+  snapFeetToGround: 1
+  bobOffset: 0
 --- !u!114 &5661524912742052099
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -134,6 +136,9 @@ MonoBehaviour:
   walkClipIndex: 0
   syncWithMoveSpeed: 1
   moveThreshold: 0.15
+  bobWhenNoClip: 1
+  bobHeight: 0.025
+  bobStepsPerSecond: 3.3
 --- !u!1 &2136025707989506509
 GameObject:
   m_ObjectHideFlags: 0
@@ -314,8 +319,10 @@ MonoBehaviour:
   windupColor: {r: 1, g: 0.35, b: 0.35, a: 1}
   hitFlashColor: {r: 1, g: 0.6, b: 0.6, a: 1}
   hitFlashOverlay: {r: 1, g: 1, b: 1, a: 1}
-  hitFlashStrength: 0.85
+  hitFlashStrength: 0.5
   hitFlashDuration: 0.08
+  hitShakeAmount: 0.07
+  hitShakeDuration: 0.15
   aimLineColor: {r: 1, g: 0.1, b: 0.1, a: 0.9}
 --- !u!195 &3979463733816889376
 NavMeshAgent:
@@ -469,3 +476,11 @@ MonoBehaviour:
   tracerDuration: 0.05
   tracerWidth: 0.03
   tracerColor: {r: 1, g: 0.9, b: 0.5, a: 1}
+  alwaysShowTracer: 0
+  muzzleFlash: 0
+  muzzleFlashSprite: {fileID: 0}
+  muzzleFlashSize: 0.7
+  muzzleFlashDuration: 0.05
+  muzzleFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  hitSlowPercent: 0
+  hitSlowDuration: 1
