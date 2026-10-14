@@ -91,6 +91,13 @@ public class MobAI : MonoBehaviour
     private float nextPathTime;
     private float lastAttackTime = -999f;
     private float baseSpeed;
+    private float initialAgentSpeed;     // 프리팹에 설정된 원래 이동속도 (둔화가 누적되지 않게 보관)
+
+    // 이동 둔화 (충격파 포탑, 제압 사격 등)
+    private float slowPercent;
+    private float slowUntil;
+    public float SlowPercent => Time.time < slowUntil ? slowPercent : 0f;
+    public float SpeedMultiplier => 1f - SlowPercent;
     private float movingTime;
     private Vector3 lastMoveDir;
     private Coroutine attackRoutine;
@@ -106,6 +113,7 @@ public class MobAI : MonoBehaviour
     void Awake()
     {
         agent = GetComponent<NavMeshAgent>();
+        initialAgentSpeed = agent != null ? agent.speed : 3.5f;
         health = GetComponent<Health>();
         weapon = GetComponentInChildren<Weapon>();
         knockback = GetComponent<KnockbackReceiver>();
@@ -144,12 +152,14 @@ public class MobAI : MonoBehaviour
         {
             if (health != null) health.InitStats(myData);
             if (weapon != null) weapon.InitWeapon(myData.defaultWeapon);
-            baseSpeed = myData.moveSpeed > 0 ? myData.moveSpeed : (agent != null ? agent.speed : 3.5f);
+            baseSpeed = myData.moveSpeed > 0 ? myData.moveSpeed : initialAgentSpeed;
         }
         else
         {
-            baseSpeed = agent != null ? agent.speed : 3.5f;
+            baseSpeed = initialAgentSpeed;
         }
+        slowPercent = 0f;
+        slowUntil = 0f;
 
         if (weapon != null)
         {
@@ -167,7 +177,7 @@ public class MobAI : MonoBehaviour
             if (accelerateWhileMoving) agent.angularSpeed = 90f; // 방향 전환이 느림
         }
 
-        if (health != null) health.OnDamaged += HandleDamaged;
+        if (health != null) { health.OnDamaged += HandleDamaged; health.OnDied += HandleDied; }
 
         state = State.Chase;
         target = null;
@@ -183,7 +193,7 @@ public class MobAI : MonoBehaviour
     void OnDisable()
     {
         ReleaseSlot();
-        if (health != null) health.OnDamaged -= HandleDamaged;
+        if (health != null) { health.OnDamaged -= HandleDamaged; health.OnDied -= HandleDied; }
         attackRoutine = null;
         flashRoutine = null;
     }
@@ -193,6 +203,7 @@ public class MobAI : MonoBehaviour
         if (agent == null || !agent.isOnNavMesh) return;
         if (health != null && health.IsDead) { ReleaseSlot(); StopMoving(); return; }
         if (AiPaused) { StopMoving(); StateLabel = "AI 정지"; return; }
+        if (!accelerateWhileMoving) agent.speed = baseSpeed * SpeedMultiplier; // 둔화 반영
 
         UpdateTarget();
         UpdateSpriteFacing();
@@ -538,6 +549,30 @@ public class MobAI : MonoBehaviour
     }
 
     // ------------------------------------------------------------------
+    // 이동 둔화 (포탑 효과)
+    // ------------------------------------------------------------------
+    // percent: 0.15 = 15% 느려짐. 여러 둔화가 겹치면 가장 강한 것만 적용되고, 지속시간은 늘어남
+    public void ApplySlow(float percent, float duration)
+    {
+        percent = Mathf.Clamp(percent, 0f, 0.9f);
+        if (percent <= 0f || duration <= 0f) return;
+        float now = Time.time;
+        if (now >= slowUntil) slowPercent = percent;          // 둔화가 끝난 상태면 새로 시작
+        else slowPercent = Mathf.Max(slowPercent, percent);    // 진행 중이면 더 강한 쪽
+        slowUntil = Mathf.Max(slowUntil, now + duration);
+    }
+
+    // 콜라이더(자식 포함)에서 몹을 찾아 둔화 적용
+    public static bool TryApplySlow(Component hit, float percent, float duration)
+    {
+        if (hit == null || percent <= 0f) return false;
+        MobAI mob = hit.GetComponentInParent<MobAI>();
+        if (mob == null || !mob.isActiveAndEnabled) return false;
+        mob.ApplySlow(percent, duration);
+        return true;
+    }
+
+    // ------------------------------------------------------------------
     // 이동 / 회전 / 연출
     // ------------------------------------------------------------------
     private float AttackCooldown()
@@ -565,7 +600,7 @@ public class MobAI : MonoBehaviour
             }
             movingTime += Time.deltaTime;
             float k = Mathf.Clamp01(movingTime / Mathf.Max(0.1f, accelerateDuration));
-            agent.speed = baseSpeed * Mathf.Lerp(startSpeedRatio, 1f, k);
+            agent.speed = baseSpeed * Mathf.Lerp(startSpeedRatio, 1f, k) * SpeedMultiplier;
         }
     }
 
@@ -603,6 +638,17 @@ public class MobAI : MonoBehaviour
 
         bool facingLeft = side < 0f;
         bodySprite.flipX = spriteFacesRight ? facingLeft : !facingLeft;
+    }
+
+    // 처치 보상 골드 (체력이 0이 되어 죽었을 때만. 웨이브 정리·테스트 제거로 사라질 때는 없음)
+    private void HandleDied()
+    {
+        ReleaseSlot();
+        GoldManager gm = GoldManager.Instance;
+        if (gm == null) return;
+        int reward = gm.GetKillReward(myData);
+        gm.Add(reward);
+        LastAction = $"처치됨 (+{reward} 골드)";
     }
 
     private void HandleDamaged(float amount)

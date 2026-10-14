@@ -88,6 +88,9 @@ MonoBehaviour:
   spriteFacesRight: 1
   windupColor: {r: 1, g: 0.35, b: 0.35, a: 1}
   hitFlashColor: {r: 1, g: 0.6, b: 0.6, a: 1}
+  hitFlashOverlay: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashStrength: 0.85
+  hitFlashDuration: 0.08
   aimLineColor: {r: 1, g: 0.1, b: 0.1, a: 0.9}
 --- !u!195 &1688468789999469998
 NavMeshAgent:

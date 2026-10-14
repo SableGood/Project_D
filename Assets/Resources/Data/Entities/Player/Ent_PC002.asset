@@ -15,8 +15,10 @@ MonoBehaviour:
   entityType: 1
   entityCode: PC002
   entityName: "\uC6D0\uC22D\uC774"
-  maxHp: 150
+  maxHp: 80
   defense: 0
   moveSpeed: 6
   cost: 0
-  defaultWeapon: {fileID: 11400000, guid: 4bf87eaae76febf46857a8b1fd4dafc7, type: 2}
+  abilityText: "\uBC29\uC5B4\uAE30\uBB3C \uAC74\uC124/\uC5C5\uADF8\uB808\uC774\uB4DC
+    \uBE44\uC6A9 10%\uAC10\uC18C"
+  defaultWeapon: {fileID: 0}

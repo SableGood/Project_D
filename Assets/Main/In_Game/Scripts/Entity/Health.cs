@@ -20,6 +20,8 @@ public class Health : MonoBehaviour
 
     // 피격 시 실제 받은 피해량을 알림 (피격 번쩍임, 데미지 숫자 등 연출용)
     public event System.Action<float> OnDamaged;
+    // 체력이 0이 되어 죽는 순간 1번 알림 (처치 보상 등). 풀 반환/웨이브 정리로 꺼질 때는 호출되지 않음
+    public event System.Action OnDied;
 
     public float Defense => defense;
     public float CurrentHealth => currentHealth;
@@ -71,6 +73,7 @@ public class Health : MonoBehaviour
         if (currentHealth <= 0 && !isDead)
         {
             isDead = true;
+            OnDied?.Invoke();
             StartCoroutine(ProcessDeathRoutine());
         }
     }
@@ -102,6 +105,20 @@ public class Health : MonoBehaviour
             Destroy(gameObject);
         }
     }
+
+    // 체력 회복 (수리 포탑 등). 실제로 회복된 양을 돌려줌
+    public event System.Action<float> OnHealed;
+    public float Heal(float amount)
+    {
+        if (isDead || amount <= 0f || maxHealth <= 0f) return 0f;
+        float healed = Mathf.Min(amount, maxHealth - currentHealth);
+        if (healed <= 0f) return 0f;
+        currentHealth += healed;
+        OnHealed?.Invoke(healed);
+        return healed;
+    }
+
+    public bool IsFullHealth => currentHealth >= maxHealth;
 
     public float GetCurrentHealth()
     {

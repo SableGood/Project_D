@@ -89,6 +89,9 @@ MonoBehaviour:
   spriteFacesRight: 1
   windupColor: {r: 1, g: 0.35, b: 0.35, a: 1}
   hitFlashColor: {r: 1, g: 0.6, b: 0.6, a: 1}
+  hitFlashOverlay: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashStrength: 0.85
+  hitFlashDuration: 0.08
   aimLineColor: {r: 1, g: 0.1, b: 0.1, a: 0.9}
 --- !u!195 &1688468789999469998
 NavMeshAgent:
@@ -311,6 +314,7 @@ GameObject:
   - component: {fileID: 347590381660518882}
   - component: {fileID: 8468457012778440465}
   - component: {fileID: 1805622137327819182}
+  - component: {fileID: 872617453627986693}
   m_Layer: 8
   m_Name: Sprite
   m_TagString: Untagged
@@ -404,3 +408,32 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1af4e3f331d8f447a7c488ad32cef9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  anchorAtFeet: 0
+--- !u!114 &872617453627986693
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9095062137250806603}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db90acee0dd6efd4eaa96e3d8cd2f199, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameAnimator
+  idleSprite: {fileID: 21300000, guid: 5ffdf5abe9d420745b6e4812bc772f48, type: 3}
+  idleUsesFirstWalkFrame: 0
+  walkClips:
+  - name: Walk6
+    frames:
+    - {fileID: 21300000, guid: cc31d3fff1d7eef4f8a5438f883872c9, type: 3}
+    - {fileID: 21300000, guid: b63a8053c8900314fb0a4545948fc903, type: 3}
+    - {fileID: 21300000, guid: 72a95ca1f44247544aa867421ffe4fc6, type: 3}
+    - {fileID: 21300000, guid: cd1e13c42e41b29428b327fac204e7d6, type: 3}
+    - {fileID: 21300000, guid: cebe190d9477dbb43a59f40acb1a5644, type: 3}
+    - {fileID: 21300000, guid: 0747dc15dbed9ef4cb054461c38cf70c, type: 3}
+    fps: 10
+    pingPong: 0
+  walkClipIndex: 0
+  syncWithMoveSpeed: 1
+  moveThreshold: 0.15

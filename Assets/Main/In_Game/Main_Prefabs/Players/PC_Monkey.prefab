@@ -74,13 +74,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::TowerBuilder
   towerPrefabs:
   - {fileID: 4062961868020206127, guid: 03f29f220441aed46856b0482d37320c, type: 3}
-  - {fileID: 886742137302997863, guid: d01f63982cc93314c93272526e3cffd1, type: 3}
+  - {fileID: 2192127169443005824, guid: a64eef0712f0f134b82e17036f0a4034, type: 3}
   - {fileID: 2898419198516239965, guid: fe5a5b5100f023049bf81f0816583d4e, type: 3}
   - {fileID: 8006142029814479707, guid: 0fbd4c3a304b4bf48ae6e1d7dd3a44ff, type: 3}
   - {fileID: 3053417277477350690, guid: 6fcfdcfa7d54d8f4e823564921749015, type: 3}
   previewPrefabs:
   - {fileID: 4640493310954779667, guid: f059dd0a98309bb498392e1425edc0b9, type: 3}
-  - {fileID: 6495433412832155837, guid: e7bfe2c9a61b1f94d8c357bbc32f9591, type: 3}
+  - {fileID: 4940048254753943504, guid: a5b572b2eab3c2945974ff78994fe590, type: 3}
   - {fileID: 8221577384593496684, guid: 1d6bec4bd89357e49b71885b12d1ff79, type: 3}
   - {fileID: 9119740930152300994, guid: 1b9de86b3b2190e4c8448dccd12d199b, type: 3}
   - {fileID: 6815471919430117113, guid: 328cf377008b0ce4fa613201d6249d42, type: 3}
@@ -91,6 +91,9 @@ MonoBehaviour:
   obstacleLayer:
     serializedVersion: 2
     m_Bits: 448
+  builtTowerLayerName: Tower
+  defaultTowerCost: 100
+  groundProbeHeight: 50
 --- !u!114 &9121127342046632522
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -105,6 +108,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Health
   maxHealth: 80
   logDamage: 0
+  invincible: 0
 --- !u!114 &6586286389793943144
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -119,8 +123,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   moveSpeed: 6.5
   mouseSensitivity: 2
-  isTPS: 0
+  isFirstPerson: 0
   cameraPitch: 15
+  maxPitch: 80
   myData: {fileID: 11400000, guid: d7d20ea7015852141afcfb0843925db8, type: 2}
 --- !u!114 &3978763989706357710
 MonoBehaviour:
@@ -176,6 +181,9 @@ MonoBehaviour:
   - {fileID: 8367635697152360028, guid: 7db688c524bc4e2428b890e23194e6a0, type: 3}
   - {fileID: 3665098050208100746, guid: b70825e91585dbd4f8027bd9fd6359fb, type: 3}
   - {fileID: 1385618014095525979, guid: ce38771d94b265b48ad74b180f3de248, type: 3}
+  fpsHoldOffset: {x: 0.16, y: -0.2, z: 0.42}
+  fpsHoldRotation: {x: 0, y: -108, z: -4}
+  fpsHoldScale: 0.4
   tpsAimIgnoreLayers:
     serializedVersion: 2
     m_Bits: 0
@@ -278,7 +286,7 @@ SpriteRenderer:
   m_GameObject: {fileID: 8839657621067220540}
   m_Enabled: 1
   m_CastShadows: 2
-  m_ReceiveShadows: 1
+  m_ReceiveShadows: 0
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
   m_MotionVectors: 1
@@ -294,7 +302,7 @@ SpriteRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 60efdfe7bf87eab41a40448ea8a90d38, type: 2}
+  - {fileID: 2100000, guid: 2ad89b0e7886a1f47aa67c308ea6d0ac, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -339,3 +347,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1af4e3f331d8f447a7c488ad32cef9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  anchorAtFeet: 1

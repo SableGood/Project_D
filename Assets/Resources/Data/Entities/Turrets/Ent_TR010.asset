@@ -19,4 +19,5 @@ MonoBehaviour:
   defense: 10
   moveSpeed: 0
   cost: 100
+  abilityText: 
   defaultWeapon: {fileID: 11400000, guid: e29642abb05beff49b12d3a7237a4a37, type: 2}

@@ -39,8 +39,8 @@ public class PlayerWeaponManager : MonoBehaviour
 
         if (tpsAimIgnoreLayers.value == 0) tpsAimIgnoreLayers = LayerMask.GetMask("Player");
 
-        // 탄약/재장전 HUD 자동 생성 및 연결
-        WeaponHUD.Attach(this);
+        // 하단 통합 HUD (무기·탄약 카드 포함)
+        GameHUD.Ensure();
 
         EnsureMountPoint();
 
@@ -163,6 +163,8 @@ public class PlayerWeaponManager : MonoBehaviour
 
     // 현재 들고 있는 무기 (HUD 등에서 탄약 표시용)
     public Weapon CurrentWeapon => currentWeapon;
+    public int CurrentIndex => currentWeaponIndex;
+    public int WeaponCount => weaponPrefabs != null ? weaponPrefabs.Length : 0;
 
     // 인스펙터에서 컴포넌트 우클릭 → 이 메뉴로 1인칭 무기 위치를 기본값으로 되돌릴 수 있습니다.
     [ContextMenu("1인칭 무기 위치 기본값으로")]

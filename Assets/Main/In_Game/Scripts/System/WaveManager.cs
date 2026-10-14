@@ -206,9 +206,13 @@ public class WaveManager : MonoBehaviour
 
     private IEnumerator EndWaveRoutine()
     {
+        // 웨이브 클리어 보너스 골드
+        int bonus = GoldManager.Instance != null ? GoldManager.Instance.waveClearBonus : 0;
+        if (bonus > 0) GoldManager.Instance.Add(bonus);
+
         if (waveText != null)
         {
-            waveText.text = "웨이브 종료\n- 정비 시간 -";
+            waveText.text = bonus > 0 ? $"웨이브 종료 (+{bonus} 골드)\n- 정비 시간 -" : "웨이브 종료\n- 정비 시간 -";
             waveText.gameObject.SetActive(true);
         }
 

@@ -37,7 +37,7 @@ public class EntityDataImporter : MonoBehaviour
             string row = rows[i].Trim();
             if (string.IsNullOrEmpty(row)) continue;
 
-            string[] cols = row.Split(',');
+            string[] cols = SplitCsvRow(row); // 따옴표 안의 쉼표("공격속도 20%, 이동속도 10%")는 나누지 않음
 
             if (cols.Length < 13 || string.IsNullOrEmpty(cols[0]) || cols[0].ToLower().Contains("nan")) continue;
 
@@ -53,6 +53,7 @@ public class EntityDataImporter : MonoBehaviour
             float atkSpeed = ParseFloat(cols[10]);
             float speed = ParseFloat(cols[11]);
             int cost = (int)ParseFloat(cols[12]);
+            string ability = cols.Length > 13 ? cols[13].Trim() : "";
 
             // ★ 태그에 따른 서브 폴더 이름 결정
             string subFolder = "Mobs"; // 기본값
@@ -107,6 +108,7 @@ public class EntityDataImporter : MonoBehaviour
             entityData.defense = def;
             entityData.moveSpeed = speed;
             entityData.cost = cost;
+            entityData.abilityText = ability;
 
             // ★ 플레이어면 null이 들어가고, 몹/타워면 위에서 생성한 전용 무기가 들어갑니다.
             entityData.defaultWeapon = weaponData;
@@ -133,6 +135,31 @@ public class EntityDataImporter : MonoBehaviour
         {
             AssetDatabase.CreateFolder(parentFolder, newFolderName);
         }
+    }
+
+    // CSV 한 줄을 칸으로 나눔 (큰따옴표로 감싼 칸 안의 쉼표 유지, "" → ")
+    private static string[] SplitCsvRow(string row)
+    {
+        var cols = new System.Collections.Generic.List<string>();
+        var sb = new System.Text.StringBuilder();
+        bool inQuotes = false;
+        for (int i = 0; i < row.Length; i++)
+        {
+            char ch = row[i];
+            if (ch == '"')
+            {
+                if (inQuotes && i + 1 < row.Length && row[i + 1] == '"') { sb.Append('"'); i++; }
+                else inQuotes = !inQuotes;
+            }
+            else if (ch == ',' && !inQuotes)
+            {
+                cols.Add(sb.ToString());
+                sb.Length = 0;
+            }
+            else sb.Append(ch);
+        }
+        cols.Add(sb.ToString());
+        return cols.ToArray();
     }
 
     private static float ParseFloat(string value)

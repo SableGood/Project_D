@@ -279,7 +279,7 @@ public static class MobPrefabTools
             var frames = new System.Collections.Generic.List<Sprite>();
             foreach (string f in kv.Value)
             {
-                Sprite sp = LoadSpriteWithPixelSettings(f);
+                Sprite sp = LoadSpriteWithPixelSettings(f, CompressAnimationFrames);
                 if (sp != null) frames.Add(sp);
             }
             if (frames.Count == 0) continue;
@@ -319,7 +319,7 @@ public static class MobPrefabTools
         return (us >= 0 && int.TryParse(fname.Substring(us + 1), out int n)) ? n : 0;
     }
 
-    private static Material GetOrCreateMobSpriteMaterial()
+    public static Material GetOrCreateMobSpriteMaterial()
     {
         Shader shader = Shader.Find(MobSpriteShaderName);
         if (shader == null)
@@ -367,7 +367,11 @@ public static class MobPrefabTools
     }
 
     // 픽셀 아트용 스프라이트 임포트 설정(Point, 무압축, 밉맵 없음)을 보장하고 스프라이트를 반환
-    private static Sprite LoadSpriteWithPixelSettings(string texPath)
+    // 애니메이션 프레임은 압축(PC: DXT5)해서 메모리를 약 1/4로 줄임. 가로·세로가 4의 배수여야 압축됨
+    //  (화질이 거슬리면 false로 바꾸고 도구를 다시 실행)
+    public const bool CompressAnimationFrames = true;
+
+    private static Sprite LoadSpriteWithPixelSettings(string texPath, bool compressed = false)
     {
         TextureImporter ti = AssetImporter.GetAtPath(texPath) as TextureImporter;
         if (ti != null)
@@ -376,7 +380,9 @@ public static class MobPrefabTools
             if (ti.textureType != TextureImporterType.Sprite) { ti.textureType = TextureImporterType.Sprite; changed = true; }
             if (ti.spriteImportMode != SpriteImportMode.Single) { ti.spriteImportMode = SpriteImportMode.Single; changed = true; }
             if (ti.filterMode != FilterMode.Point) { ti.filterMode = FilterMode.Point; changed = true; }
-            if (ti.textureCompression != TextureImporterCompression.Uncompressed) { ti.textureCompression = TextureImporterCompression.Uncompressed; changed = true; }
+            TextureImporterCompression wantCompression = compressed ? TextureImporterCompression.Compressed : TextureImporterCompression.Uncompressed;
+            if (ti.textureCompression != wantCompression) { ti.textureCompression = wantCompression; changed = true; }
+            if (compressed && ti.crunchedCompression) { ti.crunchedCompression = false; changed = true; }
             if (ti.mipmapEnabled) { ti.mipmapEnabled = false; changed = true; }
             if (!ti.alphaIsTransparency) { ti.alphaIsTransparency = true; changed = true; }
             if (changed) ti.SaveAndReimport();

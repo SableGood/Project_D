@@ -514,6 +514,7 @@ public class MobTestPanel : MonoBehaviour
         NewButton(controls, $"무리 소환 x{hordeCount}", SpawnHorde);
         slotButtonText = NewButton(controls, "근접 슬롯", ToggleSlots);
         slotMarkerButtonText = NewButton(controls, "슬롯 표시", ToggleSlotMarkers);
+        NewButton(controls, "골드 +500 (테스트)", () => { if (GoldManager.Instance != null) GoldManager.Instance.Add(500); });
         UpdateSlotButtons();
 
         // 걷기 애니메이션 비교 (애니메이션이 있는 몹이 하나라도 있을 때만)

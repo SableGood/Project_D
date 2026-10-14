@@ -14,6 +14,8 @@ public class Projectile : MonoBehaviour
     [HideInInspector] public LayerMask targetLayer;
     [HideInInspector] public float armorPenetration;   // 방어구 무시
     [HideInInspector] public float knockbackDistance;  // 명중 시 넉백 거리
+    [HideInInspector] public float hitSlowPercent;     // 명중 시 이동 둔화 (제압 사격)
+    [HideInInspector] public float hitSlowDuration;
 
     private Transform target;
     private Vector3 straightDir;
@@ -156,6 +158,7 @@ public class Projectile : MonoBehaviour
             {
                 directHealth.TakeDamage(attackDamage, armorPenetration);
                 KnockbackReceiver.TryApply(directHealth.transform, hitDir, knockbackDistance);
+                if (hitSlowPercent > 0f) MobAI.TryApplySlow(directHealth, hitSlowPercent, hitSlowDuration);
             }
         }
 
@@ -171,6 +174,7 @@ public class Projectile : MonoBehaviour
                 if (areaHealth == null || areaHealth.IsDead || !damaged.Add(areaHealth)) continue;
 
                 areaHealth.TakeDamage(attackDamage, armorPenetration);
+                if (hitSlowPercent > 0f) MobAI.TryApplySlow(areaHealth, hitSlowPercent, hitSlowDuration);
                 // 폭발은 중심에서 바깥쪽으로 밀어냄
                 KnockbackReceiver.TryApply(areaHealth.transform, areaHealth.transform.position - transform.position, knockbackDistance);
             }

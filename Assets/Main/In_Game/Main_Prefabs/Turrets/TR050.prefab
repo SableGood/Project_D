@@ -1306,6 +1306,7 @@ GameObject:
   - component: {fileID: 5648355920073082697}
   - component: {fileID: 4077543537511532810}
   - component: {fileID: 343878641795954707}
+  - component: {fileID: 3523682528427968393}
   m_Layer: 0
   m_Name: TR050
   m_TagString: Untagged
@@ -1786,3 +1787,28 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 0, z: 0}
   m_TimeToStationary: 0.5
+--- !u!114 &3523682528427968393
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3053417277477350690}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec58367e4e966754fa23e0d2cded7735, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SupportTower
+  myData: {fileID: 11400000, guid: 7bd0c75366bdcd64abdf6db2733cdcf2, type: 2}
+  mode: 1
+  range: 7
+  slowPercent: 0.15
+  slowTickInterval: 0.25
+  slowPulseVisualInterval: 1.2
+  healAmount: 10
+  healInterval: 2
+  healSelf: 0
+  spinner: {fileID: 8698998598166586822}
+  spinSpeed: 40
+  pulseColor: {r: 0.4, g: 1, b: 0.5, a: 0.9}
+  pulseDuration: 0.6

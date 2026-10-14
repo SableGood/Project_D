@@ -19,6 +19,9 @@ public class EntityData : ScriptableObject
     [Header("건설/소환 비용")]
     public int cost;          // 타워 건설 비용
 
+    [Header("고유능력 (CSV '고유능력' 칸)")]
+    [TextArea] public string abilityText; // 예: "근처 몹 이동 둔화 15%" → 포탑 기능이 숫자(%)를 읽어 사용
+
     [Header("기본 장착 장비")]
     public WeaponData defaultWeapon;
 }

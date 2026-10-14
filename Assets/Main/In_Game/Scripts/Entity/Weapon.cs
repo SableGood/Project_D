@@ -35,6 +35,13 @@ public class Weapon : MonoBehaviour
     public float tracerDuration = 0.05f;
     public float tracerWidth = 0.03f;
     public Color tracerColor = new Color(1f, 0.9f, 0.5f, 1f);
+    [Tooltip("켜면 플레이어 무기가 아니어도 궤적 표시 (저격 포탑 등)")]
+    public bool alwaysShowTracer = false;
+
+    [Header("명중 시 이동 둔화 (포탑 제압 사격 등)")]
+    [Tooltip("0.2 = 명중한 몹이 20% 느려짐. 0이면 없음 (TurretAI가 자동 설정)")]
+    [Range(0f, 0.9f)] public float hitSlowPercent = 0f;
+    public float hitSlowDuration = 1f;
 
     private float lastAttackTime = -999f;
     private float reloadStartTime;
@@ -164,6 +171,13 @@ public class Weapon : MonoBehaviour
         }
     }
 
+    // 포탑 전용: 쿨타임·탄창 검사 없이 즉시 1회 발사 (발사 간격은 TurretAI가 관리 → 여러 총열 번갈아 사격)
+    public void FireAt(Vector3 targetPosition)
+    {
+        PerformAttack(null, targetPosition);
+        lastAttackTime = Time.time;
+    }
+
     // 재장전 시작 (코루틴을 무기 자신에서 돌려, 무기 교체 시 함께 정리되도록 함)
     public void StartReload()
     {
@@ -287,7 +301,7 @@ public class Weapon : MonoBehaviour
         }
 
         Debug.DrawLine(fireOrigin, endPoint, Color.green, 0.5f);
-        if (showTracer && playerWepData != null) ShowTracer(fireOrigin, endPoint);
+        if (showTracer && (playerWepData != null || alwaysShowTracer)) ShowTracer(fireOrigin, endPoint);
     }
 
     private void FireProjectile(Transform targetTransform, Vector3 manualTargetPosition)
@@ -342,6 +356,7 @@ public class Weapon : MonoBehaviour
         if (targetHealth == null || targetHealth.IsDead) return;
 
         targetHealth.TakeDamage(attackDamage, armorPenetration);
+        if (hitSlowPercent > 0f) MobAI.TryApplySlow(targetHealth, hitSlowPercent, hitSlowDuration);
 
         if (knockbackDistance > 0f && hitDirection != Vector3.zero && knockedThisShot.Add(targetHealth))
         {
@@ -355,6 +370,8 @@ public class Weapon : MonoBehaviour
         projectile.targetLayer = this.targetLayer;
         projectile.armorPenetration = 0f;
         projectile.knockbackDistance = 0f;
+        projectile.hitSlowPercent = hitSlowPercent;
+        projectile.hitSlowDuration = hitSlowDuration;
 
         switch (fireMode)
         {

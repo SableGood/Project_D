@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7125502522575458336}
   - component: {fileID: 1701441955690873889}
   - component: {fileID: 6522914001618289497}
+  - component: {fileID: 5661524912742052099}
   m_Layer: 8
   m_Name: Sprite
   m_TagString: Untagged
@@ -104,6 +105,35 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f1af4e3f331d8f447a7c488ad32cef9b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Billboard
+  anchorAtFeet: 0
+--- !u!114 &5661524912742052099
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1109314436714019274}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db90acee0dd6efd4eaa96e3d8cd2f199, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SpriteFrameAnimator
+  idleSprite: {fileID: 21300000, guid: a60877e1f0dc4b34db4dc4178b4fb8e6, type: 3}
+  idleUsesFirstWalkFrame: 0
+  walkClips:
+  - name: Walk6
+    frames:
+    - {fileID: 21300000, guid: 5a1c32f574c214349b5385c4cf164eea, type: 3}
+    - {fileID: 21300000, guid: 4f1e314698738bf46bf905a35424a1c0, type: 3}
+    - {fileID: 21300000, guid: d0f072774e208ba43b3a3e4bafb1ed6d, type: 3}
+    - {fileID: 21300000, guid: aefe419eb30fb4a4c9b629d15ea8a3db, type: 3}
+    - {fileID: 21300000, guid: 08ae0f1469801cd4f8f52beada0088a2, type: 3}
+    - {fileID: 21300000, guid: bc19d3ad187cc8e478def2985b057152, type: 3}
+    fps: 10
+    pingPong: 0
+  walkClipIndex: 0
+  syncWithMoveSpeed: 1
+  moveThreshold: 0.15
 --- !u!1 &2136025707989506509
 GameObject:
   m_ObjectHideFlags: 0
@@ -283,6 +313,9 @@ MonoBehaviour:
   spriteFacesRight: 1
   windupColor: {r: 1, g: 0.35, b: 0.35, a: 1}
   hitFlashColor: {r: 1, g: 0.6, b: 0.6, a: 1}
+  hitFlashOverlay: {r: 1, g: 1, b: 1, a: 1}
+  hitFlashStrength: 0.85
+  hitFlashDuration: 0.08
   aimLineColor: {r: 1, g: 0.1, b: 0.1, a: 0.9}
 --- !u!195 &3979463733816889376
 NavMeshAgent:

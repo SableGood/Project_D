@@ -25,6 +25,10 @@ public class TowerBuilder : MonoBehaviour
     [Tooltip("건설한 타워(자식 포함)를 이 레이어로 바꿉니다. 이 레이어는 충돌 판정에도 자동 포함됩니다.")]
     public string builtTowerLayerName = "Tower";
 
+    [Header("건설 비용")]
+    [Tooltip("포탑 데이터(Mob_Data의 '비용' 칸)를 찾지 못했을 때 쓰는 비용")]
+    public int defaultTowerCost = 100;
+
     [Header("지면 배치")]
     [Tooltip("지면 높이를 찾을 때 위에서 아래로 레이를 쏘는 시작 높이")]
     public float groundProbeHeight = 50f;
@@ -51,6 +55,13 @@ public class TowerBuilder : MonoBehaviour
     // ★ 건설 모드이거나, 방금 건설한 클릭을 아직 누르고 있으면 true → PlayerWeaponManager가 사격하지 않음
     public bool BlocksFiring => isBuildMode || waitForMouseRelease;
 
+    // ★ 비용/HUD용
+    private EntityData[] towerDataCache;
+    private bool placementOk = false;   // 자리만 놓고 보면 설치 가능 (골드와 무관)
+    public int SlotCount => towerPrefabs != null ? towerPrefabs.Length : 0;
+    public int SelectedSlot => isBuildMode ? currentTowerIndex : -1;
+    public GameObject GetTowerPrefab(int index) => (towerPrefabs != null && index >= 0 && index < towerPrefabs.Length) ? towerPrefabs[index] : null;
+
     void Start()
     {
         // 미리보기 오브젝트를 담을 빈 배열 공간을 슬롯 개수(보통 5개)만큼 초기화합니다.
@@ -60,7 +71,40 @@ public class TowerBuilder : MonoBehaviour
         builtTowerLayer = LayerMask.NameToLayer(builtTowerLayerName);
         if (builtTowerLayer >= 0) obstacleLayer |= (1 << builtTowerLayer);
         else Debug.LogWarning($"TowerBuilder: '{builtTowerLayerName}' 레이어가 없습니다. 칸 점유 기록으로만 겹침을 막습니다.");
+
+        // 하단 통합 HUD (체력·스킬·포탑 슬롯·골드·무기)
+        GameHUD.Ensure();
     }
+
+    // 포탑 데이터: 프리팹의 TurretAI에 연결된 데이터 → 없으면 Resources/Data/Entities/Turrets/Ent_{프리팹 이름}
+    public EntityData GetTowerData(int index)
+    {
+        GameObject prefab = GetTowerPrefab(index);
+        if (prefab == null) return null;
+        if (towerDataCache == null || towerDataCache.Length != towerPrefabs.Length) towerDataCache = new EntityData[towerPrefabs.Length];
+        if (towerDataCache[index] != null) return towerDataCache[index];
+
+        EntityData data = null;
+        TurretAI turret = prefab.GetComponentInChildren<TurretAI>(true);
+        if (turret != null) data = turret.myData;
+        if (data == null)
+        {
+            SupportTower support = prefab.GetComponentInChildren<SupportTower>(true);
+            if (support != null) data = support.myData;
+        }
+        if (data == null) data = Resources.Load<EntityData>($"Data/Entities/Turrets/Ent_{prefab.name}");
+        towerDataCache[index] = data;
+        return data;
+    }
+
+    public int GetTowerCost(int index)
+    {
+        EntityData data = GetTowerData(index);
+        return (data != null && data.cost > 0) ? data.cost : defaultTowerCost;
+    }
+
+    // HUD 슬롯 클릭 등 외부에서 선택 (키보드 1~5와 동일)
+    public void SelectSlot(int index) => SelectTower(index);
 
     void Update()
     {
@@ -74,11 +118,19 @@ public class TowerBuilder : MonoBehaviour
             UpdatePreviewPosition();
 
             bool pointerOnUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
-            if (Input.GetMouseButtonDown(0) && canBuild && !pointerOnUI)
+            if (Input.GetMouseButtonDown(0) && !pointerOnUI)
             {
-                BuildTower();
-                CancelBuildMode();
-                waitForMouseRelease = true;
+                if (canBuild)
+                {
+                    if (BuildTower()) CancelBuildMode();
+                    waitForMouseRelease = true;
+                }
+                else if (placementOk)
+                {
+                    // 자리는 괜찮은데 골드가 부족 → HUD에 알림
+                    if (GoldManager.Instance != null) GoldManager.Instance.NotifyShort(GetTowerCost(currentTowerIndex));
+                    waitForMouseRelease = true;
+                }
             }
         }
     }
@@ -141,6 +193,7 @@ public class TowerBuilder : MonoBehaviour
     private static void MakePreviewOnly(GameObject preview)
     {
         foreach (TurretAI t in preview.GetComponentsInChildren<TurretAI>(true)) { t.enabled = false; Destroy(t); }
+        foreach (SupportTower s in preview.GetComponentsInChildren<SupportTower>(true)) { s.enabled = false; Destroy(s); }
         foreach (Weapon w in preview.GetComponentsInChildren<Weapon>(true)) { w.enabled = false; Destroy(w); }
         foreach (Health h in preview.GetComponentsInChildren<Health>(true)) { h.enabled = false; Destroy(h); }
         // 충돌체도 끔 (조준 레이·몹 탐색·설치 검사에 걸리지 않도록)
@@ -192,6 +245,7 @@ public class TowerBuilder : MonoBehaviour
         {
             if (currentPreviewObj.activeSelf) currentPreviewObj.SetActive(false);
             canBuild = false;
+            placementOk = false;
         }
         else
         {
@@ -201,7 +255,9 @@ public class TowerBuilder : MonoBehaviour
             Vector3 center = new Vector3(checkPos.x, currentGroundY + halfExtents.y + 0.05f, checkPos.z); // 지면 바로 위 공간 검사
             bool isOverlapping = Physics.CheckBox(center, halfExtents, Quaternion.identity, obstacleLayer, QueryTriggerInteraction.Ignore);
 
-            canBuild = !isOverlapping && !IsCellOccupied(ToCell(checkPos));
+            placementOk = !isOverlapping && !IsCellOccupied(ToCell(checkPos));
+            bool affordable = GoldManager.Instance == null || GoldManager.Instance.CanAfford(GetTowerCost(currentTowerIndex));
+            canBuild = placementOk && affordable; // 골드가 부족해도 미리보기는 빨간색
 
             // ★ 하나의 오브젝트가 여러 머티리얼을 가져도 모두 초록/빨강으로 교체
             //   (최적화) 색이 바뀔 때만 칠하고, materials 대신 sharedMaterials를 써서 매 프레임 머티리얼 복제(메모리 누수)를 막음
@@ -220,13 +276,22 @@ public class TowerBuilder : MonoBehaviour
         }
     }
 
-    private void BuildTower()
+    // 건설 성공 시 true (골드 차감 포함)
+    private bool BuildTower()
     {
         Vector3 pos = currentPreviewObj.transform.position;
 
+        // ★ 건설 비용 차감 (부족하면 건설하지 않음)
+        int cost = GetTowerCost(currentTowerIndex);
+        if (GoldManager.Instance != null && !GoldManager.Instance.TrySpend(cost)) return false;
+
         // PoolManager를 이용해 선택된 타워(currentTowerIndex)를 바닥에 소환
         GameObject tower = PoolManager.Instance.Spawn(towerPrefabs[currentTowerIndex], pos, Quaternion.identity);
-        if (tower == null) return;
+        if (tower == null)
+        {
+            if (GoldManager.Instance != null) GoldManager.Instance.Add(cost); // 실패하면 환불
+            return false;
+        }
 
         // ★ 높이 수정: 실제 타워 모델의 바닥이 지면에 닿도록 보정 (미리보기와 타워 프리팹의 피벗이 달라도 정확히 맞춤)
         Vector3 placed = tower.transform.position;
@@ -240,8 +305,8 @@ public class TowerBuilder : MonoBehaviour
         //    → 몹(특히 공성 몹)이 타워를 공격해 파괴할 수 있게 됨
         Health towerHealth = tower.GetComponent<Health>();
         if (towerHealth == null) towerHealth = tower.AddComponent<Health>();
-        TurretAI turret = tower.GetComponent<TurretAI>();
-        if (turret != null && turret.myData != null) towerHealth.InitStats(turret.myData);
+        EntityData towerData = GetTowerData(currentTowerIndex);
+        if (towerData != null && towerData.maxHp > 0f) towerHealth.InitStats(towerData);
         else towerHealth.InitStats(200f, 0f); // 데이터가 없으면 임시 체력
 
         // (풀에서 재사용된 타워라면 예전 칸 기록은 지움)
@@ -250,6 +315,7 @@ public class TowerBuilder : MonoBehaviour
         foreach (Vector2Int c in stale) occupiedCells.Remove(c);
 
         occupiedCells[ToCell(pos)] = tower;
+        return true;
     }
 
     // 해당 위치의 지면 높이 (타워/플레이어/몹은 무시). 지면을 못 찾으면 0

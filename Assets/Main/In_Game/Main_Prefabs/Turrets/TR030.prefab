@@ -668,6 +668,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2201210366954804643}
+  - {fileID: 3690908966942760903}
   m_Father: {fileID: 8292010513237762219}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1940487116499002839
@@ -1041,6 +1042,7 @@ GameObject:
   - component: {fileID: 3631527188282074695}
   - component: {fileID: 1851103959913787762}
   - component: {fileID: 7509340575410405864}
+  - component: {fileID: 3048109334071204199}
   m_Layer: 0
   m_Name: TR030
   m_TagString: Untagged
@@ -1521,6 +1523,91 @@ NavMeshObstacle:
   m_CarveOnlyStationary: 1
   m_Center: {x: 0, y: 0, z: 0}
   m_TimeToStationary: 0.5
+--- !u!114 &3048109334071204199
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2898419198516239965}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 396d38a1f50a1e049b41254451b407ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::TurretAI
+  myData: {fileID: 11400000, guid: 6d588b31a9efa844a92d70d6a867a62e, type: 2}
+  turretHead: {fileID: 8292010513237762219}
+  rotationSpeed: 8
+  fireAngleThreshold: 3
+  targetPriority: 1
+  fallbackDamage: 40
+  hitSlowPercent: 0
+  hitSlowDuration: 1
+--- !u!1 &5012206725148559386
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3690908966942760903}
+  - component: {fileID: 4767873744816897711}
+  m_Layer: 0
+  m_Name: WeaponPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3690908966942760903
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5012206725148559386}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.033, z: 1.85}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 916653163315109944}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4767873744816897711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5012206725148559386}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6bc7411838ee36f41a4e61724a7bad01, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Weapon
+  aimType: 1
+  fireMode: 4
+  projectilePrefab: {fileID: 0}
+  targetLayer:
+    serializedVersion: 2
+    m_Bits: 256
+  muzzle: {fileID: 3690908966942760903}
+  maxTargetCapacity: 20
+  attackRange: 10
+  attackCooldown: 0.5
+  attackDamage: 10
+  playerWepData: {fileID: 0}
+  currentAmmo: 0
+  isReloading: 0
+  showTracer: 1
+  tracerDuration: 0.08
+  tracerWidth: 0.06
+  tracerColor: {r: 1, g: 0.95, b: 0.7, a: 1}
+  alwaysShowTracer: 1
+  hitSlowPercent: 0
+  hitSlowDuration: 1
 --- !u!1 &9061091903385681922
 GameObject:
   m_ObjectHideFlags: 0

@@ -19,4 +19,5 @@ MonoBehaviour:
   defense: 10
   moveSpeed: 0
   cost: 150
+  abilityText: "\uADFC\uCC98 \uBAB9 \uC774\uB3D9 \uB454\uD654 15%"
   defaultWeapon: {fileID: 11400000, guid: 87ecb6c736af02e40830dbcef480d1f4, type: 2}
