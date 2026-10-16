@@ -49,6 +49,18 @@ public class Weapon : MonoBehaviour
     public float muzzleFlashDuration = 0.05f;
     public Color muzzleFlashColor = Color.white;
 
+    [Header("총구 섬광 빛 + 재장전 연기 (플레이어 총기만)")]
+    [Tooltip("쏠 때 총구 주변과 발밑 바닥이 잠깐 밝아짐 (실제 조명 대신 가벼운 그림이라 성능 부담 거의 없음)")]
+    public bool muzzleGlow = true;
+    public Color muzzleGlowColor = new Color(1f, 0.84f, 0.5f, 1f);
+    [Range(0f, 1f)] public float muzzleGlowAlpha = 0.4f;   // 총구 주변 빛무리 진하기
+    [Range(0f, 1f)] public float groundGlowAlpha = 0.28f;  // 바닥 빛 진하기
+    public float groundGlowSize = 2.4f;                    // 바닥 빛 지름 (미터)
+    public float muzzleGlowDuration = 0.08f;
+    [Tooltip("사격 후 재장전할 때 총구에서 연기가 가늘게 피어오름")]
+    public bool muzzleSmoke = true;
+    public float smokeDuration = 1.4f;
+
     [Header("명중 시 이동 둔화 (포탑 제압 사격 등)")]
     [Tooltip("0.2 = 명중한 몹이 20% 느려짐. 0이면 없음 (TurretAI가 자동 설정)")]
     [Range(0f, 0.9f)] public float hitSlowPercent = 0f;
@@ -66,14 +78,25 @@ public class Weapon : MonoBehaviour
     public bool IsGun => playerWepData != null && playerWepData.UsesAmmo;
 
     private float lastAttackTime = -999f;
+    private int shotsSinceReload;      // 연기 양 (많이 쏠수록 진하고 오래)
+    private float lastShotTime = -999f;
     private float reloadStartTime;
+    private Coroutine reloadRoutine;
+    private float shellStartTime, shellTime = 1f;
 
-    // 재장전 진행도 0~1 (HUD 표시용)
+    // 한 발씩 장전하는 무기 (산탄총): 재장전 = 한 발 넣을 때마다 장탄수 +1, 장전 중에도 남은 탄이 있으면 바로 사격
+    public bool ShellReload => playerWepData != null && playerWepData.maxAmmo > 0 &&
+                               ((playerWepData.role ?? "").Contains("산탄") || playerWepData.projectileCount > 1);
+    // 한 발 넣는 데 걸리는 시간 = CSV 재장전속도 ÷ 장탄수 (빈 총을 끝까지 채우는 시간이 CSV 값과 같음)
+    public float ShellLoadTime => playerWepData != null ? Mathf.Max(0.1f, playerWepData.reloadTime / Mathf.Max(1, playerWepData.maxAmmo)) : 0.5f;
+
+    // 재장전 진행도 0~1 (HUD 표시용). 한 발씩 장전하는 무기는 '지금 넣는 한 발'의 진행도
     public float ReloadProgress
     {
         get
         {
             if (!isReloading || playerWepData == null || playerWepData.reloadTime <= 0f) return 0f;
+            if (ShellReload) return Mathf.Clamp01((Time.time - shellStartTime) / Mathf.Max(0.01f, shellTime));
             return Mathf.Clamp01((Time.time - reloadStartTime) / playerWepData.reloadTime);
         }
     }
@@ -167,6 +190,7 @@ public class Weapon : MonoBehaviour
     // 이동하면서 쏴도 화염·궤적이 쏜 자리에 남지 않고 총구를 따라가게 (매 프레임 마지막에 다시 붙임)
     void LateUpdate()
     {
+        UpdateMuzzleGlow();
         if (muzzle == null) return;
         if (flashRenderer != null && flashRenderer.enabled)
         {
@@ -198,7 +222,12 @@ public class Weapon : MonoBehaviour
     // 수동 사격 (플레이어/포탑용)
     public void ManualAttackCommand(Vector3 targetPosition)
     {
-        if (isReloading) return; // 장전 중 사격 불가
+        if (isReloading)
+        {
+            // 산탄총: 한 발씩 넣는 중이라도 남은 탄이 있으면 장전을 멈추고 바로 사격
+            if (ShellReload && currentAmmo > 0 && Time.time >= lastAttackTime + attackCooldown) CancelReload();
+            else return; // 장전 중 사격 불가
+        }
 
         if (Time.time >= lastAttackTime + attackCooldown)
         {
@@ -230,7 +259,36 @@ public class Weapon : MonoBehaviour
     {
         if (isReloading || playerWepData == null || playerWepData.maxAmmo <= 0) return;
         if (currentAmmo >= playerWepData.maxAmmo) return;
-        StartCoroutine(ReloadCoroutine());
+        reloadRoutine = StartCoroutine(ShellReload ? ShellReloadCoroutine() : ReloadCoroutine());
+    }
+
+    // 장전 중단 (산탄총: 장전 중 사격). 이미 넣은 탄은 그대로
+    public void CancelReload()
+    {
+        if (!isReloading) return;
+        if (reloadRoutine != null) StopCoroutine(reloadRoutine);
+        reloadRoutine = null;
+        isReloading = false;
+    }
+
+    // 한 발씩 장전: 한 발 넣을 때마다 장탄수 +1 → 가득 차면 끝
+    private IEnumerator ShellReloadCoroutine()
+    {
+        if (isReloading || playerWepData == null || playerWepData.maxAmmo <= 0) yield break;
+        isReloading = true;
+        reloadStartTime = Time.time;
+        if (muzzleSmoke && IsGun && shotsSinceReload > 0 && Time.time - lastShotTime < 4f) StartCoroutine(SmokeRoutine());
+        shotsSinceReload = 0;
+
+        while (currentAmmo < playerWepData.maxAmmo)
+        {
+            shellTime = ShellLoadTime;
+            shellStartTime = Time.time;
+            yield return new WaitForSeconds(shellTime);
+            currentAmmo = Mathf.Min(playerWepData.maxAmmo, currentAmmo + 1);
+        }
+        isReloading = false;
+        reloadRoutine = null;
     }
 
     public IEnumerator ReloadCoroutine()
@@ -239,6 +297,8 @@ public class Weapon : MonoBehaviour
 
         isReloading = true;
         reloadStartTime = Time.time;
+        if (muzzleSmoke && IsGun && shotsSinceReload > 0 && Time.time - lastShotTime < 4f) StartCoroutine(SmokeRoutine());
+        shotsSinceReload = 0;
 
         yield return new WaitForSeconds(playerWepData.reloadTime);
 
@@ -300,7 +360,8 @@ public class Weapon : MonoBehaviour
         if (muzzleFlash) ShowMuzzleFlash(aimForFx);
         Vector3 fd = aimForFx - GetFireOrigin(fireMode == FireMode.Hitscan);
         if (fd.sqrMagnitude > 0.0001f) LastFireDirection = fd.normalized;
-        if (playerWepData != null) Fired?.Invoke(this);
+        if (playerWepData != null) { Fired?.Invoke(this); shotsSinceReload++; lastShotTime = Time.time; }
+        if (muzzleFlash && muzzleGlow && IsGun) ShowMuzzleGlow();
 
         if (tracerIndex > 0)
         {
@@ -331,29 +392,51 @@ public class Weapon : MonoBehaviour
     {
         Vector3 aimPos = targetTransform != null ? targetTransform.position + Vector3.up * 0.5f : manualTargetPosition;
         Vector3 fireOrigin = GetFireOrigin(true);
-        Vector3 direction = ApplySpread((aimPos - fireOrigin).normalized);
+
+        // 판정 레이의 시작점: 플레이어 무기는 '몸 중심(총구 높이)'에서 시작.
+        // 총구에서 시작하면, 바짝 붙은 몹 안으로 총구가 들어갔을 때 레이가 몹 내부에서 출발해 맞지 않음.
+        // 몸 중심에서 쏘면 몸과 총구 사이에 있는 몹도 정상적으로 맞음 (총알 궤적 그림은 그대로 총구에서 나감)
+        Vector3 rayStart = fireOrigin;
+        Transform owner = playerWepData != null ? OwnerBody() : null;
+        if (owner != null) rayStart = new Vector3(owner.position.x, fireOrigin.y, owner.position.z);
+        Vector3 toAim = aimPos - rayStart;
+        if (toAim.sqrMagnitude < 0.0001f) toAim = aimPos - fireOrigin;
+        Vector3 direction = ApplySpread(toAim.normalized);
+        float muzzleDist = Vector3.Distance(rayStart, fireOrigin); // 이보다 가까운 지점 = 총구 뒤쪽 (궤적을 그리지 않음)
 
         // 플레이어 총기: 커서(조준점)까지만 날아감. 도중에 포탑·바닥·벽에 막히면 그 자리에서 멈춤
         bool stopAtAim = stopAtAimPoint && IsGun && targetTransform == null;
-        float maxDist = attackRange;
+        float maxDist = attackRange + muzzleDist;
         bool blocked = false;
         if (stopAtAim)
         {
-            maxDist = Mathf.Min(attackRange, Vector3.Distance(fireOrigin, aimPos));
-            if (Physics.Raycast(fireOrigin, direction, out RaycastHit obstacle, maxDist, ObstacleMask(), QueryTriggerInteraction.Ignore))
+            maxDist = Mathf.Min(attackRange + muzzleDist, Vector3.Distance(rayStart, aimPos));
+            // 가장 가까운 장애물 (플레이어 자신과 든 무기의 콜라이더는 제외)
+            RaycastHit[] obstacles = Physics.RaycastAll(rayStart, direction, maxDist, ObstacleMask(), QueryTriggerInteraction.Ignore);
+            foreach (RaycastHit o in obstacles)
             {
-                maxDist = obstacle.distance;
+                if (owner != null && o.collider.transform.IsChildOf(owner)) continue;
+                if (o.distance >= maxDist) continue;
+                maxDist = o.distance;
                 blocked = true;
             }
         }
-        Vector3 endPoint = fireOrigin + direction * maxDist;
+        Vector3 endPoint = rayStart + direction * maxDist;
         bool hitTarget = false;
+
+        // 시작점이 이미 몹 몸 안이면(몸끼리 겹침) 레이로는 잡히지 않으므로 따로 확인
+        int insideCount = Physics.OverlapSphereNonAlloc(rayStart, 0.05f, insideHits, targetLayer, QueryTriggerInteraction.Ignore);
 
         if (canPierce)
         {
             // 관통: 사거리 안의 모든 대상에게 피해
             hitThisRay.Clear();
-            RaycastHit[] hits = Physics.RaycastAll(fireOrigin, direction, maxDist, targetLayer, QueryTriggerInteraction.Ignore);
+            for (int i = 0; i < insideCount; i++)
+            {
+                Health hp = insideHits[i].GetComponentInParent<Health>();
+                if (hp != null && hitThisRay.Add(hp)) ApplyDamage(hp, direction);
+            }
+            RaycastHit[] hits = Physics.RaycastAll(rayStart, direction, maxDist, targetLayer, QueryTriggerInteraction.Ignore);
             foreach (RaycastHit h in hits)
             {
                 Health hp = h.transform.GetComponentInParent<Health>();
@@ -361,18 +444,38 @@ public class Weapon : MonoBehaviour
                 ApplyDamage(hp, direction);
             }
         }
-        else if (Physics.Raycast(fireOrigin, direction, out RaycastHit hit, maxDist, targetLayer, QueryTriggerInteraction.Ignore))
+        else if (insideCount > 0)
         {
-            ApplyDamage(hit.transform, direction);
-            endPoint = hit.point;
+            ApplyDamage(insideHits[0].transform, direction);
+            endPoint = fireOrigin;
             hitTarget = true;
         }
+        else if (Physics.Raycast(rayStart, direction, out RaycastHit hit, maxDist, targetLayer, QueryTriggerInteraction.Ignore))
+        {
+            ApplyDamage(hit.transform, direction);
+            endPoint = hit.distance > muzzleDist ? hit.point : fireOrigin; // 총구 뒤에서 맞았으면 궤적 없이 그 자리 타격
+            hitTarget = true;
+        }
+        if (!hitTarget && maxDist <= muzzleDist) endPoint = fireOrigin; // 총구에 닿기 전(몸과 총구 사이)에 막힘 → 궤적 없음
 
         // 몹에 맞지 않은 탄: 멈춘 자리(커서·포탑·바닥)에 작은 회색 착탄
         if (stopAtAim && !hitTarget) HitEffects.Impact(endPoint, blocked);
 
         Debug.DrawLine(fireOrigin, endPoint, Color.green, 0.5f);
-        if (showTracer && (playerWepData != null || alwaysShowTracer)) ShowTracer(fireOrigin, endPoint);
+        if (showTracer && (IsGun || alwaysShowTracer)) ShowTracer(fireOrigin, endPoint); // 근접무기는 탄 궤적 없음 (휘두르기 연출)
+    }
+
+    // 이 무기를 든 플레이어의 몸 (밀착 사격 판정의 기준점)
+    private Transform ownerBody;
+    private readonly Collider[] insideHits = new Collider[8];
+    private Transform OwnerBody()
+    {
+        if (ownerBody == null)
+        {
+            PlayerController pc = GetComponentInParent<PlayerController>();
+            ownerBody = pc != null ? pc.transform : null;
+        }
+        return ownerBody;
     }
 
     // 착탄 판정에 쓰는 '막는 물체' 레이어: 대상(몹)·플레이어·Ignore Raycast를 뺀 모든 것 (포탑, 바닥, 지형)
@@ -532,11 +635,144 @@ public class Weapon : MonoBehaviour
     void OnDisable()
     {
         if (flashRenderer != null) flashRenderer.enabled = false; // 포탑이 풀로 돌아갈 때 화염이 남지 않게
+        if (haloRenderer != null) haloRenderer.enabled = false;
+        if (groundRenderer != null) groundRenderer.enabled = false;
     }
 
     void OnDestroy()
     {
         if (flashRenderer != null) Destroy(flashRenderer.gameObject);
+        if (haloRenderer != null) Destroy(haloRenderer.gameObject);
+        if (groundRenderer != null) Destroy(groundRenderer.gameObject);
+    }
+
+    // =========================================================
+    // 총구 섬광 빛 (가짜 조명): 총구 주변 빛무리 + 발밑 바닥에 둥근 빛
+    //  - 진짜 Light를 쓰면 바닥·포탑 셰이더가 빛 하나당 한 번 더 그려야 해서, 반투명 그림 2장으로 흉내냄
+    //  - 도트 느낌이 나도록 빛이 3단으로 끊긴 원
+    // =========================================================
+    private SpriteRenderer haloRenderer, groundRenderer;
+    private float glowStartTime = -999f;
+    private float glowFloorY;
+    private static Sprite glowSprite;
+    private static int glowIgnoreMask;
+    private static bool glowMaskReady;
+
+    // 0~1: 방금 쏜 섬광의 남은 밝기 (1인칭 무기 그림을 밝히는 데 사용)
+    public float MuzzleGlow01
+    {
+        get
+        {
+            if (!muzzleGlow || muzzleGlowDuration <= 0f) return 0f;
+            float t = (Time.time - glowStartTime) / muzzleGlowDuration;
+            return t >= 1f || t < 0f ? 0f : (1f - t) * (1f - t);
+        }
+    }
+
+    private void ShowMuzzleGlow()
+    {
+        if (flashRenderer == null) return;
+        if (glowSprite == null) glowSprite = MakeGlowSprite();
+        if (haloRenderer == null) haloRenderer = CreateGlowRenderer("MuzzleGlow");
+        if (groundRenderer == null) groundRenderer = CreateGlowRenderer("MuzzleGroundGlow");
+
+        Vector3 p = flashRenderer.transform.position;
+        if (!glowMaskReady)
+        {
+            glowMaskReady = true;
+            int pl = LayerMask.NameToLayer("Player");
+            glowIgnoreMask = ~((1 << 2) | (pl >= 0 ? 1 << pl : 0));
+        }
+        glowFloorY = Physics.Raycast(p + Vector3.up * 0.05f, Vector3.down, out RaycastHit hit, 6f, glowIgnoreMask, QueryTriggerInteraction.Ignore)
+            ? hit.point.y : p.y - 1.2f;
+        glowStartTime = Time.time;
+        haloRenderer.enabled = groundRenderer.enabled = true;
+        UpdateMuzzleGlow();
+    }
+
+    private SpriteRenderer CreateGlowRenderer(string name)
+    {
+        GameObject go = new GameObject(name);
+        go.layer = 2; // Ignore Raycast
+        SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+        if (flashMaterial == null) flashMaterial = new Material(Shader.Find("Sprites/Default"));
+        sr.sharedMaterial = flashMaterial;
+        sr.sprite = glowSprite;
+        sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        sr.receiveShadows = false;
+        sr.sortingOrder = 9; // 화염(10) 바로 뒤
+        sr.enabled = false;
+        return sr;
+    }
+
+    private void UpdateMuzzleGlow()
+    {
+        if (haloRenderer == null || !haloRenderer.enabled) return;
+        float k = MuzzleGlow01;
+        if (k <= 0f || flashRenderer == null)
+        {
+            haloRenderer.enabled = false;
+            if (groundRenderer != null) groundRenderer.enabled = false;
+            return;
+        }
+        Camera c = Camera.main;
+        Vector3 p = muzzle != null ? muzzle.TransformPoint(flashLocal) : flashRenderer.transform.position;
+        float spriteSize = Mathf.Max(0.0001f, glowSprite.bounds.size.x);
+
+        // 총구 빛무리: 화염보다 2.6배 크고 옅게, 화염 바로 뒤
+        Transform ht = haloRenderer.transform;
+        ht.position = p + (c != null ? c.transform.forward * 0.02f : Vector3.zero);
+        ht.rotation = c != null ? c.transform.rotation : Quaternion.identity;
+        ht.localScale = Vector3.one * (muzzleFlashSize * 2.6f / spriteSize);
+        Color hc = muzzleGlowColor; hc.a = muzzleGlowAlpha * k; haloRenderer.color = hc;
+
+        // 바닥 빛: 총구 바로 아래 바닥에 눕힘 (높이가 높을수록 옅게)
+        Transform gt = groundRenderer.transform;
+        float height = Mathf.Max(0f, p.y - glowFloorY);
+        gt.position = new Vector3(p.x, glowFloorY + 0.02f, p.z);
+        gt.rotation = Quaternion.Euler(90f, 0f, 0f);
+        gt.localScale = Vector3.one * (groundGlowSize / spriteSize);
+        Color gc = muzzleGlowColor; gc.a = groundGlowAlpha * k * Mathf.Clamp01(1.6f - height * 0.5f); groundRenderer.color = gc;
+    }
+
+    // 32x32 둥근 빛 (흰색, 바깥으로 갈수록 3단으로 옅어짐)
+    private static Sprite MakeGlowSprite()
+    {
+        const int N = 32;
+        Texture2D tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        float c = (N - 1) * 0.5f;
+        for (int y = 0; y < N; y++)
+        for (int x = 0; x < N; x++)
+        {
+            float r = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / (N * 0.5f);
+            float a = r < 0.32f ? 1f : r < 0.62f ? 0.55f : r < 0.95f ? 0.22f : 0f;
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+        }
+        tex.Apply();
+        Sprite s = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+        s.name = "GeneratedMuzzleGlow";
+        return s;
+    }
+
+    // 재장전: 총구에서 가는 연기가 잠시 피어오름 (많이 쏠수록 진하고 오래)
+    private IEnumerator SmokeRoutine()
+    {
+        float heat = Mathf.Clamp01(shotsSinceReload / 15f);
+        float dur = smokeDuration * Mathf.Lerp(0.6f, 1f, heat);
+        float end = Time.time + dur;
+        while (Time.time < end)
+        {
+            if (muzzle != null)
+            {
+                float scale = muzzleFlashSize / 0.32f; // 1인칭에서는 무기 크기에 맞춰 작게
+                float k = (end - Time.time) / dur;     // 1 → 0 (점점 가늘어짐)
+                Vector3 p = muzzle.TransformPoint(flashLocal);
+                Vector3 v = new Vector3(Random.Range(-0.06f, 0.06f), Random.Range(0.22f, 0.36f), Random.Range(-0.06f, 0.06f)) * scale;
+                float alpha = 0.38f * Mathf.Lerp(0.35f, 1f, k) * Mathf.Lerp(0.6f, 1f, heat);
+                HitEffects.Smoke(p, v, Random.Range(0.09f, 0.14f) * scale, Random.Range(0.9f, 1.3f), alpha, scale);
+            }
+            yield return new WaitForSeconds(Random.Range(0.06f, 0.1f));
+        }
     }
 
     private static Sprite GetGeneratedFlash()

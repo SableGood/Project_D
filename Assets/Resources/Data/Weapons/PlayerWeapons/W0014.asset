@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0014
   weaponName: Bbadda_Modern
-  inGameName: "\uBE60\uB530-\uBAA8\uB358"
+  inGameName: "\uBE60\uB530 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uADFC\uC811\uBB34\uC7A5"
   aimType: Multi
   fireMode: Hitscan
@@ -23,7 +23,7 @@ MonoBehaviour:
   damage: 34
   reloadTime: 0
   maxAmmo: 0
-  fireRate: 1.1
+  fireRate: 3.3
   projectileCount: 1
   spread: 0
   moveSpread: 0

@@ -1,0 +1,47 @@
+{
+ "magType": "Belt",
+ "ppu": 100,
+ "side": {
+  "magOffset": [
+   -20.0,
+   -24.5
+  ],
+  "magInFront": true,
+  "muzzle": [
+   237.0,
+   38.5
+  ],
+  "cover": {
+   "hinge": [
+    27.0,
+    48.0
+   ],
+   "center": [
+    -45.0,
+    58.5
+   ],
+   "openAngle": -43
+  }
+ },
+ "fps": {
+  "magOffset": [
+   45.5,
+   -89.5
+  ],
+  "muzzle": [
+   -282.0,
+   204.0
+  ],
+  "cover": {
+   "hinge": [
+    -8.9,
+    112.0
+   ],
+   "center": [
+    155.5,
+    119.5
+   ],
+   "openAngle": 65.0
+  }
+ }
+}

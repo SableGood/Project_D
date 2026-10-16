@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0023
   weaponName: Colt_Ranger
-  inGameName: "\uCF5C\uD2B8-\uB808\uC778\uC800"
+  inGameName: "\uCF5C\uD2B8 / \uB808\uC778\uC800"
   role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uAD8C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 7.5
+  range: 15
   damage: 26
   reloadTime: 1
   maxAmmo: 11
-  fireRate: 2.2
+  fireRate: 6.6
   projectileCount: 1
   spread: 1.8
   moveSpread: 3.2
@@ -33,7 +33,7 @@ MonoBehaviour:
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
   spriteName: Pic_Colt_3_Ranger
-  spriteLength: 0.5
+  spriteLength: 0.38
   weaponSprite: {fileID: 21300000, guid: 7da9af2a316b4b34f92cb2d970ab0597, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
   description: "Ranger \uC2DC\uB9AC\uC988 : \uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58

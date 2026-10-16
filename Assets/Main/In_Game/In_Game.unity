@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 3
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 10304, guid: 0000000000000000f000000000000000, type: 0}
+  m_SkyboxMaterial: {fileID: 2100000, guid: f4b7c60a3b3938240b00750f7ceda05f, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -3893,6 +3893,9 @@ MonoBehaviour:
   - {fileID: 1950522396}
   currentCrosshairIndex: 0
   showInTopDown: 1
+  recoilJitter: 9
+  recoilPunch: 0.22
+  recoilRecover: 14
 --- !u!1 &799825441
 GameObject:
   m_ObjectHideFlags: 0
@@ -6777,7 +6780,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: ab6d2d62032c23a4cae954146eabeabb, type: 2}
+  - {fileID: 2100000, guid: c8a96f254e72c8f46a8fc46fff5066ae, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -6819,7 +6822,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3, y: 1, z: 3}
+  m_LocalScale: {x: 4, y: 1, z: 2.25}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -9272,6 +9275,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraController
   player: {fileID: 0}
+  transitionMode: 0
+  blinkDuration: 0.22
+  blinkDarkness: 0.85
+  smoothDuration: 0.35
   transitionSpeed: 5
   topDownOffset: {x: 0, y: 12, z: -4}
   topDownRotation: {x: 75, y: 0, z: 0}

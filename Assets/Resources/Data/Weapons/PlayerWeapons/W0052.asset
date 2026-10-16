@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0052
   weaponName: MAG_Assault
-  inGameName: "\uB78C\uBCF4-\uC5B4\uC370\uD2B8"
+  inGameName: "\uB78C\uBCF4 / \uC5B4\uC370\uD2B8"
   role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uAE30\uAD00\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 9.5
+  range: 19
   damage: 12
   reloadTime: 2.9
   maxAmmo: 66
-  fireRate: 5
+  fireRate: 12
   projectileCount: 1
   spread: 5.4
   moveSpread: 4.8

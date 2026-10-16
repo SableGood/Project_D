@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0034
   weaponName: Thompson_Ballista
-  inGameName: "\uD1B0\uC2A8-\uBC1C\uB9AC\uC2A4\uD0C0"
+  inGameName: "\uD1B0\uC2A8 / \uBC1C\uB9AC\uC2A4\uD0C0"
   role: "3\uD2F0\uC5B4 \uD654\uB825\uD615 \uAE30\uAD00\uB2E8\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 8.5
+  range: 17
   damage: 9
   reloadTime: 1.9
   maxAmmo: 46
-  fireRate: 4.8
+  fireRate: 11.52
   projectileCount: 1
   spread: 6
   moveSpread: 6

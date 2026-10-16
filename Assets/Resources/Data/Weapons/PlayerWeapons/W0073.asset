@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0073
   weaponName: Mossberg_Ranger
-  inGameName: "\uBAA8\uC2A4\uBC84\uADF8-\uB808\uC778\uC800"
+  inGameName: "\uBAA8\uC2A4\uBC84\uADF8 / \uB808\uC778\uC800"
   role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uC0B0\uD0C4\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 5
+  range: 10
   damage: 13
   reloadTime: 2.7
   maxAmmo: 8
-  fireRate: 1
+  fireRate: 3
   projectileCount: 6
   spread: 14.4
   moveSpread: 3.2

@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0033
   weaponName: Thompson_Ranger
-  inGameName: "\uD1B0\uC2A8-\uB808\uC778\uC800"
+  inGameName: "\uD1B0\uC2A8 / \uB808\uC778\uC800"
   role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uAE30\uAD00\uB2E8\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 6.5
+  range: 13
   damage: 10
   reloadTime: 1.7
   maxAmmo: 41
-  fireRate: 5
+  fireRate: 12
   projectileCount: 1
   spread: 3.6
   moveSpread: 4.8

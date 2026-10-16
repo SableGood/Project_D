@@ -7,16 +7,21 @@
    -31.0
   ],
   "gunWidth": 662,
-  "gunLeft": 0
+  "gunLeft": 0,
+  "muzzle": [
+   331.0,
+   43.0
+  ]
  },
  "fps": {
   "magOffset": [
-   2.5,
-   -23.5
+   3.83,
+   -36.02
   ],
   "muzzle": [
-   -156.0,
-   124.5
+   -239.0,
+   190.5
   ]
- }
+ },
+ "hudOriginal": true
 }

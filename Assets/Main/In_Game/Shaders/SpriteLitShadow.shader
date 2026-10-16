@@ -11,6 +11,7 @@
 // - Upright depth (_FeetPos from Billboard): the sprite is drawn tilted toward the camera, but its DEPTH is
 //     taken from an upright plane standing at the feet. So a tower behind the feet no longer cuts through
 //     the upper half of the image, and a tower in front correctly covers it. Screen position is unchanged.
+//     Parts drawn below the feet (e.g. a long gun aimed down) keep a depth just above the ground, so the floor never hides them.
 Shader "Project_D/Sprite Shadow"
 {
     Properties
@@ -25,6 +26,8 @@ Shader "Project_D/Sprite Shadow"
         [Toggle] _UprightDepth ("Upright Depth (feet plane)", Float) = 1
         [PerRendererData] _FeetPos ("Feet Position (set by Billboard)", Vector) = (0,0,0,0)
         [PerRendererData] _OutlineSkip ("Outline Skip (x,y: bottom joint v / band texels, z,w: top joint v / band)", Vector) = (0,0,0,0)
+        [PerRendererData] _OutlineSkipSpan ("Outline Skip span (x,y: u range of the bottom joint, 0,0 = full width)", Vector) = (0,0,0,0)
+        [PerRendererData] _FpsLight ("Light shading (xy: light dir in uv, z: strength)", Vector) = (0,0,0,0)
         [HideInInspector] _RendererColor ("RendererColor", Color) = (1,1,1,1)
         [HideInInspector] _Flip ("Flip", Vector) = (1,1,1,1)
         [PerRendererData] _AlphaTex ("External Alpha", 2D) = "white" {}
@@ -66,6 +69,8 @@ Shader "Project_D/Sprite Shadow"
             //   x = joint line (uv v) at the BOTTOM of this picture, y = band height below it (texels, 0 = off)
             //   z = joint line (uv v) at the TOP of this picture,    w = band height above it (texels, 0 = off)
             float4 _OutlineSkip;
+            float4 _OutlineSkipSpan; // 아래 이음새 생략을 이 가로 범위(u)에서만 (하체가 실제로 있는 허리 폭). 0,0 = 전체
+            float4 _FpsLight; // 1인칭 무기: 빛 반대쪽을 어둡게 (xy = 그림 안에서 빛이 오는 방향, z = 세기, 0 = 끔)
             float4 _MainTex_TexelSize;
 
             // alpha of the neighbour pixel used for the outline test
@@ -73,8 +78,11 @@ Shader "Project_D/Sprite Shadow"
             {
                 float2 p = uv + o;
                 float tv = _MainTex_TexelSize.y;
-                if (_OutlineSkip.y > 0 && p.y < _OutlineSkip.x + 0.5 * tv && p.y > _OutlineSkip.x - _OutlineSkip.y * tv) return 1; // joint below (upper body)
-                if (_OutlineSkip.w > 0 && p.y > _OutlineSkip.z - 0.5 * tv && p.y < _OutlineSkip.z + _OutlineSkip.w * tv) return 1; // joint above (lower body)
+                // band grows with the probe distance (outline width is in screen pixels, band is in texels)
+                float reach = abs(o.y) + tv;
+                bool inSpan = _OutlineSkipSpan.y <= _OutlineSkipSpan.x || (p.x >= _OutlineSkipSpan.x && p.x <= _OutlineSkipSpan.y);
+                if (_OutlineSkip.y > 0 && inSpan && p.y < _OutlineSkip.x + 0.5 * tv && p.y > _OutlineSkip.x - max(_OutlineSkip.y * tv, reach)) return 1; // joint below (upper body)
+                if (_OutlineSkip.w > 0 && p.y > _OutlineSkip.z - 0.5 * tv && p.y < _OutlineSkip.z + max(_OutlineSkip.w * tv, reach)) return 1; // joint above (lower body)
                 if (p.x < 0 || p.x > 1 || p.y < 0 || p.y > 1) return 0;          // outside the image = transparent
                 return tex2Dlod(_MainTex, float4(p, 0, 0)).a; // no mips on sprites; lod avoids gradient-in-branch issues
             }
@@ -118,6 +126,11 @@ Shader "Project_D/Sprite Shadow"
                             // w = 1 + bias: plane moved toward the camera by 'bias' meters (layering: legs < torso < weapon)
                             float3 feet = _FeetPos.xyz - fwdFlat * max(0, _FeetPos.w - 1);
                             float t = dot(feet - camPos, fwdFlat) / denom; // ray hits the upright plane at the feet
+                            // never deeper than the ground: a long gun pointing down (below the feet on screen) would
+                            // otherwise get a depth under the floor and vanish -> clamp to just above the ground plane
+                            float groundY = _FeetPos.y + 0.03;
+                            if (dir.y < -1e-4 && camPos.y + dir.y * t < groundY)
+                                t = min(t, (groundY - camPos.y) / dir.y);
                             float4 cd = UnityWorldToClipPos(camPos + dir * t);
                             if (cd.w > 1e-4)
                             {
@@ -143,6 +156,12 @@ Shader "Project_D/Sprite Shadow"
                 fixed4 c = SampleSpriteTexture(i.uv) * i.color;
                 clip(c.a - _Cutoff);
                 c.rgb = lerp(c.rgb, _FlashColor.rgb, _FlashAmount); // hit flash (MaterialPropertyBlock)
+                if (_FpsLight.z > 0.001)
+                {
+                    // light-facing side stays as is, the far side darkens (fake shading on a flat picture)
+                    float t = dot(i.uv - 0.5, _FpsLight.xy);
+                    c.rgb *= 1.0 - _FpsLight.z * saturate(0.5 - t);
+                }
 
                 // outline: this pixel is solid, but a neighbour (N screen px away) is transparent -> edge
                 if (_OutlineWidth > 0.01)

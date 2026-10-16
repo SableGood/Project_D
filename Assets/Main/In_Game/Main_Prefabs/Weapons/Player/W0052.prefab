@@ -138,6 +138,39 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WeaponVisual
   flipWhenAimingLeft: 1
+  recoilDistance: 0.07
+  recoilAngle: 7
+  recoilRecover: 16
+  fpsScreenHeight: 0.62
+  fpsMuzzleHeight: 0.36
+  fpsRightOverhang: 0.14
+  fpsScreenOffset: {x: 0, y: 0}
+  fpsDistance: 0.55
+  reloadTiltTopDown: 14
+  reloadTiltFps: 12
+  magOutEnd: 0.075
+  insertTiltAngle: 30
+  droppedMagLife: 2
+  ejectFpsReach: 1.35
+  fpsFlickAngle: 14
+  fpsFlickDuration: 0.22
+  fpsSlapAmount: 0.035
+  fpsSlapAngle: 5
+  fpsSlapDuration: 0.28
+  fpsLighting: 1
+  fpsShadeMin: 0.45
+  fpsShadeGradient: 0.35
+  fpsShadowDarken: 0.6
+  slideCycleTime: 0.07
+  slideReleaseAt: 0.93
+  swingDuration: 0.24
+  swingBackAngle: 55
+  swingForwardAngle: 75
+  slashColor: {r: 1, g: 1, b: 0.95, a: 0.9}
+  clipStartLift: 2.2
+  clipEjectUp: 3.4
+  clipEjectBack: 0.9
+  clipEjectSpin: 900
 --- !u!1 &7228667389978524453
 GameObject:
   m_ObjectHideFlags: 0
@@ -201,6 +234,23 @@ MonoBehaviour:
   tracerDuration: 0.05
   tracerWidth: 0.03
   tracerColor: {r: 1, g: 0.9, b: 0.5, a: 1}
+  alwaysShowTracer: 0
+  muzzleFlash: 0
+  muzzleFlashSprite: {fileID: 0}
+  muzzleFlashSize: 0.7
+  muzzleFlashDuration: 0.05
+  muzzleFlashColor: {r: 1, g: 1, b: 1, a: 1}
+  muzzleGlow: 1
+  muzzleGlowColor: {r: 1, g: 0.84, b: 0.5, a: 1}
+  muzzleGlowAlpha: 0.4
+  groundGlowAlpha: 0.28
+  groundGlowSize: 2.4
+  muzzleGlowDuration: 0.08
+  muzzleSmoke: 1
+  smokeDuration: 1.4
+  hitSlowPercent: 0
+  hitSlowDuration: 1
+  stopAtAimPoint: 1
 --- !u!1 &8350122547621865919
 GameObject:
   m_ObjectHideFlags: 0

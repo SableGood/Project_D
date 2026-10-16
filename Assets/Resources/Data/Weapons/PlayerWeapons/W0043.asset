@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0043
   weaponName: Eugene_Ranger
-  inGameName: "\uC720\uC9C4-\uB808\uC778\uC800"
+  inGameName: "\uC720\uC9C4 / \uB808\uC778\uC800"
   role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uC18C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 9.5
+  range: 19
   damage: 17
   reloadTime: 1.9
   maxAmmo: 34
-  fireRate: 3
+  fireRate: 9
   projectileCount: 1
   spread: 1.5
   moveSpread: 4.8

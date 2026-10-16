@@ -19,11 +19,11 @@ MonoBehaviour:
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 7
+  range: 14
   damage: 18
   reloadTime: 1.1
   maxAmmo: 8
-  fireRate: 2.2
+  fireRate: 6.6
   projectileCount: 1
   spread: 3
   moveSpread: 4
@@ -33,7 +33,7 @@ MonoBehaviour:
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
   spriteName: Pic_Colt
-  spriteLength: 0.5
+  spriteLength: 0.41
   weaponSprite: {fileID: 21300000, guid: bfc0da36bf8c38441a340a7e7cc78cf9, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
   description: "\uAE30\uBCF8\uD615"

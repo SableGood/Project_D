@@ -19,11 +19,11 @@ MonoBehaviour:
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 9
+  range: 18
   damage: 10
   reloadTime: 4
   maxAmmo: 60
-  fireRate: 4
+  fireRate: 9.6
   projectileCount: 1
   spread: 6
   moveSpread: 12

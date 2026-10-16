@@ -28,6 +28,7 @@ public class GameHUD : MonoBehaviour
 
     // ── 색상 (포탑 슬롯 디자인 기준으로 통일) ──
     private static readonly Color SlotBg = new Color(0.12f, 0.12f, 0.14f, 0.95f);
+    private static readonly Color WeaponIconBg = new Color(0.78f, 0.78f, 0.8f, 0.32f); // 무기 그림 칸: 옅은 반투명 회색 (누끼 가장자리가 덜 티 나게)
     private static readonly Color FrameNormal = new Color(1f, 1f, 1f, 0.18f);
     private static readonly Color Accent = new Color(1f, 0.85f, 0.25f, 1f);
     private static readonly Color CostOk = new Color(1f, 0.88f, 0.4f, 1f);
@@ -83,13 +84,19 @@ public class GameHUD : MonoBehaviour
     private int lastGold = int.MinValue, lastSelected = int.MinValue;
 
     // 무기
-    private Text weaponNameText, ammoText, weaponHintText;
+    private Text weaponNameText, ammoText, ammoMaxText, weaponHintText;
     private Image weaponIcon;
     // 탄창 분리 이미지가 있는 무기: 본체(탄창 없음) + 탄창을 따로 그려 재장전 모습까지 보여줌
     private RectTransform iconPartsRoot;
-    private Image iconBody, iconMag;
+    private Image iconBody, iconMag, iconCover;
+    private RectTransform iconCoverPivot;
     private GameObject reloadBarRoot;
     private RectTransform reloadFill;
+    // 머리 위 재장전 바 (탑뷰): 너비 = 침팬치 히트박스 너비(월드 1m), 높이 = 무기 칸 재장전 바(6)의 0.7배
+    private const float OverheadWidthMeters = 1f, OverheadHeight = 4f, OverheadGap = 36f;   // Gap: 머리 꼭대기 위로 띄우는 거리 (화면 px)
+    private Canvas hudCanvas;
+    private RectTransform overheadBar, overheadFill;
+    private SpriteRenderer[] playerBodyRenderers;
 
     public static void Ensure()
     {
@@ -121,7 +128,46 @@ public class GameHUD : MonoBehaviour
         UpdateHealth();
         UpdateTowers();
         UpdateWeapon();
+        UpdateOverheadReload();
         UpdateGoldEffects();
+    }
+
+    // 캐릭터 머리 위 재장전 바 (탑뷰에서만). 무기 칸 바와 같은 진행도
+    private void UpdateOverheadReload()
+    {
+        if (overheadBar == null) return;
+        Weapon w = weaponManager != null ? weaponManager.CurrentWeapon : null;
+        Camera cam = Camera.main;
+        bool show = w != null && w.isReloading && !CameraController.FirstPersonView && cam != null && boundPlayer != null && hudCanvas != null;
+        Vector3 c = Vector3.zero;
+        float top = float.MinValue;
+        if (show)
+        {
+            c = cam.WorldToScreenPoint(boundPlayer.position);
+            if (c.z <= 0f) show = false;
+        }
+        if (show)
+        {
+            // 화면에서 캐릭터 그림의 가장 높은 점 = 머리 꼭대기.
+            // 그림 상자(bounds)는 투명 여백·기울기 때문에 캐릭터마다 실제 머리와 차이가 나서, 실제로 그려지는 점(스프라이트 꼭짓점)으로 계산
+            foreach (SpriteRenderer r in playerBodyRenderers)
+            {
+                if (r == null || !r.enabled || r.sprite == null) continue;
+                Transform t = r.transform;
+                foreach (Vector2 v in r.sprite.vertices)
+                    top = Mathf.Max(top, cam.WorldToScreenPoint(t.TransformPoint(v)).y);
+            }
+            if (top == float.MinValue) top = c.y;
+        }
+        if (overheadBar.gameObject.activeSelf != show) overheadBar.gameObject.SetActive(show);
+        if (!show) return;
+
+        Vector3 right = cam.transform.right * (OverheadWidthMeters * 0.5f);
+        float widthPx = Mathf.Abs(cam.WorldToScreenPoint(boundPlayer.position + right).x - cam.WorldToScreenPoint(boundPlayer.position - right).x);
+        float k = Mathf.Max(0.0001f, hudCanvas.scaleFactor);
+        overheadBar.sizeDelta = new Vector2(Mathf.Round(widthPx / k), OverheadHeight);
+        overheadBar.anchoredPosition = new Vector2(Mathf.Round(c.x / k), Mathf.Round(top / k + OverheadGap));
+        overheadFill.anchorMax = new Vector2(w.ReloadProgress, 1f);
     }
 
     private void Bind(Transform player)
@@ -130,6 +176,16 @@ public class GameHUD : MonoBehaviour
         playerHealth = player != null ? player.GetComponent<Health>() : null;
         builder = player != null ? player.GetComponent<TowerBuilder>() : null;
         weaponManager = player != null ? player.GetComponent<PlayerWeaponManager>() : null;
+        // 머리 위 바 위치 계산용: 캐릭터 그림(상체 Upper·하체 Sprite)만 (무기 제외)
+        System.Collections.Generic.List<SpriteRenderer> body = new System.Collections.Generic.List<SpriteRenderer>();
+        if (player != null)
+            foreach (string n in new[] { "Upper", "Sprite" })
+            {
+                Transform t = player.Find(n);
+                SpriteRenderer r = t != null ? t.GetComponent<SpriteRenderer>() : null;
+                if (r != null) body.Add(r);
+            }
+        playerBodyRenderers = body.ToArray();
         trailRatio = 1f;
         lastGold = lastSelected = int.MinValue;
 
@@ -195,30 +251,106 @@ public class GameHUD : MonoBehaviour
         else infoText.text = "";
     }
 
-    // 무기 칸 그림: 본체 + 탄창 (무기 그림의 재장전 상태를 그대로 따라감)
+    // 무기 칸 그림: 본체 + 탄창 (+ 기관총 상부 덮개). 탑뷰 무기 그림의 재장전 모션을 그대로 따라감
+    //  - 위치·크기: 그림의 투명한 여백을 빼고 '실제로 그려진 부분'(본체 + 제자리 탄창)이 칸 가운데에 꽉 차게
     private void UpdatePartsIcon(WeaponVisual wv)
     {
         if (!iconPartsRoot.gameObject.activeSelf) iconPartsRoot.gameObject.SetActive(true);
-        Sprite body = wv.SideNoMagSprite, mag = wv.SideMagSprite;
+        Sprite full = wv.SideNoMagSprite, mag = wv.SideMagSprite, cover = wv.SideCoverSprite;
+        // 덮개가 따로 있으면: 덮개 없는 본체 + 덮개 그림 (같은 크기의 그림이라 크기 계산은 전체 그림 기준)
+        Sprite body = cover != null && wv.SideBodySprite != null ? wv.SideBodySprite : full;
+        if (wv.SideCurrentBodySprite != null) body = wv.SideCurrentBodySprite; // 개런드: 노리쇠 후퇴 고정 그림
         if (iconBody.sprite != body) iconBody.sprite = body;
         if (iconMag.sprite != mag) iconMag.sprite = mag;
 
-        Rect box = iconPartsRoot.rect;
-        Vector2 bodyPx = body.rect.size;
-        float s = Mathf.Min(box.width / Mathf.Max(1f, bodyPx.x), box.height / Mathf.Max(1f, bodyPx.y));
-        iconBody.rectTransform.sizeDelta = bodyPx * s;
-        iconBody.rectTransform.anchoredPosition = Vector2.zero;
+        // 보이는 부분의 범위 (본체 그림 가운데 기준 픽셀): 본체 + 제자리의 탄창
+        Rect content = DrawnRect(full);
+        if (mag != null && wv.MagFitsInIcon)
+        {
+            Rect m = DrawnRect(mag);
+            m.position += wv.SideMagOffsetPx;
+            content = Union(content, m);
+        }
+        float s = FitScale(content, iconPartsRoot.rect);
+        Vector2 shift = -content.center * s;   // 보이는 부분의 가운데 → 칸 가운데
+        iconBody.rectTransform.sizeDelta = body.rect.size * s;
+        // 그림마다 기준점(피벗)이 다를 수 있음 (권총 슬라이드 후퇴 그림은 더 넓음) → 피벗이 같은 자리에 오게
+        iconBody.rectTransform.anchoredPosition = shift + (body.rect.size * 0.5f - body.pivot) * s;
+
+        // 그리는 순서: [탄창(뒤)] 본체 → 덮개 → [탄통(앞)]
+        int magIdx = wv.MagInFront ? 2 : 0;
+        if (iconMag.transform.GetSiblingIndex() != magIdx)
+        {
+            iconMag.transform.SetSiblingIndex(magIdx);
+            iconBody.transform.SetSiblingIndex(wv.MagInFront ? 0 : 1);
+            iconCoverPivot.SetSiblingIndex(wv.MagInFront ? 1 : 2);
+        }
 
         bool showMag = mag != null && !wv.MagHidden;
         iconMag.enabled = showMag;
         if (showMag)
         {
-            Vector2 magPx = mag.rect.size;
-            iconMag.rectTransform.sizeDelta = magPx * s;
-            Vector2 off = wv.SideMagOffsetPx;
-            off.y -= wv.MagDrop * magPx.y * 1.2f;
-            iconMag.rectTransform.anchoredPosition = off * s;
+            wv.GetSideMagPose(out Vector2 off, out float angle);
+            iconMag.rectTransform.sizeDelta = mag.rect.size * s;
+            iconMag.rectTransform.anchoredPosition = shift + off * s;
+            iconMag.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
         }
+
+        bool showCover = cover != null;
+        if (iconCoverPivot.gameObject.activeSelf != showCover) iconCoverPivot.gameObject.SetActive(showCover);
+        if (showCover)
+        {
+            if (iconCover.sprite != cover) iconCover.sprite = cover;
+            Vector2 hinge = wv.CoverHingePx;
+            iconCoverPivot.anchoredPosition = shift + hinge * s;
+            iconCoverPivot.localRotation = Quaternion.Euler(0f, 0f, wv.CoverAngle);
+            iconCover.rectTransform.sizeDelta = cover.rect.size * s;
+            iconCover.rectTransform.anchoredPosition = (wv.CoverCenterPx - hinge) * s;
+        }
+    }
+
+    // 그림에서 실제로 그려진 부분 (투명 여백 제외), 그림 가운데 기준 픽셀. Tight 메쉬의 꼭짓점으로 계산 (한 번만 계산해 저장)
+    private readonly System.Collections.Generic.Dictionary<Sprite, Rect> drawnRects = new System.Collections.Generic.Dictionary<Sprite, Rect>();
+    private Rect DrawnRect(Sprite sp)
+    {
+        if (sp == null) return new Rect(0f, 0f, 1f, 1f);
+        if (drawnRects.TryGetValue(sp, out Rect r)) return r;
+        Vector2 half = sp.rect.size * 0.5f;
+        r = new Rect(-half, sp.rect.size);
+        Vector2[] v = sp.vertices; // 피벗 기준, 유닛
+        if (v != null && v.Length > 0)
+        {
+            Vector2 toCenter = sp.pivot - half; // 피벗 → 그림 가운데 기준으로 옮김
+            Vector2 mn = new Vector2(float.MaxValue, float.MaxValue), mx = new Vector2(float.MinValue, float.MinValue);
+            foreach (Vector2 p in v)
+            {
+                Vector2 q = p * sp.pixelsPerUnit + toCenter;
+                mn = Vector2.Min(mn, q); mx = Vector2.Max(mx, q);
+            }
+            if (mx.x > mn.x && mx.y > mn.y) r = Rect.MinMaxRect(mn.x, mn.y, mx.x, mx.y);
+        }
+        drawnRects[sp] = r;
+        return r;
+    }
+
+    private static Rect Union(Rect a, Rect b) => Rect.MinMaxRect(Mathf.Min(a.xMin, b.xMin), Mathf.Min(a.yMin, b.yMin), Mathf.Max(a.xMax, b.xMax), Mathf.Max(a.yMax, b.yMax));
+    // 보이는 부분이 칸 안에 꽉 차는 배율 (여백 IconMargin)
+    private const float IconMargin = 8f;
+    private static float FitScale(Rect content, Rect box)
+    {
+        float w = Mathf.Max(1f, box.width - IconMargin * 2f), h = Mathf.Max(1f, box.height - IconMargin * 2f);
+        return Mathf.Min(w / Mathf.Max(1f, content.width), h / Mathf.Max(1f, content.height));
+    }
+
+    // 분리 이미지가 없는 무기(권총·근접무기 등): 한 장짜리 그림을 같은 방식으로 칸 가운데에
+    private void PlaceSingleIcon(Sprite sp)
+    {
+        if (sp == null) return;
+        Rect content = DrawnRect(sp);
+        Rect box = ((RectTransform)weaponIcon.rectTransform.parent).rect;
+        float s = FitScale(content, box);
+        weaponIcon.rectTransform.sizeDelta = sp.rect.size * s;
+        weaponIcon.rectTransform.anchoredPosition = -content.center * s;
     }
 
     private void UpdateWeapon()
@@ -229,6 +361,7 @@ public class GameHUD : MonoBehaviour
         {
             weaponNameText.text = "무기 없음";
             ammoText.text = "";
+            ammoMaxText.text = "";
             weaponHintText.text = "";
             weaponIcon.color = new Color(1f, 1f, 1f, 0f);
             reloadBarRoot.SetActive(false);
@@ -238,7 +371,10 @@ public class GameHUD : MonoBehaviour
         weaponNameText.text = string.IsNullOrEmpty(data.inGameName) ? data.weaponID : data.inGameName;
 
         WeaponVisual wv = weapon.GetComponentInChildren<WeaponVisual>();
-        if (wv != null && wv.SideNoMagSprite != null && iconPartsRoot != null)
+        // 분리 그림(본체+탄창)으로 재장전 모션을 보여줌. 톰슨 계열은 재장전 중이 아닐 때 원본 한 장짜리 그림
+        bool useParts = wv != null && wv.SideNoMagSprite != null && iconPartsRoot != null
+                        && !(wv.HudUseOriginal && !weapon.isReloading && data.weaponSprite != null);
+        if (useParts)
         {
             weaponIcon.color = new Color(1f, 1f, 1f, 0f);
             UpdatePartsIcon(wv);
@@ -248,11 +384,13 @@ public class GameHUD : MonoBehaviour
             if (iconPartsRoot != null && iconPartsRoot.gameObject.activeSelf) iconPartsRoot.gameObject.SetActive(false);
             if (weaponIcon.sprite != data.weaponSprite) weaponIcon.sprite = data.weaponSprite;
             weaponIcon.color = data.weaponSprite != null ? Color.white : new Color(1f, 1f, 1f, 0f);
+            PlaceSingleIcon(data.weaponSprite);
         }
 
         if (!data.UsesAmmo)
         {
-            ammoText.text = "<size=40><b>∞</b></size>";
+            ammoText.text = "<b>∞</b>";
+            ammoMaxText.text = "";
             weaponHintText.text = "";
             reloadBarRoot.SetActive(false);
             return;
@@ -261,13 +399,14 @@ public class GameHUD : MonoBehaviour
         int cur = weapon.currentAmmo, max = data.maxAmmo;
         bool low = cur <= Mathf.CeilToInt(max * 0.25f);
         string curHex = low ? "FF6666" : "FFFFFF";
-        ammoText.text = $"<size=40><b><color=#{curHex}>{cur}</color></b></size><size=22><color=#FFFFFF99> / {max}</color></size>";
+        ammoText.text = $"<b><color=#{curHex}>{cur}</color></b>";
+        ammoMaxText.text = $"<color=#FFFFFFAA>/ {max}</color>";
 
         if (weapon.isReloading)
         {
             reloadBarRoot.SetActive(true);
             reloadFill.anchorMax = new Vector2(weapon.ReloadProgress, 1f);
-            weaponHintText.text = "재장전 중...";
+            weaponHintText.text = "재장전";
             weaponHintText.color = CostOk;
         }
         else
@@ -335,6 +474,7 @@ public class GameHUD : MonoBehaviour
     private void Build()
     {
         Canvas canvas = gameObject.AddComponent<Canvas>();
+        hudCanvas = canvas;
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = -1;    // 일시정지·게임오버 화면보다 아래
         canvas.pixelPerfect = true;  // 글자 번짐 방지
@@ -476,7 +616,8 @@ public class GameHUD : MonoBehaviour
 
     // 무기 카드: 하단 상태창 오른쪽의 남는 공간을 꽉 채움 (상태창과 같은 높이·바닥선)
     //  - 화면 오른쪽 아래에 붙어서, 창 크기/비율이 바뀌어도 상태창과 겹치지 않고 남는 폭에 맞춰 늘어나고 줄어듦
-    private const float CardGap = 12f, CardMargin = 12f, CardPad = 14f, CardIconW = 170f;
+    // CardIconW: 무기 그림 칸 너비 (긴 총이 작아 보이지 않게 넓게. 권총·근접무기는 높이에 맞춰져서 그대로)
+    private const float CardGap = 12f, CardMargin = 12f, CardPad = 14f, CardIconW = 255f;
 
     private void BuildWeaponCard(float panelWidth, float panelHeight)
     {
@@ -499,21 +640,31 @@ public class GameHUD : MonoBehaviour
         RectTransform iconBox = Place(NewRect("IconBox", weaponCard), CardPad, CardPad, CardIconW, iconH);
         AddImage(iconBox, FrameNormal, false);
         RectTransform iconInner = Inset(NewRect("Inner", iconBox), 2f);
-        AddImage(iconInner, SlotBg, false);
-        weaponIcon = AddImage(Inset(NewRect("Icon", iconInner), 6f), new Color(1f, 1f, 1f, 0f), false);
-        weaponIcon.preserveAspect = true;
+        AddImage(iconInner, WeaponIconBg, false);
+        weaponIcon = AddImage(Centered(NewRect("Icon", iconInner)), new Color(1f, 1f, 1f, 0f), false);
         // 분리 이미지용: 탄창(뒤) → 본체(앞) 순서. 칸 밖으로 빠지는 탄창은 잘라냄
         iconInner.gameObject.AddComponent<RectMask2D>();
-        iconPartsRoot = Inset(NewRect("IconParts", iconInner), 6f);
+        iconPartsRoot = Inset(NewRect("IconParts", iconInner), 0f);
         iconMag = AddImage(Centered(NewRect("Mag", iconPartsRoot)), Color.white, false);
         iconBody = AddImage(Centered(NewRect("Body", iconPartsRoot)), Color.white, false);
+        iconCoverPivot = Centered(NewRect("CoverHinge", iconPartsRoot));   // 기관총 상부 덮개: 경첩을 축으로 회전
+        iconCoverPivot.sizeDelta = Vector2.zero;
+        iconCover = AddImage(Centered(NewRect("Cover", iconCoverPivot)), Color.white, false);
+        iconCoverPivot.gameObject.SetActive(false);
         iconPartsRoot.gameObject.SetActive(false);
 
         // 탄약 / 재장전 바 / 안내 (그림 오른쪽, 남는 폭 전체)
         float textLeft = CardPad + CardIconW + 12f;
-        ammoText = AddText(Band(NewRect("Ammo", weaponCard), textLeft, CardPad, CardPad + 40f, 50f), "", 28, TextAnchor.MiddleRight, Color.white);
+        // 남은 탄 (크게) / 그 아래 장탄수 (작게): 그림 칸 오른쪽 끝 ~ 상태창 오른쪽 끝의 가운데 정렬.
+        // 장탄수는 재장전 바와 안내 글자 사이 간격만큼 바 위로 띄움 (바가 장탄수와 '재장전' 글자 딱 중간에 오게)
+        // (글자 칸보다 글꼴 줄 높이가 커서 실제 글자는 칸 아래로 조금 내려옴 → 그만큼 더 올림)
+        float ammoLeft = CardPad + CardIconW;
+        ammoText = AddText(Band(NewRect("Ammo", weaponCard), ammoLeft, 0f, h - CardPad - 28f - 34f, 50f), "", 50, TextAnchor.MiddleCenter, Color.white);
         ammoText.fontStyle = FontStyle.Bold;
         AddShadow(ammoText);
+        ammoMaxText = AddText(Band(NewRect("AmmoMax", weaponCard), ammoLeft, 0f, CardPad + 54f, 26f), "", 24, TextAnchor.MiddleCenter, Color.white);
+        ammoMaxText.fontStyle = FontStyle.Bold;
+        AddShadow(ammoMaxText);
         weaponHintText = AddText(Band(NewRect("Hint", weaponCard), textLeft, CardPad, CardPad, 22f), "", 16, TextAnchor.MiddleRight, Warn);
         AddShadow(weaponHintText);
 
@@ -524,6 +675,17 @@ public class GameHUD : MonoBehaviour
         AddImage(reloadFill, CostOk, false);
         reloadBarRoot = bar.gameObject;
         reloadBarRoot.SetActive(false);
+
+        // 캐릭터 머리 위 재장전 바 (화면 좌표로 매 프레임 위치를 옮김)
+        overheadBar = NewRect("OverheadReload", transform);
+        overheadBar.anchorMin = overheadBar.anchorMax = Vector2.zero;
+        overheadBar.pivot = new Vector2(0.5f, 0f);
+        overheadBar.SetAsFirstSibling();                 // 하단 패널·무기 칸보다 뒤에 그림
+        AddImage(overheadBar, TrackColor, false);
+        overheadFill = Stretch(NewRect("Fill", overheadBar));
+        overheadFill.anchorMax = new Vector2(0f, 1f);
+        AddImage(overheadFill, CostOk, false);
+        overheadBar.gameObject.SetActive(false);
     }
 
     // ==================================================================

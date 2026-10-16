@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0024
   weaponName: Colt_Ballista
-  inGameName: "\uCF5C\uD2B8-\uBC1C\uB9AC\uC2A4\uD0C0"
+  inGameName: "\uCF5C\uD2B8 / \uBC1C\uB9AC\uC2A4\uD0C0"
   role: "3\uD2F0\uC5B4 \uD654\uB825\uD615 \uAD8C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 10
+  range: 20
   damage: 23
   reloadTime: 1.1
   maxAmmo: 12
-  fireRate: 2.1
+  fireRate: 6.3
   projectileCount: 1
   spread: 3
   moveSpread: 4

@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0012
   weaponName: Axe_Modern
-  inGameName: "\uB3C4\uB07C-\uBAA8\uB358"
+  inGameName: "\uB3C4\uB07C / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uADFC\uC811\uBB34\uC7A5"
   aimType: Multi
   fireMode: Hitscan
@@ -23,7 +23,7 @@ MonoBehaviour:
   damage: 48
   reloadTime: 0
   maxAmmo: 0
-  fireRate: 0.9
+  fireRate: 2.7
   projectileCount: 1
   spread: 0
   moveSpread: 0

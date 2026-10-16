@@ -5,8 +5,8 @@ using UnityEngine.SceneManagement;
 // 플레이 구역 (씬의 'Floor' 크기 = 이동 가능한 범위)
 //  - 플레이어·몹·포탑이 Floor 밖으로 나가지 못하게 막음
 //      플레이어: 보이지 않는 벽(충돌체) + 위치 보정 / 몹: 0.2초마다 밖에 있으면 안으로 되돌림 / 포탑: 밖에는 설치 불가
-//  - 경계: 노란 선
-//  - 바깥: Floor와 같은 텍스처의 넓은 바닥(자연스럽게 이어짐) + 빨간 빗금(투명도 60%)
+//  - 경계: 노란 선 (불투명도 20%, 은은하게)
+//  - 바깥: Floor와 같은 텍스처의 넓은 바닥(자연스럽게 이어짐) + 빨간 빗금 (불투명도 20%, 넓은 간격)
 //  - 씬에 'Floor'가 있으면 실행 시 자동으로 생깁니다. (씬 파일은 수정하지 않음, 바깥 바닥도 실행 중에만 생성)
 //  * Floor 크기를 바꾸면 내비메쉬(몹 길찾기)도 다시 구워야 몹이 새 범위를 모두 다닙니다.
 public class PlayArea : MonoBehaviour
@@ -20,13 +20,13 @@ public class PlayArea : MonoBehaviour
     public float outerSize = 160f;
 
     [Header("경계선")]
-    public Color borderColor = new Color(1f, 0.85f, 0.1f, 1f);
-    public float borderWidth = 0.15f;
+    public Color borderColor = new Color(1f, 0.85f, 0.1f, 0.2f);
+    public float borderWidth = 0.3f;
 
     [Header("바깥 빗금")]
-    public Color hatchColor = new Color(0.9f, 0.1f, 0.1f, 0.6f);
-    [Tooltip("빗금 한 칸의 크기(미터)")]
-    public float hatchPeriod = 1.2f;
+    public Color hatchColor = new Color(0.9f, 0.1f, 0.1f, 0.2f);
+    [Tooltip("빗금 한 칸의 크기(미터). 줄 두께와 간격이 함께 커짐")]
+    public float hatchPeriod = 2.4f;
 
     [Header("이동 제한")]
     [Tooltip("경계에서 이만큼 안쪽까지만 이동 (몸 두께)")]

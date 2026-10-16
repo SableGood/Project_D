@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0081
   weaponName: Battle_Modern
-  inGameName: "\uBC30\uD2C0-\uBAA8\uB358"
+  inGameName: "\uBC30\uD2C0 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uC804\uD22C\uC18C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 10.5
+  range: 21
   damage: 25
   reloadTime: 2.3
   maxAmmo: 22
-  fireRate: 1.6
+  fireRate: 4.8
   projectileCount: 1
   spread: 1.5
   moveSpread: 7

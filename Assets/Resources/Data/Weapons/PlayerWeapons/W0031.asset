@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0031
   weaponName: Thompson_Modern
-  inGameName: "\uD1B0\uC2A8-\uBAA8\uB358"
+  inGameName: "\uD1B0\uC2A8 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uAE30\uAD00\uB2E8\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 6.5
+  range: 13
   damage: 8
   reloadTime: 1.7
   maxAmmo: 33
-  fireRate: 5
+  fireRate: 12
   projectileCount: 1
   spread: 6
   moveSpread: 6

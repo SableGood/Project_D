@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0061
   weaponName: Garand_Modern
-  inGameName: "\uAC1C\uB7F0\uB4DC-\uBAA8\uB358"
+  inGameName: "\uAC1C\uB7F0\uB4DC / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uC800\uACA9\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 13.5
+  range: 27
   damage: 63
   reloadTime: 2.4
   maxAmmo: 6
-  fireRate: 0.8
+  fireRate: 2.4
   projectileCount: 1
   spread: 0
   moveSpread: 8

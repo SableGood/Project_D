@@ -27,6 +27,12 @@ public class Billboard : MonoBehaviour
     public Vector3 FeetWorld { get; private set; }
     public bool HasFeet { get; private set; }
 
+    // 1인칭 그림자: 그림은 카메라를 보지만, 그림자는 탑뷰 때와 같은 방향의 판에서 드리움
+    //  (카메라·플레이어가 돌 때 그림자가 같이 돌거나 얇아지지 않게 → 광원 기준으로 고정)
+    private SpriteRenderer shadowProxy;
+    private bool proxyActive;
+    private UnityEngine.Rendering.ShadowCastingMode savedShadowMode;
+
     // 피격 흔들림
     private float shakeAmount;
     private float shakeStart, shakeEnd;
@@ -54,6 +60,8 @@ public class Billboard : MonoBehaviour
 
     void OnDisable()
     {
+        if (shadowProxy != null) shadowProxy.enabled = false;
+        if (proxyActive) { proxyActive = false; if (sr != null) sr.shadowCastingMode = savedShadowMode; }
         shakeEnd = 0f;
         if (wasShaking) { transform.localPosition = baseLocalPos; wasShaking = false; }
     }
@@ -74,7 +82,10 @@ public class Billboard : MonoBehaviour
 
         // 스프라이트가 항상 카메라와 동일한 각도를 유지하도록 회전값을 고정합니다.
         // 캐릭터가 3D 공간에서 회전하더라도 일러스트는 항상 유저를 바라봅니다.
-        transform.rotation = mainCam.transform.rotation;
+        //  * 1인칭에서 그림자 전용(내 몸)은 탑뷰 방향 그대로 → 그림자가 시점에 따라 돌지 않음
+        bool fpsView = CameraController.FirstPersonView;
+        bool shadowOnly = sr != null && sr.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+        transform.rotation = (fpsView && shadowOnly) ? CameraController.TopDownRotation : mainCam.transform.rotation;
 
         Vector3 shake = ShakeOffset();
         if (bobOffset != 0f) shake += mainCam.transform.up * bobOffset;
@@ -107,6 +118,62 @@ public class Billboard : MonoBehaviour
             }
         }
         wasShaking = shaking;
+        UpdateShadowProxy(fpsView && !shadowOnly);
+    }
+
+    // 1인칭: 보이는 그림의 그림자는 끄고, 탑뷰 방향으로 세운 '그림자 전용' 복사본이 대신 드리움
+    private void UpdateShadowProxy(bool want)
+    {
+        if (sr == null) return;
+        if (want && !proxyActive)
+        {
+            savedShadowMode = sr.shadowCastingMode;
+            if (savedShadowMode == UnityEngine.Rendering.ShadowCastingMode.Off) return; // 원래 그림자가 없는 그림
+            proxyActive = true;
+        }
+        else if (!want && proxyActive)
+        {
+            proxyActive = false;
+            sr.shadowCastingMode = savedShadowMode;
+            if (shadowProxy != null) shadowProxy.enabled = false;
+            return;
+        }
+        if (!proxyActive) return;
+
+        if (shadowProxy == null)
+        {
+            GameObject go = new GameObject(name + "_Shadow");
+            go.layer = gameObject.layer;
+            if (transform.parent != null) go.transform.SetParent(transform.parent, false);
+            shadowProxy = go.AddComponent<SpriteRenderer>();
+            shadowProxy.receiveShadows = false;
+        }
+        sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        shadowProxy.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly;
+        shadowProxy.sharedMaterial = sr.sharedMaterial;
+        shadowProxy.sprite = sr.sprite;
+        shadowProxy.flipX = sr.flipX;
+        shadowProxy.flipY = sr.flipY;
+        shadowProxy.enabled = sr.enabled && sr.sprite != null;
+
+        Transform t = shadowProxy.transform;
+        Quaternion rot = CameraController.TopDownRotation;
+        t.localScale = transform.localScale;
+        t.rotation = rot;
+        if (anchorAtFeet && sr.sprite != null && transform.parent != null)
+        {
+            float minY = sr.sprite.bounds.min.y;
+            Vector3 feetLocal = baseLocalPos + Vector3.up * (minY * Mathf.Abs(transform.localScale.y));
+            Vector3 feetWorld = transform.parent.TransformPoint(feetLocal);
+            if (snapFeetToGround && groundBody != null && groundBody.enabled) feetWorld.y = groundBody.bounds.min.y;
+            t.position = feetWorld - rot * (Vector3.up * (minY * Mathf.Abs(transform.lossyScale.y)));
+        }
+        else t.position = transform.position;
+    }
+
+    void OnDestroy()
+    {
+        if (shadowProxy != null) Destroy(shadowProxy.gameObject);
     }
 
     // 다른 값(피격 번쩍임 등)은 유지한 채 발 위치만 갱신

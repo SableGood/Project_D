@@ -1,0 +1,29 @@
+{
+ "items": [
+  {
+   "name": "Pic_Mossberg",
+   "x": 506.0,
+   "y": 81.5
+  },
+  {
+   "name": "Pic_Mossberg_2_Modern",
+   "x": 348.5,
+   "y": 32.0
+  },
+  {
+   "name": "Pic_Mossberg_3_Assault",
+   "x": 512.0,
+   "y": 40.5
+  },
+  {
+   "name": "Pic_Mossberg_3_Ranger",
+   "x": 253.5,
+   "y": 20.0
+  },
+  {
+   "name": "Pic_Mossberg_3_Ballista",
+   "x": 503.0,
+   "y": 28.5
+  }
+ ]
+}

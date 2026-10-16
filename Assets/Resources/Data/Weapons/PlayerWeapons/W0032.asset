@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0032
   weaponName: Thompson_Assault
-  inGameName: "\uD1B0\uC2A8-\uC5B4\uC370\uD2B8"
+  inGameName: "\uD1B0\uC2A8 / \uC5B4\uC370\uD2B8"
   role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uAE30\uAD00\uB2E8\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 6.5
+  range: 13
   damage: 8
   reloadTime: 1.3
   maxAmmo: 33
-  fireRate: 6.3
+  fireRate: 15.12
   projectileCount: 1
   spread: 5.4
   moveSpread: 2.4

@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0044
   weaponName: Eugene_Ballista
-  inGameName: "\uC720\uC9C4-\uBC1C\uB9AC\uC2A4\uD0C0"
+  inGameName: "\uC720\uC9C4 / \uBC1C\uB9AC\uC2A4\uD0C0"
   role: "3\uD2F0\uC5B4 \uD654\uB825\uD615 \uC18C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 12.5
+  range: 25
   damage: 15
   reloadTime: 2.1
   maxAmmo: 38
-  fireRate: 2.9
+  fireRate: 8.7
   projectileCount: 1
   spread: 2.5
   moveSpread: 6

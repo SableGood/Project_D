@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0042
   weaponName: Eugene_Assault
-  inGameName: "\uC720\uC9C4-\uC5B4\uC370\uD2B8"
+  inGameName: "\uC720\uC9C4 / \uC5B4\uC370\uD2B8"
   role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uC18C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 9.5
+  range: 19
   damage: 14
   reloadTime: 1.4
   maxAmmo: 28
-  fireRate: 3.8
+  fireRate: 11.4
   projectileCount: 1
   spread: 2.3
   moveSpread: 2.4

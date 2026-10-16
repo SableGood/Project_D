@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0082
   weaponName: Battle_Assault
-  inGameName: "\uBC30\uD2C0-\uC5B4\uC370\uD2B8"
+  inGameName: "\uBC30\uD2C0 / \uC5B4\uC370\uD2B8"
   role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uC804\uD22C\uC18C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 10.5
+  range: 21
   damage: 27
   reloadTime: 1.7
   maxAmmo: 22
-  fireRate: 2
+  fireRate: 6
   projectileCount: 1
   spread: 1.4
   moveSpread: 2.8

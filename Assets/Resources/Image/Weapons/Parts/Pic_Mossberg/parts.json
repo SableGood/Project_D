@@ -1,0 +1,20 @@
+{
+ "magType": "Pump",
+ "ppu": 100,
+ "cycleDelay": 0.07,
+ "cycleTime": 0.16,
+ "side": {
+  "magOffset": [
+   -24.1,
+   74.4
+  ],
+  "muzzle": [
+   506.0,
+   81.5
+  ],
+  "loadPort": [
+   -5.0,
+   20.0
+  ]
+ }
+}

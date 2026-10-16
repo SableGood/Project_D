@@ -13,6 +13,7 @@ using UnityEngine;
 //      Impact()      : 몹이 아닌 곳(커서 위치·포탑·바닥)에 맞은 탄의 작은 회색 착탄
 //      EjectCasing() : 탄피 배출 (도트 그림, 바닥에서 한 번 튀고 잠시 뒤 사라짐)
 //                      권총탄(짧은 황동) / 소총탄(길고 목이 가는 황동) / 산탄(빨간 몸통 + 황동 바닥) 세 가지
+//      Smoke()       : 재장전 때 총구에서 피어오르는 가는 연기 (도트 연기 덩어리, 위로 떠오르며 커지고 옅어짐)
 public class HitEffects : MonoBehaviour
 {
     public static bool Enabled = true;
@@ -53,6 +54,10 @@ public class HitEffects : MonoBehaviour
         burstSize = 0.26f, sparks = 3, sparkSpeed = 2.2f, gravity = 9f,
     };
 
+    [Header("총구 연기")]
+    [Tooltip("연기 움직임을 1초에 몇 번 갱신할지 (낮을수록 뚝뚝 끊기는 도트 애니메이션 느낌). 0 = 매 프레임")]
+    public float smokeFrameRate = 30f;
+
     [Header("탄피")]
     public float casingLife = 1.4f;
     public int maxCasings = 40;
@@ -68,7 +73,7 @@ public class HitEffects : MonoBehaviour
     public int maxPieces = 240;
 
     private static HitEffects instance;
-    private static Sprite burstSprite, pixelSprite;
+    private static Sprite burstSprite, pixelSprite, smokeSprite, slashSprite;
     private static Sprite[] casingSprites;
     private static Material material;
     private static readonly int FlashAmountId = Shader.PropertyToID("_FlashAmount");
@@ -87,6 +92,10 @@ public class HitEffects : MonoBehaviour
         public float floorY, spin, restHeight;
         public Vector3 scaleV;
         public int bounces;
+        // 연기
+        public bool isSlash;   // 근접무기 베기 궤적
+        public bool isSmoke;
+        public float phase, drift, stepTime; // stepTime: 아직 화면에 반영 안 한 시간 (뚝뚝 끊기는 갱신용)
     }
     private int casingCount;
 
@@ -205,7 +214,7 @@ public class HitEffects : MonoBehaviour
     }
 
     // 재장전 때 빠진 탄창 등: 주어진 그림을 그대로 떨어뜨림 (scale은 월드 크기, roll은 화면상 기울기)
-    public static void DropDebris(Sprite sprite, Vector3 pos, Vector3 velocity, Vector3 scale, float roll, float floorY, float life)
+    public static void DropDebris(Sprite sprite, Vector3 pos, Vector3 velocity, Vector3 scale, float roll, float floorY, float life, float spinSpeed = 0f)
     {
         if (!Enabled || instance == null || sprite == null) return;
         instance.EnsureCam();
@@ -220,12 +229,56 @@ public class HitEffects : MonoBehaviour
         {
             sr = sr, velocity = velocity, life = Mathf.Max(0.2f, life), age = 0f, size = Mathf.Abs(scale.x), gravity = 12f,
             color = Color.white, roll = roll, isCasing = true, isDebris = true, floorY = floorY,
-            spin = Random.Range(60f, 160f) * (Random.value < 0.5f ? -1f : 1f),
+            spin = spinSpeed != 0f ? spinSpeed * Random.Range(0.8f, 1.2f) : Random.Range(60f, 160f) * (Random.value < 0.5f ? -1f : 1f),
             scaleV = scale, restHeight = 0.02f,
         });
     }
 
     private void EnsureCam() { if (cam == null) cam = Camera.main; }
+
+    // 탄피 그림 (무기 연출용: 산탄총 장전 때 손에 든 탄). 가로 1유닛, 가운데 피벗
+    public static Sprite CasingSprite(CasingType type) { EnsureAssets(); return casingSprites[(int)type]; }
+
+    // 근접무기 베기 궤적: 손(중심) 기준 반지름 radius(미터)의 반달, 조준 각도(화면 기준 도), flip = 왼쪽을 볼 때(아래로 베는 방향 맞춤)
+    public static void Slash(Vector3 center, float radius, float angleDeg, bool flip, Color color, float life)
+    {
+        if (!Enabled || instance == null || instance.active.Count > instance.maxPieces) return;
+        instance.EnsureCam();
+        EnsureAssets();
+        SpriteRenderer sr = instance.pool.Count > 0 ? instance.pool.Pop() : instance.CreateRenderer();
+        sr.sprite = slashSprite;
+        sr.color = color;
+        sr.flipY = flip;
+        sr.transform.position = center;
+        sr.transform.localScale = Vector3.one * radius * 2f;
+        sr.gameObject.SetActive(true);
+        instance.active.Add(new Piece
+        {
+            sr = sr, velocity = Vector3.zero, life = Mathf.Max(0.06f, life), age = 0f, size = radius * 2f,
+            color = color, roll = angleDeg, isSlash = true, drift = flip ? -1f : 1f,
+        });
+    }
+
+    // 연기 한 덩어리: 위치, 처음 속도, 크기(미터), 수명, 진하기(0~1), drift = 흔들림·떠오름 배율 (1인칭은 작게)
+    public static void Smoke(Vector3 pos, Vector3 velocity, float size, float life, float alpha, float drift)
+    {
+        if (!Enabled || instance == null || instance.active.Count > instance.maxPieces) return;
+        instance.EnsureCam();
+        EnsureAssets();
+        SpriteRenderer sr = instance.pool.Count > 0 ? instance.pool.Pop() : instance.CreateRenderer();
+        Color c = new Color(0.86f, 0.86f, 0.84f, Mathf.Clamp01(alpha));
+        sr.sprite = smokeSprite;
+        sr.color = new Color(c.r, c.g, c.b, 0f);
+        sr.transform.position = pos;
+        sr.transform.localScale = Vector3.one * size;
+        sr.gameObject.SetActive(true);
+        instance.active.Add(new Piece
+        {
+            sr = sr, velocity = velocity, life = Mathf.Max(0.2f, life), age = 0f, size = size, gravity = 0f,
+            color = c, roll = Random.Range(0, 4) * 90f, isSmoke = true,
+            phase = Random.Range(0f, Mathf.PI * 2f), drift = Mathf.Max(0.05f, drift),
+        });
+    }
 
     private void Spawn(Vector3 point, Style s, float radius)
     {
@@ -288,7 +341,7 @@ public class HitEffects : MonoBehaviour
             p.age += dt;
             if (p.age >= p.life || p.sr == null)
             {
-                if (p.sr != null) { p.sr.gameObject.SetActive(false); pool.Push(p.sr); }
+                if (p.sr != null) { p.sr.flipY = false; p.sr.gameObject.SetActive(false); pool.Push(p.sr); }
                 if (p.isCasing && !p.isDebris) casingCount--;
                 active.RemoveAt(i);
                 continue;
@@ -318,6 +371,31 @@ public class HitEffects : MonoBehaviour
                 Color c = p.color; c.a = k < 0.75f ? 1f : Mathf.Lerp(1f, 0f, (k - 0.75f) / 0.25f);
                 p.sr.color = c;
                 t.localScale = p.scaleV;
+            }
+            else if (p.isSlash)
+            {
+                // 베는 방향으로 조금 더 돌며 커지고, 끝으로 갈수록 옅어짐
+                t.localScale = Vector3.one * (p.size * Mathf.Lerp(0.92f, 1.06f, k));
+                Color c = p.color; c.a = p.color.a * (k < 0.3f ? 1f : 1f - (k - 0.3f) / 0.7f);
+                p.sr.color = c;
+                t.rotation = face * Quaternion.Euler(0f, 0f, p.roll - 18f * k * p.drift);
+                continue;
+            }
+            else if (p.isSmoke)
+            {
+                // 천천히 떠오르며 좌우로 살랑, 점점 커지고 옅어짐. 일정 간격으로만 갱신해서 도트 애니메이션처럼 끊어지게
+                p.stepTime += dt;
+                float step = smokeFrameRate > 0f ? 1f / smokeFrameRate : 0f;
+                if (p.stepTime < step) { t.rotation = face * Quaternion.Euler(0f, 0f, p.roll); continue; }
+                float sdt = p.stepTime; p.stepTime = 0f;
+                k = Mathf.Clamp01(p.age / p.life);
+                p.velocity += Vector3.up * (0.25f * p.drift) * sdt;
+                p.velocity *= 1f - Mathf.Min(1f, 1.2f * sdt);
+                Vector3 sway = (cam != null ? cam.transform.right : Vector3.right) * (Mathf.Sin(p.age * 4f + p.phase) * 0.06f * p.drift);
+                t.position += (p.velocity + sway) * sdt;
+                t.localScale = Vector3.one * (p.size * (1f + 1.6f * k));
+                Color c = p.color; c.a = p.color.a * (k < 0.15f ? k / 0.15f : 1f - (k - 0.15f) / 0.85f);
+                p.sr.color = c;
             }
             else if (p.isBurst)
             {
@@ -399,6 +477,8 @@ public class HitEffects : MonoBehaviour
                 "DMRRRX",
                 "DDXXXX" });
         }
+        if (smokeSprite == null) smokeSprite = MakeSmoke();
+        if (slashSprite == null) slashSprite = MakeSlash();
         if (pixelSprite == null)
         {
             Texture2D t = new Texture2D(2, 2, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
@@ -432,6 +512,57 @@ public class HitEffects : MonoBehaviour
         }
         tex.Apply();
         return Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), w);
+    }
+
+    // 48x48 도트 반달 베기 궤적 (오른쪽 중심, 위(+)에서 아래(-)로 벤 모양: 아래 끝이 굵고 위로 갈수록 가늘고 옅음)
+    private static Sprite MakeSlash()
+    {
+        const int N = 48;
+        Texture2D tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        float c = (N - 1) * 0.5f, R = N * 0.5f;
+        const float a0 = -70f, a1 = 60f; // 아래 끝(머리) ~ 위 끝(꼬리)
+        for (int y = 0; y < N; y++)
+        for (int x = 0; x < N; x++)
+        {
+            float dx = x - c, dy = y - c;
+            float r = Mathf.Sqrt(dx * dx + dy * dy) / R;
+            float a = Mathf.Atan2(dy, dx) * Mathf.Rad2Deg;
+            Color col = new Color(1, 1, 1, 0);
+            if (a >= a0 && a <= a1)
+            {
+                float s = (a - a0) / (a1 - a0);            // 0 = 머리(굵음), 1 = 꼬리
+                float thick = Mathf.Lerp(0.30f, 0.05f, s);  // 반지름 대비 두께
+                float headRound = s < 0.08f ? Mathf.Sqrt(Mathf.Max(0f, 1f - Mathf.Pow((0.08f - s) / 0.08f, 2f))) : 1f; // 머리 끝 둥글게
+                float inner = 1f - thick * headRound;
+                if (r <= 0.98f && r >= inner)
+                {
+                    float edge = (r - inner) / Mathf.Max(0.001f, 0.98f - inner); // 0 = 안쪽, 1 = 바깥
+                    float alpha = s < 0.55f ? 1f : (s < 0.8f ? 0.6f : 0.3f);     // 꼬리로 갈수록 3단계로 옅어짐
+                    if (edge < 0.35f) alpha *= 0.55f;                             // 안쪽 가장자리는 옅게 (도트 2톤)
+                    col = new Color(1, 1, 1, alpha);
+                }
+            }
+            tex.SetPixel(x, y, col);
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+    }
+
+    // 10x10 도트 연기 덩어리 (가운데 진하고 가장자리는 듬성듬성, 흰색 → 색은 SpriteRenderer.color)
+    private static Sprite MakeSmoke()
+    {
+        const int N = 10;
+        Texture2D tex = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+        float c = (N - 1) * 0.5f;
+        for (int y = 0; y < N; y++)
+        for (int x = 0; x < N; x++)
+        {
+            float r = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c));
+            float a = r < 2.6f ? 1f : r < 3.8f ? 0.7f : (r < 4.8f && ((x + y) & 1) == 0) ? 0.45f : 0f;
+            tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+        }
+        tex.Apply();
+        return Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
     }
 
     // 16x16 '팍' 섬광: 가운데 꽉 찬 원 + 십자 가시 + 대각선 점 (흰색, 색은 SpriteRenderer.color로 입힘)

@@ -189,10 +189,17 @@ public class PlayerWeaponManager : MonoBehaviour
     // ---- 발사 연출: 반동(무기 밀림 + 크로스헤어 요동) + 탄피 ----
     private void OnWeaponFired(Weapon w)
     {
-        if (w == null || !w.IsGun) return;
+        if (w == null) return;
+        if (!w.IsGun)
+        {
+            // 근접무기: 휘두르기 + 베기 궤적 (탑뷰만. 1인칭은 아직 없음)
+            if (currentVisual != null && !(playerController != null && playerController.isFirstPerson))
+                currentVisual.Swing(w.attackCooldown);
+            return;
+        }
         float strength = RecoilStrength(w.playerWepData) * recoilMultiplier;
 
-        if (currentVisual != null) currentVisual.Kick(strength);
+        if (currentVisual != null) { currentVisual.Cycle(w.attackCooldown); currentVisual.Kick(strength); } // 권총 슬라이드 + 반동
         PlayerHUD.Recoil(strength);
         if (ejectCasings) EjectCasing(w, strength);
     }
@@ -208,9 +215,9 @@ public class PlayerWeaponManager : MonoBehaviour
     private void EjectCasing(Weapon w, float strength)
     {
         Transform muzzle = w.muzzle != null ? w.muzzle : w.transform;
-        Transform grip = currentVisual != null ? currentVisual.transform : w.transform;
-        // 탄피 배출구 = 손잡이와 총구 사이
-        Vector3 pos = Vector3.Lerp(grip.position, muzzle.position, 0.45f);
+        // 탄피 배출구 = 탄창 위 노리쇠 자리 (무기 그림이 계산)
+        Vector3 pos = currentVisual != null ? currentVisual.EjectionPortWorld(muzzle.position)
+                                            : Vector3.Lerp(w.transform.position, muzzle.position, 0.25f);
 
         Vector3 fwd = w.LastFireDirection; fwd.y = 0f;
         if (fwd.sqrMagnitude < 0.0001f) fwd = transform.forward;
@@ -288,8 +295,78 @@ public class PlayerWeaponManager : MonoBehaviour
             float aimHeight = weaponMountPoint != null ? weaponMountPoint.position.y : transform.position.y;
             Ray ray = cam.ScreenPointToRay(Input.mousePosition);
             Plane aimPlane = new Plane(Vector3.up, new Vector3(0f, aimHeight, 0f));
-            if (aimPlane.Raycast(ray, out float distance)) return ray.GetPoint(distance);
-            return transform.position + transform.forward * 10f;
+            if (!aimPlane.Raycast(ray, out float distance)) return transform.position + transform.forward * 10f;
+            Vector3 planePoint = ray.GetPoint(distance);
+
+            // 커서가 몹 '그림' 위에 있으면 그 몹의 '가리킨 부위'를 조준.
+            // 탑뷰의 몹 그림은 카메라 쪽으로 세워져 있어서, 어깨·머리를 가리키면 무기 높이 평면 위의 점은
+            // 몹 뒤쪽 바닥으로 잡히고 → 탄이 몹 옆으로 비껴감. 그래서 화면에 보이는 그림 기준으로 판정하고,
+            // 그림 위의 커서 지점(머리면 머리 높이)을 몹 히트박스 안으로 당겨서 조준점으로 씀 → 탄이 가리킨 부위로 날아가고 반드시 맞음
+            if (PickMobUnderCursor(cam, ray, planePoint, out Vector3 mobPoint)) return mobPoint;
+            return planePoint;
         }
+    }
+
+    private readonly Collider[] pickHits = new Collider[32];
+    private const float PickSearchRadius = 8f; // 커서 아래 평면 지점에서 이 거리 안의 몹만 검사 (큰 몹의 머리까지 포함)
+
+    private bool PickMobUnderCursor(Camera cam, Ray ray, Vector3 planePoint, out Vector3 aimPoint)
+    {
+        aimPoint = planePoint;
+        if (currentWeapon == null || currentWeapon.targetLayer.value == 0) return false;
+        Vector2 mouse = Input.mousePosition;
+        int n = Physics.OverlapSphereNonAlloc(planePoint, PickSearchRadius, pickHits, currentWeapon.targetLayer, QueryTriggerInteraction.Ignore);
+        Collider best = null;
+        SpriteRenderer bestSprite = null;
+        float bestDepth = float.MaxValue;
+        for (int i = 0; i < n; i++)
+        {
+            Health hp = pickHits[i].GetComponentInParent<Health>();
+            if (hp == null) continue;
+            Billboard board = hp.GetComponentInChildren<Billboard>();
+            SpriteRenderer sr = board != null ? board.GetComponent<SpriteRenderer>() : null;
+            if (sr == null || !sr.enabled || sr.sprite == null) continue;
+            float depth = cam.WorldToScreenPoint(hp.transform.position).z;
+            if (depth >= bestDepth || !ScreenHitsSprite(cam, sr, mouse)) continue;
+            bestDepth = depth; // 여러 마리가 겹쳐 보이면 카메라에 가장 가까운(앞에 그려진) 몹
+            best = pickHits[i];
+            bestSprite = sr;
+        }
+        if (best == null) return false;
+
+        // 커서가 가리킨 그림 위의 3D 지점 (그림이 놓인 평면과 커서 레이의 교점)
+        Vector3 onSprite = best.bounds.center;
+        Plane spritePlane = new Plane(bestSprite.transform.forward, bestSprite.transform.position);
+        if (spritePlane.Raycast(ray, out float d)) onSprite = ray.GetPoint(d);
+        // 히트박스 안의 가장 가까운 점 (머리를 가리키면 히트박스 위쪽, 발을 가리키면 아래쪽)
+        aimPoint = best.ClosestPoint(onSprite);
+        // 조금 더 몹 중심 쪽으로 넣어서 판정 레이가 표면에서 끝나 빗나가는 일이 없게
+        Vector3 c = best.bounds.center;
+        aimPoint += new Vector3(c.x - aimPoint.x, 0f, c.z - aimPoint.z) * 0.5f;
+        return true;
+    }
+
+    // 화면의 한 점이 스프라이트의 실제 그림(타이트 메시 삼각형) 안에 있는지
+    private static bool ScreenHitsSprite(Camera cam, SpriteRenderer sr, Vector2 p)
+    {
+        Vector2[] v = sr.sprite.vertices;
+        ushort[] tri = sr.sprite.triangles;
+        Transform t = sr.transform;
+        float fx = sr.flipX ? -1f : 1f, fy = sr.flipY ? -1f : 1f;
+        Vector2[] s = new Vector2[v.Length];
+        for (int i = 0; i < v.Length; i++)
+            s[i] = cam.WorldToScreenPoint(t.TransformPoint(new Vector3(v[i].x * fx, v[i].y * fy, 0f)));
+        for (int i = 0; i + 2 < tri.Length; i += 3)
+            if (InTriangle(p, s[tri[i]], s[tri[i + 1]], s[tri[i + 2]])) return true;
+        return false;
+    }
+
+    private static bool InTriangle(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+    {
+        float d1 = (p.x - b.x) * (a.y - b.y) - (a.x - b.x) * (p.y - b.y);
+        float d2 = (p.x - c.x) * (b.y - c.y) - (b.x - c.x) * (p.y - c.y);
+        float d3 = (p.x - a.x) * (c.y - a.y) - (c.x - a.x) * (p.y - a.y);
+        bool neg = d1 < 0 || d2 < 0 || d3 < 0, pos = d1 > 0 || d2 > 0 || d3 > 0;
+        return !(neg && pos);
     }
 }

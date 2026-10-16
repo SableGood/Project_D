@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0071
   weaponName: Mossberg_Modern
-  inGameName: "\uBAA8\uC2A4\uBC84\uADF8-\uBAA8\uB358"
+  inGameName: "\uBAA8\uC2A4\uBC84\uADF8 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uC0B0\uD0C4\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 5
+  range: 10
   damage: 10
   reloadTime: 2.7
   maxAmmo: 7
-  fireRate: 1
+  fireRate: 3
   projectileCount: 6
   spread: 24
   moveSpread: 4

@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0022
   weaponName: Colt_Assault
-  inGameName: "\uCF5C\uD2B8-\uC5B4\uC370\uD2B8"
+  inGameName: "\uCF5C\uD2B8 / \uC5B4\uC370\uD2B8"
   role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uAD8C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 7.5
+  range: 15
   damage: 22
   reloadTime: 0.8
   maxAmmo: 9
-  fireRate: 2.8
+  fireRate: 8.4
   projectileCount: 1
   spread: 2.7
   moveSpread: 1.6
@@ -32,9 +32,9 @@ MonoBehaviour:
   armorPenetration: 0
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
-  spriteName: Pic_Colt_2_Modern
-  spriteLength: 0.5
-  weaponSprite: {fileID: 21300000, guid: cb99aa094cd7ad144b94d2c0f330d6fc, type: 3}
+  spriteName: Pic_Colt_3_Assault
+  spriteLength: 0.59
+  weaponSprite: {fileID: 21300000, guid: a670affb128c4c9b8ce0e4910c4192f7, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
   description: "Assault \uC2DC\uB9AC\uC988 : \uC774\uB3D9 \uC0AC\uACA9 \uC2DC \uC9D1\uD0C4\uC728
     + \uC7AC\uC7A5\uC804\uC18D\uB3C4 + \uBC1C\uC0AC\uC18D\uB3C4 \uC0C1\uC2B9"

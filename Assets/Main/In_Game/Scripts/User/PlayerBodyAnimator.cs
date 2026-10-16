@@ -72,6 +72,8 @@ public class PlayerBodyAnimator : MonoBehaviour
     private int weaponChildSignature = -1;
     private static readonly int FeetPosId = Shader.PropertyToID("_FeetPos");
     private static readonly int OutlineSkipId = Shader.PropertyToID("_OutlineSkip");
+    private static readonly int OutlineSkipSpanId = Shader.PropertyToID("_OutlineSkipSpan");
+    private readonly Dictionary<Sprite, Vector2> waistCache = new Dictionary<Sprite, Vector2>();
 
     // 1인칭 무기 그림자용 (탑뷰에서 본 무기 그림의 손잡이 기준 위치·크기를 기억해 둠)
     private SpriteRenderer shadowProxy;
@@ -167,12 +169,16 @@ public class PlayerBodyAnimator : MonoBehaviour
             if (r != null)
             {
                 // 탄창(Magazine)은 무기 그림 바로 뒤에 (같은 깊이면 깜빡거림)
-                float bias = r.name == "Magazine" ? weaponDepthBias - 0.01f : weaponDepthBias;
+                float bias = r.name == "Magazine" ? weaponDepthBias - 0.01f                                   // 무기 뒤
+                           : (r.name == "MagazineFront" || r.name == "Cover") ? weaponDepthBias + 0.01f   // 무기 앞 (기관총 탄통·덮개)
+                           : weaponDepthBias;
                 SetFeet(r, feet, valid ? 1f + bias : 0f);
             }
 
         // ---- 이음새: 상체 아래 / 하체 위 가장자리 외곽선 생략 ----
-        SetVector(upperRenderer, OutlineSkipId, new Vector4(upperJointV, upperJoinTexels, 0f, 0f));
+        // 상체: 허리 아래로 늘어진 털(최대 6텍셀)까지 외곽선 생략, 단 하체가 실제로 있는 허리 폭 안에서만 (옆의 손은 외곽선 유지)
+        SetVector(upperRenderer, OutlineSkipId, new Vector4(upperJointV, Mathf.Max(upperJoinTexels, 7f), 0f, 0f));
+        SetVector(upperRenderer, OutlineSkipSpanId, WaistSpan());
         SetVector(lowerRenderer, OutlineSkipId, new Vector4(0f, 0f, lowerJointV, lowerJoinTexels));
     }
 
@@ -261,6 +267,29 @@ public class PlayerBodyAnimator : MonoBehaviour
             if (area > bestArea) { bestArea = area; best = r; }
         }
         return best;
+    }
+
+    // 하체 그림 맨 윗부분(허리)의 가로 범위 → 상체 그림의 u 좌표 (상체 외곽선 생략 범위)
+    private Vector4 WaistSpan()
+    {
+        Sprite ls = lowerRenderer.sprite, us = upperRenderer.sprite;
+        if (ls == null || us == null) return Vector4.zero;
+        if (!waistCache.TryGetValue(ls, out Vector2 span))
+        {
+            span = new Vector2(float.MaxValue, float.MinValue);
+            Vector2[] v = ls.vertices;
+            float top = ls.bounds.max.y, band = ls.bounds.size.y * 0.15f;
+            foreach (Vector2 q in v)
+                if (q.y >= top - band) { span.x = Mathf.Min(span.x, q.x); span.y = Mathf.Max(span.y, q.x); }
+            if (span.x > span.y) span = new Vector2(ls.bounds.min.x, ls.bounds.max.x);
+            waistCache[ls] = span;
+        }
+        float a = span.x, b = span.y;
+        if (lowerRenderer.flipX) { float t = -b; b = -a; a = t; }
+        float w = us.rect.width / Mathf.Max(1f, us.pixelsPerUnit);
+        float pu = us.pivot.x / Mathf.Max(1f, us.rect.width);
+        float ox = upperRenderer.transform.localPosition.x;
+        return new Vector4(pu + (a - ox) / w, pu + (b - ox) / w, 0f, 0f);
     }
 
     // 화면 기준 각도 → 8방향

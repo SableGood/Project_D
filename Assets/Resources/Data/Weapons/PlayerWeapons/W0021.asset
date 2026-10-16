@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0021
   weaponName: Colt_Modern
-  inGameName: "\uCF5C\uD2B8-\uBAA8\uB358"
+  inGameName: "\uCF5C\uD2B8 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uAD8C\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 7.5
+  range: 15
   damage: 21
   reloadTime: 1
   maxAmmo: 9
-  fireRate: 2.2
+  fireRate: 6.6
   projectileCount: 1
   spread: 3
   moveSpread: 4
@@ -33,7 +33,7 @@ MonoBehaviour:
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
   spriteName: Pic_Colt_2_Modern
-  spriteLength: 0.5
+  spriteLength: 0.38
   weaponSprite: {fileID: 21300000, guid: cb99aa094cd7ad144b94d2c0f330d6fc, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
   description: "Modern \uC2DC\uB9AC\uC988 : \uAE30\uBCF8 \uCD1D\uAE30\uC5D0\uC11C

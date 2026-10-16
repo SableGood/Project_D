@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0064
   weaponName: Garand_Ballista
-  inGameName: "\uAC1C\uB7F0\uB4DC-\uBC1C\uB9AC\uC2A4\uD0C0"
+  inGameName: "\uAC1C\uB7F0\uB4DC / \uBC1C\uB9AC\uC2A4\uD0C0"
   role: "3\uD2F0\uC5B4 \uD654\uB825\uD615 \uC800\uACA9\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 17.5
+  range: 35
   damage: 70
   reloadTime: 2.6
   maxAmmo: 8
-  fireRate: 0.8
+  fireRate: 2.4
   projectileCount: 1
   spread: 0
   moveSpread: 8

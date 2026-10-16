@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0053
   weaponName: MAG_Ranger
-  inGameName: "\uB78C\uBCF4-\uB808\uC778\uC800"
+  inGameName: "\uB78C\uBCF4 / \uB808\uC778\uC800"
   role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uAE30\uAD00\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 9.5
+  range: 19
   damage: 14
   reloadTime: 3.8
   maxAmmo: 82
-  fireRate: 4
+  fireRate: 9.6
   projectileCount: 1
   spread: 3.6
   moveSpread: 9.6

@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0051
   weaponName: MAG_Modern
-  inGameName: "\uB78C\uBCF4-\uBAA8\uB358"
+  inGameName: "\uB78C\uBCF4 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uAE30\uAD00\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 9.5
+  range: 19
   damage: 12
   reloadTime: 3.8
   maxAmmo: 66
-  fireRate: 4
+  fireRate: 9.6
   projectileCount: 1
   spread: 6
   moveSpread: 12
