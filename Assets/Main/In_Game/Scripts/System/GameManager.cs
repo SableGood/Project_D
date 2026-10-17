@@ -68,7 +68,7 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         // 게임 셋업이 완료되었고, 게임 오버 상태가 아닐 때만 ESC 일시정지 가능
-        if (Input.GetKeyDown(KeyCode.Escape) && !isGameOver && isSetupComplete)
+        if (Input.GetKeyDown(KeyCode.Escape) && !isGameOver && isSetupComplete && !AugmentManager.IsOpen)
         {
             if (isPaused)
             {

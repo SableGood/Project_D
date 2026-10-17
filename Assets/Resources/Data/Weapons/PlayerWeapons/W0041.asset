@@ -22,8 +22,8 @@ MonoBehaviour:
   range: 19
   damage: 14
   reloadTime: 1.9
-  maxAmmo: 28
-  fireRate: 9
+  maxAmmo: 30
+  fireRate: 10
   projectileCount: 1
   spread: 2.5
   moveSpread: 6
@@ -36,5 +36,4 @@ MonoBehaviour:
   spriteLength: 1
   weaponSprite: {fileID: 21300000, guid: 7ea2b3d004cad6f49ab26d5249378ef9, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "Modern \uC2DC\uB9AC\uC988 : \uAE30\uBCF8 \uCD1D\uAE30\uC5D0\uC11C
-    \uC870\uAE08\uC758 \uC131\uB2A5 \uD5A5\uC0C1 + \uD604\uB300\uC801 \uC678\uAD00"
+  description: "\uB098\uC774\uB97C \uBA39\uACE0 \uC138\uB828\uB418\uC5B4\uC84C\uB2E4."

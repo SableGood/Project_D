@@ -272,7 +272,8 @@ public class MobAI : MonoBehaviour
     // ------------------------------------------------------------------
     private void UpdateTarget()
     {
-        bool invalid = target == null || !target.gameObject.activeInHierarchy || (targetHealth != null && targetHealth.IsDead);
+        bool invalid = target == null || !target.gameObject.activeInHierarchy || (targetHealth != null && targetHealth.IsDead)
+                       || PlayerSkills.IsCloaked(target); // 은신한 플레이어는 바로 놓침
         if (!invalid && Time.time < nextRetargetTime) return;
         nextRetargetTime = Time.time + 0.5f;
 
@@ -292,7 +293,11 @@ public class MobAI : MonoBehaviour
             newTarget = FindNearestTower();
 
         if (newTarget == null && GameManager.Instance != null && GameManager.Instance.playerTransform != null)
-            newTarget = GameManager.Instance.playerTransform;
+        {
+            Transform p = GameManager.Instance.playerTransform;
+            if (!PlayerSkills.IsCloaked(p)) newTarget = p;
+            else if (towerMask != 0) newTarget = FindNearestTower(); // 은신 중: 가까운 포탑을 노림 (없으면 멈춤)
+        }
 
         if (newTarget != target)
         {
@@ -528,7 +533,7 @@ public class MobAI : MonoBehaviour
         SetBodyColor(bodyBaseColor);
 
         // 아직 사거리 안(약간의 여유 포함)에 있으면 타격
-        if (target != null && target.gameObject.activeInHierarchy && SurfaceDistance() <= reach + 0.3f && weapon != null)
+        if (target != null && target.gameObject.activeInHierarchy && SurfaceDistance() <= reach + 0.3f && weapon != null && !PlayerSkills.IsCloaked(target))
         {
             Vector3 dir = target.position - transform.position;
             weapon.ApplyDamage(targetHealth != null ? targetHealth.transform : target, dir);
@@ -624,7 +629,7 @@ public class MobAI : MonoBehaviour
         }
         line.enabled = false;
 
-        if (target != null && target.gameObject.activeInHierarchy && weapon != null && t >= aimLockTime)
+        if (target != null && target.gameObject.activeInHierarchy && weapon != null && t >= aimLockTime && !PlayerSkills.IsCloaked(target))
         {
             Vector3 dir = target.position - transform.position;
             weapon.ApplyDamage(targetHealth != null ? targetHealth.transform : target, dir); // 확정 타격

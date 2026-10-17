@@ -100,6 +100,7 @@ public class PlayerWeaponManager : MonoBehaviour
         currentWeapon.SetOwnerMoving(playerController != null && playerController.IsMoving);
 
         if (currentWeapon.playerWepData == null) return;
+        if (AugmentManager.IsOpen) return; // 재능 선택 중에는 사격·장전 안 함
 
         // R키 수동 장전
         if (Input.GetKeyDown(KeyCode.R))
@@ -109,13 +110,17 @@ public class PlayerWeaponManager : MonoBehaviour
 
         // 타워 건설 중(또는 방금 건설한 클릭)에는 사격하지 않음
         if (towerBuilder != null && towerBuilder.BlocksFiring) return;
+        // 구르는 중에는 사격하지 않음 (오랑우탄)
+        if (playerController != null && playerController.Ability != null && playerController.Ability.IsRolling) return;
+        // 투척 스킬 조준 중이거나, 던진 클릭을 아직 떼지 않았으면 사격하지 않음
+        if (PlayerSkills.BlocksFiring) return;
 
         // 탑뷰에서 UI(버튼 등) 위를 클릭할 때는 사격하지 않음
         bool firstPerson = playerController != null && playerController.isFirstPerson;
         if (!firstPerson && EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
         // 발사 방식(Auto/Semi)
-        if (currentWeapon.playerWepData.IsAuto)
+        if (currentWeapon.playerWepData.IsAuto && !PlayerAugments.ForcedSemi(currentWeapon.playerWepData)) // 칼로리 소비: 단발 고정
         {
             // 누르고 있으면 연사 (쿨타임은 Weapon 내부에서 처리)
             if (Input.GetMouseButton(0)) currentWeapon.ManualAttackCommand(aimPoint);
@@ -137,7 +142,12 @@ public class PlayerWeaponManager : MonoBehaviour
         {
             // 들고 있던 무기의 남은 탄약 저장 (재장전 도중 교체하면 재장전은 취소됨)
             if (currentWeapon != null && currentWeaponIndex < savedAmmo.Length)
+            {
                 savedAmmo[currentWeaponIndex] = currentWeapon.currentAmmo;
+                // 재능 '자동재장전': 탄을 다 쓴 무기를 넣어 두면 다음에 꺼낼 때 가득 참 (-1 = 가득)
+                if (PlayerAugments.AutoReload && currentWeapon.currentAmmo <= 0 && currentWeapon.playerWepData != null && currentWeapon.playerWepData.maxAmmo > 0)
+                    savedAmmo[currentWeaponIndex] = -1;
+            }
             Destroy(currentWeaponInstance);
         }
 
@@ -245,6 +255,7 @@ public class PlayerWeaponManager : MonoBehaviour
     private float FloorHeight()
     {
         if (cc == null) cc = GetComponent<CharacterController>();
+        if (playerController != null) return playerController.FloorY; // 점프 중에도 실제 바닥
         return cc != null ? cc.bounds.min.y : transform.position.y;
     }
 

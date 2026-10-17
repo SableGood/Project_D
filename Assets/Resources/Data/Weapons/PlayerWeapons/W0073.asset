@@ -25,8 +25,8 @@ MonoBehaviour:
   maxAmmo: 8
   fireRate: 3
   projectileCount: 6
-  spread: 14.4
-  moveSpread: 3.2
+  spread: 14
+  moveSpread: 4
   knockback: 0
   canPierce: 0
   armorPenetration: 3
@@ -36,5 +36,4 @@ MonoBehaviour:
   spriteLength: 1
   weaponSprite: {fileID: 21300000, guid: 2fbdd5f436c1a0a44a5057e6a52c743a, type: 3}
   projectilePrefab: {fileID: 0}
-  description: "Ranger \uC2DC\uB9AC\uC988 : \uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58
-    \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"
+  description: "\uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58 \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"

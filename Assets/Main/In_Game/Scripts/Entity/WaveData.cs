@@ -17,6 +17,8 @@ public class WaveData : ScriptableObject
 {
     [Header("스테이지 정보")]
     public int stageNumber = 1; // ★ 추가됨: 이 웨이브가 속한 스테이지 번호
+    [Tooltip("Wave_Data.csv의 Info (Normal / Elite / Boss). 재능 선택 시점 판단에 사용")]
+    public string waveType = "";
 
     [Header("해당 웨이브 전용 스폰 포인트 (비워두면 기본값)")]
     public Transform[] waveSpawnPoints;

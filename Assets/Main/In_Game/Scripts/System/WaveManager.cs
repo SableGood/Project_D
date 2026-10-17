@@ -25,16 +25,21 @@ public class WaveManager : MonoBehaviour
 
     private int currentWaveIndex = 0;     // 실제 리스트 인덱스
     private bool isWaveActive = false;
+    public static bool IsWaveActive { get; private set; } // 웨이브 진행 중 (몹이 남아 있는 동안)
     private int remainingMobCount = 0;
 
     void Start()
     {
+        IsWaveActive = false;
         if (waveText != null) waveText.gameObject.SetActive(false);
         if (waveStartButton != null) waveStartButton.onClick.AddListener(StartWave);
         MenuSkin.SkinWaveStartButton(waveStartButton); // 왼쪽 위 고정 + UI 디자인 통일
 
         // 시작 스테이지 지정 로직 실행
         SetStartStage(startStage);
+
+        // 재능 선택 (엘리트·보스 웨이브 클리어 후). 씬에 없으면 자동으로 만듦
+        AugmentManager.EnsureExists();
 
         // 몹 테스트 패널 (Wave Start 버튼 아래)
         if (showMobTestPanel) MobTestPanel.Create(waveStartButton);
@@ -89,6 +94,7 @@ public class WaveManager : MonoBehaviour
     private IEnumerator WaveRoutine()
     {
         isWaveActive = true;
+        IsWaveActive = true;
         remainingMobCount = 0;
 
         if (waveStartButton != null) waveStartButton.gameObject.SetActive(false);
@@ -118,6 +124,7 @@ public class WaveManager : MonoBehaviour
         {
             Debug.LogError("지정된 스폰 포인트가 없습니다! WaveManager의 Default Spawn Points를 확인하세요.");
             isWaveActive = false;
+            IsWaveActive = false;
             if (waveStartButton != null) waveStartButton.gameObject.SetActive(true);
             yield break;
         }
@@ -184,6 +191,15 @@ public class WaveManager : MonoBehaviour
         return center;
     }
 
+    // 스테이지 안에서 몇 번째 웨이브인지 (1부터)
+    private int WaveNumberInStage(int index)
+    {
+        int stage = waves[index] != null ? waves[index].stageNumber : 1;
+        int n = 0;
+        for (int i = 0; i <= index; i++) if (waves[i] != null && waves[i].stageNumber == stage) n++;
+        return n;
+    }
+
     public void UnregisterMob(GameObject mob)
     {
         if (isWaveActive)
@@ -200,6 +216,7 @@ public class WaveManager : MonoBehaviour
     private void EndWave()
     {
         isWaveActive = false;
+        IsWaveActive = false;
         currentWaveIndex++;
 
         StartCoroutine(EndWaveRoutine());
@@ -217,8 +234,16 @@ public class WaveManager : MonoBehaviour
             waveText.gameObject.SetActive(true);
         }
 
-        yield return new WaitForSeconds(3.0f);
+        // 재능 선택 (해당 웨이브라면 고를 때까지 대기)
+        //  정비 시간에 들어서고 잠깐 뒤(1.2초) 선택창이 위에서 내려옴. 선택창이 없으면 '웨이브 종료' 문구를 3초 동안 보여줌
+        int cleared = currentWaveIndex - 1;
+        bool offer = cleared >= 0 && cleared < waves.Count && AugmentManager.Instance != null
+                     && AugmentManager.Instance.WillOffer(waves[cleared], WaveNumberInStage(cleared));
+        yield return new WaitForSeconds(offer ? 1.2f : 3.0f);
         if (waveText != null) waveText.gameObject.SetActive(false);
+
+        if (cleared >= 0 && cleared < waves.Count && AugmentManager.Instance != null)
+            yield return AugmentManager.Instance.OfferAfterWave(waves[cleared], WaveNumberInStage(cleared));
 
         if (currentWaveIndex < waves.Count)
         {

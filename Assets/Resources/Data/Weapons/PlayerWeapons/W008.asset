@@ -23,7 +23,7 @@ MonoBehaviour:
   damage: 22
   reloadTime: 2.4
   maxAmmo: 20
-  fireRate: 4.8
+  fireRate: 8
   projectileCount: 1
   spread: 1.5
   moveSpread: 7
@@ -36,4 +36,4 @@ MonoBehaviour:
   spriteLength: 1.1
   weaponSprite: {fileID: 21300000, guid: f617f5a71c677a040b465ad2f66aec6a, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "\uAE30\uBCF8\uD615"
+  description: "\uAC04 \uB9E4\uC6B4\uB9DB \uAC19\uC740 \uC120\uD0DD\uC9C0"

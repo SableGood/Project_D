@@ -19,13 +19,13 @@ MonoBehaviour:
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 15
-  damage: 22
-  reloadTime: 0.8
-  maxAmmo: 9
-  fireRate: 8.4
+  range: 4
+  damage: 20
+  reloadTime: 0.5
+  maxAmmo: 8
+  fireRate: 12
   projectileCount: 1
-  spread: 2.7
+  spread: 4
   moveSpread: 1.6
   knockback: 0
   canPierce: 0
@@ -36,5 +36,5 @@ MonoBehaviour:
   spriteLength: 0.59
   weaponSprite: {fileID: 21300000, guid: a670affb128c4c9b8ce0e4910c4192f7, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "Assault \uC2DC\uB9AC\uC988 : \uC774\uB3D9 \uC0AC\uACA9 \uC2DC \uC9D1\uD0C4\uC728
-    + \uC7AC\uC7A5\uC804\uC18D\uB3C4 + \uBC1C\uC0AC\uC18D\uB3C4 \uC0C1\uC2B9"
+  description: "\uADFC\uC811\uC804\uC5D0 \uC54C\uB9DE\uAC8C \uC870\uC815\uD55C \uD615\uD0DC.
+    \uBAA8\uB4E0 \uAC83\uC774 \uBE68\uB77C\uC84C\uB2E4. \uCD1D\uC54C\uC758 \uC218\uBA85\uAE4C\uC9C0\uB3C4."

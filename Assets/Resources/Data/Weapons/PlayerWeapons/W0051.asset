@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0051
   weaponName: MAG_Modern
-  inGameName: "\uB78C\uBCF4 / \uBAA8\uB358"
+  inGameName: "\uB9E5 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uAE30\uAD00\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 19
+  range: 18
   damage: 12
-  reloadTime: 3.8
-  maxAmmo: 66
-  fireRate: 9.6
+  reloadTime: 4
+  maxAmmo: 75
+  fireRate: 9
   projectileCount: 1
   spread: 6
   moveSpread: 12
@@ -36,5 +36,4 @@ MonoBehaviour:
   spriteLength: 1.2
   weaponSprite: {fileID: 21300000, guid: cf8308b77c19fda43bab36e54fd27ff0, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "Modern \uC2DC\uB9AC\uC988 : \uAE30\uBCF8 \uCD1D\uAE30\uC5D0\uC11C
-    \uC870\uAE08\uC758 \uC131\uB2A5 \uD5A5\uC0C1 + \uD604\uB300\uC801 \uC678\uAD00"
+  description: "\uBC29\uC544\uC1E0\uB9CC \uB2F9\uACA8\uB3C4 \uC6C3\uC74C\uC774 \uB098\uC624\uAC70\uB4E0\uC694~"

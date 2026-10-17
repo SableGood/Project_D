@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W005
   weaponName: MAG
-  inGameName: "\uB78C\uBCF4"
+  inGameName: "\uB9E5"
   role: "\uAE30\uBCF8 \uAE30\uAD00\uCD1D"
   aimType: Multi
   fireMode: Hitscan
@@ -22,8 +22,8 @@ MonoBehaviour:
   range: 18
   damage: 10
   reloadTime: 4
-  maxAmmo: 60
-  fireRate: 9.6
+  maxAmmo: 70
+  fireRate: 9
   projectileCount: 1
   spread: 6
   moveSpread: 12
@@ -36,4 +36,5 @@ MonoBehaviour:
   spriteLength: 1.2
   weaponSprite: {fileID: 21300000, guid: 964e9ab422e5f1446abe6daaf12eed63, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "\uAE30\uBCF8\uD615"
+  description: "\uD074\uB798\uC2DD\uD55C \uAE30\uAD00\uCD1D. \uBC29\uC544\uC1E0\uB9CC
+    \uB2F9\uACA8\uB3C4 \uC6C3\uC74C\uC774 \uB098\uC624\uAC70\uB4E0\uC694~"

@@ -22,8 +22,8 @@ MonoBehaviour:
   range: 13
   damage: 10
   reloadTime: 1.7
-  maxAmmo: 41
-  fireRate: 12
+  maxAmmo: 45
+  fireRate: 13.5
   projectileCount: 1
   spread: 3.6
   moveSpread: 4.8
@@ -36,5 +36,4 @@ MonoBehaviour:
   spriteLength: 0.9
   weaponSprite: {fileID: 21300000, guid: 7df1efea67acce44981851f08123bbea, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "Ranger \uC2DC\uB9AC\uC988 : \uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58
-    \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"
+  description: "\uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58 \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"

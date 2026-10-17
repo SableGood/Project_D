@@ -6,12 +6,12 @@ using UnityEngine.EventSystems;
 //
 //   (배경 판은 반투명 50%, panelAlpha로 조절)
 //   [체력 숫자] [========= 체력바 =========]                [골드]
-//   Shift  Q   E   R  Passive   [ 초상화 ]   1   2   3   4   5   │ [ 무기 카드 ]
+//   Shift  Q   E   F  Passive   [ 초상화 ]   1   2   3   4   5   │ [ 무기 카드 ]
 //   [ ] [ ] [ ] [ ] [ ]                       [포탑 슬롯 x5]    │ (상태창 오른쪽 남는 공간)
 //
 //  - 플레이어가 생기면 자동으로 연결됩니다. (TowerBuilder / PlayerWeaponManager가 Ensure() 호출)
 //  - 씬에 직접 만든 상태창(PanelDesign)은 실행 중에만 숨깁니다. (씬 파일은 그대로, hideScenePanel 끄면 다시 보임)
-//  - 스킬 칸(Shift/Q/E/R/Passive)은 아직 기능이 없는 자리입니다. SetSkillIcon / SetSkillCooldown 으로 나중에 연결
+//  - 스킬 칸(Shift/Q/E/F)은 PlayerSkills가 채움 (아이콘이 생기기 전까지는 회색 칸 + 짧은 이름). Passive 칸은 나중에 직업 칸
 //  - 포탑 썸네일: Resources/Image/TurretIcons/{포탑 프리팹 이름}.png  ([Tools/포탑/1. 포탑 썸네일 생성])
 public class GameHUD : MonoBehaviour
 {
@@ -40,7 +40,7 @@ public class GameHUD : MonoBehaviour
 
     // ── 크기 (1920x1080 기준) ──
     private const float Slot = 80f, SlotGap = 10f, Portrait = 112f, GroupGap = 24f, Pad = 16f;
-    private static readonly string[] SkillKeys = { "Shift", "Q", "E", "R", "Passive" };
+    private static readonly string[] SkillKeys = { "Shift", "Q", "E", "F", "Passive" };
 
     private Font font;
     private RectTransform root;
@@ -74,6 +74,10 @@ public class GameHUD : MonoBehaviour
     // 스킬
     private Image[] skillIcons = new Image[5];
     private RectTransform[] skillCooldowns = new RectTransform[5];
+    private Text[] skillNames = new Text[5], skillCdTexts = new Text[5];
+    private Image[] skillFrames = new Image[5];
+    private readonly int[] skillCdShown = { -1, -1, -1, -1, -1 };
+    private static readonly Color SkillGrayBox = new Color(0.42f, 0.44f, 0.48f, 1f);
 
     // 포탑
     private Image[] towerFrames;
@@ -468,6 +472,34 @@ public class GameHUD : MonoBehaviour
         skillCooldowns[index].anchorMax = new Vector2(1f, Mathf.Clamp01(remainingRatio));
     }
 
+    // 남은 초도 숫자로 표시
+    public void SetSkillCooldown(int index, float remainingRatio, float secondsLeft)
+    {
+        SetSkillCooldown(index, remainingRatio);
+        if (index < 0 || index >= skillCdTexts.Length) return;
+        int sec = secondsLeft > 0f ? Mathf.CeilToInt(secondsLeft) : 0;
+        if (sec == skillCdShown[index]) return;
+        skillCdShown[index] = sec;
+        skillCdTexts[index].text = sec > 0 ? sec.ToString() : "";
+    }
+
+    // 그레이박스 아이콘: 회색 칸 + 짧은 이름 (label이 null이면 빈 칸)
+    public void SetSkillSlot(int index, string label)
+    {
+        if (index < 0 || index >= skillIcons.Length) return;
+        bool has = !string.IsNullOrEmpty(label);
+        if (skillIcons[index].sprite == null) skillIcons[index].color = has ? SkillGrayBox : new Color(1f, 1f, 1f, 0f);
+        skillNames[index].text = has ? label : "";
+    }
+
+    // 사용 중(조준·은신) 칸 테두리 강조
+    public void SetSkillActive(int index, bool active)
+    {
+        if (index < 0 || index >= skillFrames.Length || skillFrames[index] == null) return;
+        Color c = active ? Accent : FrameNormal;
+        if (skillFrames[index].color != c) skillFrames[index].color = c;
+    }
+
     // ==================================================================
     // UI 생성
     // ==================================================================
@@ -529,14 +561,21 @@ public class GameHUD : MonoBehaviour
         {
             float x = Pad + i * (Slot + SlotGap);
             RectTransform box = SlotBox(root, $"Skill_{SkillKeys[i]}", x, slotY, out Image frame);
+            skillFrames[i] = frame;
             RectTransform iconRt = Inset(NewRect("Icon", box), 8f);
             skillIcons[i] = AddImage(iconRt, new Color(1f, 1f, 1f, 0f), false);
             skillIcons[i].preserveAspect = true;
+            skillNames[i] = AddText(Stretch(NewRect("Name", box)), "", 20, TextAnchor.MiddleCenter, Color.white);
+            skillNames[i].fontStyle = FontStyle.Bold;
+            AddShadow(skillNames[i]);
             skillCooldowns[i] = NewRect("Cooldown", box);
             skillCooldowns[i].anchorMin = Vector2.zero;
             skillCooldowns[i].anchorMax = new Vector2(1f, 0f);
             skillCooldowns[i].offsetMin = new Vector2(2f, 2f); skillCooldowns[i].offsetMax = new Vector2(-2f, 0f);
             AddImage(skillCooldowns[i], new Color(0f, 0f, 0f, 0.6f), false);
+            skillCdTexts[i] = AddText(Stretch(NewRect("CooldownText", box)), "", 30, TextAnchor.MiddleCenter, Color.white);
+            skillCdTexts[i].fontStyle = FontStyle.Bold;
+            AddShadow(skillCdTexts[i]);
             KeyLabel(root, SkillKeys[i], x, labelY, Color.white);
         }
 

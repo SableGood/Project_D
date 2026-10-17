@@ -11,6 +11,7 @@ public class Projectile : MonoBehaviour
 
     // 외부(Weapon)에서 주입받는 동적 스펙
     [HideInInspector] public int attackDamage;
+    [HideInInspector] public Transform attacker; // 쏜 개체 (피격 알림용, 없으면 null)
     [HideInInspector] public LayerMask targetLayer;
     [HideInInspector] public float armorPenetration;   // 방어구 무시
     [HideInInspector] public float knockbackDistance;  // 명중 시 넉백 거리
@@ -165,7 +166,7 @@ public class Projectile : MonoBehaviour
             directHealth = hitTransform.GetComponentInParent<Health>();
             if (directHealth != null && !directHealth.IsDead)
             {
-                directHealth.TakeDamage(attackDamage, armorPenetration);
+                directHealth.TakeDamage(attackDamage, armorPenetration, attacker);
                 KnockbackReceiver.TryApply(directHealth.transform, hitDir, knockbackDistance);
                 if (hitSlowPercent > 0f) MobAI.TryApplySlow(directHealth, hitSlowPercent, hitSlowDuration);
             }
@@ -182,7 +183,7 @@ public class Projectile : MonoBehaviour
                 Health areaHealth = hit.GetComponentInParent<Health>();
                 if (areaHealth == null || areaHealth.IsDead || !damaged.Add(areaHealth)) continue;
 
-                areaHealth.TakeDamage(attackDamage, armorPenetration);
+                areaHealth.TakeDamage(attackDamage, armorPenetration, attacker);
                 if (hitSlowPercent > 0f) MobAI.TryApplySlow(areaHealth, hitSlowPercent, hitSlowDuration);
                 // 폭발은 중심에서 바깥쪽으로 밀어냄
                 KnockbackReceiver.TryApply(areaHealth.transform, areaHealth.transform.position - transform.position, knockbackDistance);

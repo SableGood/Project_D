@@ -161,12 +161,14 @@ MonoBehaviour:
   fpsShadeMin: 0.45
   fpsShadeGradient: 0.35
   fpsShadowDarken: 0.6
+  shellLength: 0.065
   slideCycleTime: 0.07
   slideReleaseAt: 0.93
   swingDuration: 0.24
   swingBackAngle: 55
   swingForwardAngle: 75
   slashColor: {r: 1, g: 1, b: 0.95, a: 0.9}
+  magSlideOut: 0.35
   clipStartLift: 2.2
   clipEjectUp: 3.4
   clipEjectBack: 0.9

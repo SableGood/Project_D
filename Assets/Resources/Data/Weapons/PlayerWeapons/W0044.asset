@@ -22,8 +22,8 @@ MonoBehaviour:
   range: 25
   damage: 15
   reloadTime: 2.1
-  maxAmmo: 38
-  fireRate: 8.7
+  maxAmmo: 30
+  fireRate: 9
   projectileCount: 1
   spread: 2.5
   moveSpread: 6
@@ -36,5 +36,5 @@ MonoBehaviour:
   spriteLength: 1.1
   weaponSprite: {fileID: 21300000, guid: 4688521e9f08a37438ef746e496e630d, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "Ballista \uC2DC\uB9AC\uC988 : \uB109\uBC31 \uCD94\uAC00 (\uC18C\uB7C9)
-    + \uC0AC\uAC70\uB9AC \uC99D\uAC00 + \uC7A5\uD0C4\uC218 \uC99D\uAC00"
+  description: "\uB109\uBC31 \uCD94\uAC00 (\uC18C\uB7C9) + \uC0AC\uAC70\uB9AC \uC99D\uAC00
+    + \uC7A5\uD0C4\uC218 \uC99D\uAC00"

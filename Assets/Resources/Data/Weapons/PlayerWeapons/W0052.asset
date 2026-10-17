@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0052
   weaponName: MAG_Assault
-  inGameName: "\uB78C\uBCF4 / \uC5B4\uC370\uD2B8"
+  inGameName: "\uB9E5 / \uC5B4\uC370\uD2B8"
   role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uAE30\uAD00\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 19
+  range: 20
   damage: 12
-  reloadTime: 2.9
-  maxAmmo: 66
-  fireRate: 12
+  reloadTime: 2.5
+  maxAmmo: 80
+  fireRate: 10.5
   projectileCount: 1
   spread: 5.4
   moveSpread: 4.8
@@ -36,5 +36,5 @@ MonoBehaviour:
   spriteLength: 1.2
   weaponSprite: {fileID: 21300000, guid: e1909f57b62b5954cbb2253c73138995, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "Assault \uC2DC\uB9AC\uC988 : \uC774\uB3D9 \uC0AC\uACA9 \uC2DC \uC9D1\uD0C4\uC728
-    + \uC7AC\uC7A5\uC804\uC18D\uB3C4 + \uBC1C\uC0AC\uC18D\uB3C4 \uC0C1\uC2B9"
+  description: "\uC774\uB3D9 \uC0AC\uACA9 \uC2DC \uC9D1\uD0C4\uC728 + \uC7AC\uC7A5\uC804\uC18D\uB3C4
+    + \uBC1C\uC0AC\uC18D\uB3C4 \uC0C1\uC2B9"

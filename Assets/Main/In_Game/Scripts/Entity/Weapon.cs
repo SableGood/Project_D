@@ -88,16 +88,51 @@ public class Weapon : MonoBehaviour
     public bool ShellReload => playerWepData != null && playerWepData.maxAmmo > 0 &&
                                ((playerWepData.role ?? "").Contains("산탄") || playerWepData.projectileCount > 1);
     // 한 발 넣는 데 걸리는 시간 = CSV 재장전속도 ÷ 장탄수 (빈 총을 끝까지 채우는 시간이 CSV 값과 같음)
-    public float ShellLoadTime => playerWepData != null ? Mathf.Max(0.1f, playerWepData.reloadTime / Mathf.Max(1, playerWepData.maxAmmo)) : 0.5f;
+    public float ShellLoadTime => playerWepData != null ? Mathf.Max(0.1f, ReloadTime / Mathf.Max(1, playerWepData.maxAmmo)) : 0.5f;
+
+    // 재능이 반영된 실제 값 (플레이어 무기 + '뿌리 박기'의 포탑 무기. 몹 무기는 그대로)
+    public float ReloadTime => playerWepData != null ? playerWepData.reloadTime * PlayerAugments.ReloadTimeMul : 0f;
+    public float EffectiveCooldown => playerWepData != null
+        ? attackCooldown / (PlayerAugments.FireRateMul * PlayerAugments.WeaponFireRateMul(playerWepData))
+        : IsTurretWeapon ? attackCooldown / PlayerAugments.TurretFireRateMul : attackCooldown;
+    public float EffectiveDamage => playerWepData != null ? attackDamage * PlayerAugments.DamageMul
+        : IsTurretWeapon ? attackDamage * PlayerAugments.TurretDamageMul : attackDamage;
+
+    private int turretCheck = -1; // -1 = 아직 모름, 0 = 아님, 1 = 포탑 무기
+    private bool IsTurretWeapon
+    {
+        get
+        {
+            if (turretCheck < 0) turretCheck = GetComponentInParent<TurretAI>() != null ? 1 : 0;
+            return turretCheck == 1;
+        }
+    }
+
+    // 이 무기를 든 개체 (피격 알림의 '공격자'로 전달 → 피해 반사·흡혈 등)
+    private Transform attackerRoot;
+    private bool attackerSearched;
+    public Transform AttackerRoot
+    {
+        get
+        {
+            if (!attackerSearched || attackerRoot == null)
+            {
+                attackerSearched = true;
+                Health h = GetComponentInParent<Health>();
+                attackerRoot = h != null ? h.transform : null;
+            }
+            return attackerRoot;
+        }
+    }
 
     // 재장전 진행도 0~1 (HUD 표시용). 한 발씩 장전하는 무기는 '지금 넣는 한 발'의 진행도
     public float ReloadProgress
     {
         get
         {
-            if (!isReloading || playerWepData == null || playerWepData.reloadTime <= 0f) return 0f;
+            if (!isReloading || playerWepData == null || ReloadTime <= 0f) return 0f;
             if (ShellReload) return Mathf.Clamp01((Time.time - shellStartTime) / Mathf.Max(0.01f, shellTime));
-            return Mathf.Clamp01((Time.time - reloadStartTime) / playerWepData.reloadTime);
+            return Mathf.Clamp01((Time.time - reloadStartTime) / ReloadTime);
         }
     }
     private Collider[] hitColliders;
@@ -225,11 +260,11 @@ public class Weapon : MonoBehaviour
         if (isReloading)
         {
             // 산탄총: 한 발씩 넣는 중이라도 남은 탄이 있으면 장전을 멈추고 바로 사격
-            if (ShellReload && currentAmmo > 0 && Time.time >= lastAttackTime + attackCooldown) CancelReload();
+            if (ShellReload && currentAmmo > 0 && Time.time >= lastAttackTime + EffectiveCooldown) CancelReload();
             else return; // 장전 중 사격 불가
         }
 
-        if (Time.time >= lastAttackTime + attackCooldown)
+        if (Time.time >= lastAttackTime + EffectiveCooldown)
         {
             // 탄창 시스템 적용 (장탄수가 0보다 큰 무기만 적용, 0 = 무한)
             if (playerWepData != null && playerWepData.maxAmmo > 0)
@@ -300,7 +335,7 @@ public class Weapon : MonoBehaviour
         if (muzzleSmoke && IsGun && shotsSinceReload > 0 && Time.time - lastShotTime < 4f) StartCoroutine(SmokeRoutine());
         shotsSinceReload = 0;
 
-        yield return new WaitForSeconds(playerWepData.reloadTime);
+        yield return new WaitForSeconds(ReloadTime);
 
         currentAmmo = playerWepData.maxAmmo;
         isReloading = false;
@@ -547,7 +582,7 @@ public class Weapon : MonoBehaviour
     {
         if (targetHealth == null || targetHealth.IsDead) return;
 
-        targetHealth.TakeDamage(attackDamage, armorPenetration);
+        targetHealth.TakeDamage(EffectiveDamage, armorPenetration, AttackerRoot);
         if (hitSlowPercent > 0f) MobAI.TryApplySlow(targetHealth, hitSlowPercent, hitSlowDuration);
 
         if (knockbackDistance > 0f && hitDirection != Vector3.zero && knockedThisShot.Add(targetHealth))
@@ -558,7 +593,8 @@ public class Weapon : MonoBehaviour
 
     private void ConfigureProjectile(Projectile projectile)
     {
-        projectile.attackDamage = this.attackDamage;
+        projectile.attackDamage = Mathf.RoundToInt(EffectiveDamage);
+        projectile.attacker = AttackerRoot;
         projectile.targetLayer = this.targetLayer;
         projectile.armorPenetration = 0f;
         projectile.knockbackDistance = 0f;

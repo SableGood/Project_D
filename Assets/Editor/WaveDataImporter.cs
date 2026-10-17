@@ -23,6 +23,7 @@ public class WaveDataImporter : MonoBehaviour
 
         Dictionary<int, List<WaveMobInfo>> waveDict = new Dictionary<int, List<WaveMobInfo>>();
         Dictionary<int, int> waveToStageDict = new Dictionary<int, int>(); // ★ 웨이브 번호에 해당하는 스테이지를 기억할 딕셔너리
+        Dictionary<int, string> waveTypeDict = new Dictionary<int, string>(); // C열(Info): Normal / Elite / Boss
 
         int currentStageIndex = 1;
         int currentWaveIndex = -1;
@@ -57,6 +58,10 @@ public class WaveDataImporter : MonoBehaviour
             }
 
             if (currentWaveIndex == -1) continue;
+
+            // ★ C열(인덱스 2) 파싱: 웨이브 종류 (그 웨이브의 첫 값만 사용)
+            string waveInfo = cols[2].Trim();
+            if (!string.IsNullOrEmpty(waveInfo) && !waveTypeDict.ContainsKey(currentWaveIndex)) waveTypeDict[currentWaveIndex] = waveInfo;
 
             string entCode = cols[4].Trim();
             string countStr = cols[5].Trim();
@@ -121,6 +126,7 @@ public class WaveDataImporter : MonoBehaviour
             // ★ 저장된 스테이지 번호 부여
             waveAsset.stageNumber = waveToStageDict.ContainsKey(waveNum) ? waveToStageDict[waveNum] : 1;
             waveAsset.mobList = kvp.Value;
+            waveAsset.waveType = waveTypeDict.ContainsKey(waveNum) ? waveTypeDict[waveNum] : "";
 
             if (isNew) AssetDatabase.CreateAsset(waveAsset, assetPath);
             else EditorUtility.SetDirty(waveAsset);

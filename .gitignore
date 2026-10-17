@@ -124,3 +124,6 @@ InitTestScene*.unity*
 **/[Ll]ogs/
 **/[Uu]ser[Ss]ettings/
 /My project/
+
+# 구글 시트 동기화 백업 (Tools/CSV 데이터 생성/0)
+/CSVBackup/

@@ -14,16 +14,16 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
   weaponID: W0053
   weaponName: MAG_Ranger
-  inGameName: "\uB78C\uBCF4 / \uB808\uC778\uC800"
+  inGameName: "\uB9E5 / \uB808\uC778\uC800"
   role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uAE30\uAD00\uCD1D"
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
-  range: 19
+  range: 20
   damage: 14
-  reloadTime: 3.8
-  maxAmmo: 82
-  fireRate: 9.6
+  reloadTime: 4
+  maxAmmo: 100
+  fireRate: 9.5
   projectileCount: 1
   spread: 3.6
   moveSpread: 9.6
@@ -36,5 +36,4 @@ MonoBehaviour:
   spriteLength: 1.2
   weaponSprite: {fileID: 21300000, guid: 2a078a48bcef5424e868fa0eea021e74, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "Ranger \uC2DC\uB9AC\uC988 : \uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58
-    \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"
+  description: "\uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58 \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"

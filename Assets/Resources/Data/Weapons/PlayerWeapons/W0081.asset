@@ -23,7 +23,7 @@ MonoBehaviour:
   damage: 25
   reloadTime: 2.3
   maxAmmo: 22
-  fireRate: 4.8
+  fireRate: 8
   projectileCount: 1
   spread: 1.5
   moveSpread: 7

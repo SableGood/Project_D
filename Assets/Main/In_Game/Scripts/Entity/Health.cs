@@ -24,8 +24,16 @@ public class Health : MonoBehaviour
     public event System.Action OnDied;
     // 누가 맞든 피격될 때마다 알림 (피격 이펙트 등 전역 연출용: HitEffects)
     public static event System.Action<Health, float> AnyDamaged;
+    // 위와 같지만 공격한 쪽(몹·플레이어 루트)도 함께 알림. 공격자를 모르면 null (재능: 흡혈·피해 반사 등)
+    public static event System.Action<Health, float, Transform> AnyDamagedBy;
 
-    public float Defense => defense;
+    // 재능 등으로 붙는 추가 방어력 / 기본 방어력 무시(부활 페널티)
+    [HideInInspector] public float bonusDefense;
+    [HideInInspector] public bool ignoreBaseDefense;
+    // 체력이 0이 되는 순간 호출. true를 돌려주면 죽지 않음 (재능 '부활'). 체력 회복은 호출한 쪽에서 처리
+    public System.Func<Health, bool> BeforeDeath;
+
+    public float Defense => (ignoreBaseDefense ? 0f : defense) + bonusDefense;
     public float CurrentHealth => currentHealth;
     public bool IsDead => isDead;
 
@@ -57,19 +65,28 @@ public class Health : MonoBehaviour
     //    실제 피해 = 공격력 - max(0, 방어력 - 방어구 무시)   (최소 MinDamage)
     public void TakeDamage(float damage, float armorPenetration)
     {
+        TakeDamage(damage, armorPenetration, null);
+    }
+
+    // attacker: 공격한 개체 (모르면 null)
+    public void TakeDamage(float damage, float armorPenetration, Transform attacker)
+    {
         if (isDead) return;
 
-        float finalDamage = CalculateDamage(damage, defense, armorPenetration);
+        float finalDamage = CalculateDamage(damage, Defense, armorPenetration);
         if (invincible)
         {
             OnDamaged?.Invoke(finalDamage);
             AnyDamaged?.Invoke(this, finalDamage);
+            AnyDamagedBy?.Invoke(this, finalDamage, attacker);
             return;
         }
         currentHealth -= finalDamage;
         currentHealth = Mathf.Max(currentHealth, 0);
+        if (currentHealth <= 0 && BeforeDeath != null && BeforeDeath(this)) currentHealth = Mathf.Max(currentHealth, 1f);
         OnDamaged?.Invoke(finalDamage);
         AnyDamaged?.Invoke(this, finalDamage);
+        AnyDamagedBy?.Invoke(this, finalDamage, attacker);
 
         if (logDamage)
             Debug.Log($"{gameObject.name} 피격! 공격 {damage} → 실제 {finalDamage} (방어 {defense}, 관통 {armorPenetration}) / 남은 체력 {currentHealth}/{maxHealth}");
@@ -123,6 +140,20 @@ public class Health : MonoBehaviour
     }
 
     public bool IsFullHealth => currentHealth >= maxHealth;
+
+    // 최대 체력 증감 (재능). 늘어난 만큼 현재 체력도 함께 늘어남
+    public void AddMaxHealth(float delta)
+    {
+        maxHealth = Mathf.Max(1f, maxHealth + delta);
+        if (delta > 0f) currentHealth += delta;
+        currentHealth = Mathf.Clamp(currentHealth, 0f, maxHealth);
+    }
+
+    // 현재 체력을 직접 지정 (부활 등)
+    public void SetCurrentHealth(float value)
+    {
+        currentHealth = Mathf.Clamp(value, 0f, maxHealth);
+    }
 
     public float GetCurrentHealth()
     {

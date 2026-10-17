@@ -19,11 +19,11 @@ MonoBehaviour:
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
-  range: 15
-  damage: 26
+  range: 10
+  damage: 25
   reloadTime: 1
-  maxAmmo: 11
-  fireRate: 6.6
+  maxAmmo: 10
+  fireRate: 7
   projectileCount: 1
   spread: 1.8
   moveSpread: 3.2
@@ -36,5 +36,5 @@ MonoBehaviour:
   spriteLength: 0.38
   weaponSprite: {fileID: 21300000, guid: 7da9af2a316b4b34f92cb2d970ab0597, type: 3}
   projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
-  description: "Ranger \uC2DC\uB9AC\uC988 : \uC804\uBC18\uC801\uC778 \uB2A5\uB825\uCE58
-    \uC0C1\uC2B9 (\uACF5\uACA9\uB825+\uC7A5\uD0C4\uC218+\uBC18\uB3D9\uC81C\uC5B4)"
+  description: "\uC131\uB2A5\uC744 \uC804\uBC18\uC801\uC73C\uB85C \uD5A5\uC0C1\uD55C
+    \uD615\uD0DC. \uBC38\uB7F0\uC2A4 \uC788\uB2E4."

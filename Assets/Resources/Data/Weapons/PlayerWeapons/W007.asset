@@ -25,7 +25,7 @@ MonoBehaviour:
   maxAmmo: 6
   fireRate: 3
   projectileCount: 6
-  spread: 24
+  spread: 18
   moveSpread: 4
   knockback: 0
   canPierce: 0
@@ -36,4 +36,4 @@ MonoBehaviour:
   spriteLength: 1
   weaponSprite: {fileID: 21300000, guid: f1fc0bf7fa95d9c46bde7fba00d22ea4, type: 3}
   projectilePrefab: {fileID: 0}
-  description: "\uAE30\uBCF8\uD615"
+  description: "\uBBF8\uAD6D \uD560\uC544\uBC84\uC9C0 \uC190\uB9DB"

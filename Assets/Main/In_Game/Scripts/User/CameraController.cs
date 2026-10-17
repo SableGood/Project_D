@@ -92,12 +92,13 @@ public class CameraController : MonoBehaviour
         Transform p = player.transform;
 
         // 탑뷰 위치/회전
-        Vector3 tdPos = p.position + topDownOffset;
+        // 높이는 바닥 기준 (점프해도 카메라가 따라 올라가지 않아야 캐릭터가 뜨는 게 보임)
+        Vector3 tdPos = new Vector3(p.position.x, player.GroundY, p.position.z) + topDownOffset;
         Quaternion tdRot = Quaternion.Euler(topDownRotation);
 
         // 1인칭 위치/회전 (눈 높이, 플레이어가 바라보는 방향 + 상하 시선)
         Quaternion fpsRot = Quaternion.Euler(player.cameraPitch, p.eulerAngles.y, 0);
-        Vector3 fpsPos = p.position + Vector3.up * fpsEyeHeight + p.forward * fpsForwardOffset;
+        Vector3 fpsPos = p.position + Vector3.up * (fpsEyeHeight + player.EyeOffset) + p.forward * fpsForwardOffset; // EyeOffset: 구르기 때 낮아짐
 
         // Smooth: 탑뷰 쪽 방향을 플레이어가 바라보는 쪽으로 맞춰서 화면이 크게 빙글 돌지 않게
         if (transitionMode == TransitionMode.Smooth && viewBlend > 0f && viewBlend < 1f)

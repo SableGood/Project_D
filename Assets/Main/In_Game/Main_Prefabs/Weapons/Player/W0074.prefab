@@ -150,12 +150,14 @@ MonoBehaviour:
   fpsShadeMin: 0.45
   fpsShadeGradient: 0.35
   fpsShadowDarken: 0.6
+  shellLength: 0.065
   slideCycleTime: 0.07
   slideReleaseAt: 0.93
   swingDuration: 0.24
   swingBackAngle: 55
   swingForwardAngle: 75
   slashColor: {r: 1, g: 1, b: 0.95, a: 0.9}
+  magSlideOut: 0.35
   clipStartLift: 2.2
   clipEjectUp: 3.4
   clipEjectBack: 0.9
@@ -218,7 +220,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0.22000001, y: 0, z: 0}
-  m_LocalScale: {x: 0.1542777, y: 0.1542777, z: 1}
+  m_LocalScale: {x: 0.10826772, y: 0.10826772, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 7079691826401657958}
@@ -272,7 +274,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 1
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 0b257971f86b7614dbc63a0c0a21221a, type: 3}
+  m_Sprite: {fileID: 21300000, guid: a97e56411926465790ba2d7525849261, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
