@@ -102,6 +102,8 @@ public class WeaponVisual : MonoBehaviour
         public bool hasSideMuzzle; public Vector2 sideMuzzle;
         // 기관총 1인칭: 덮개가 열린 그림(탄통 있음/없음) + 덮개 그림 (경첩을 축으로 회전)
         public Sprite fpsOpen, fpsOpenNoMag, fpsCover;
+        public Sprite fpsClipEmpty;     // 개런드 1인칭: 튕겨 나가는 빈 클립 (FPS_Mag = 탄이 든 클립)
+        public Sprite fpsMagEmpty;      // 1인칭: 빈 탄창 (빈 총을 재장전할 때 빠지는 탄창). 없으면 FPS_Mag
         public Vector2 fpsCoverHinge, fpsCoverCenter;
         public float fpsCoverOpenAngle;
         public bool hudOriginal;        // HUD: 재장전 중이 아닐 때는 원본 한 장짜리 그림 사용
@@ -119,6 +121,8 @@ public class WeaponVisual : MonoBehaviour
         // 1인칭 그림 전용: 탄창 방향(손잡이 기울기), 화면 배치 덮어쓰기(권총처럼 작고 화면 안쪽에 그리는 무기), 재장전 때 옆으로 기울이는 각도
         public bool hasFpsMagDir; public Vector2 fpsMagDir;
         public bool fpsCustom; public float fpsScreenH, fpsCenterH, fpsOverhang, fpsReloadRoll;
+        // 샷건 1인칭: 탄 넣는 구멍(기관부 아래) 위치와 손에 든 탄 길이 (그림 기준)
+        public bool hasFpsLoadPort; public Vector2 fpsLoadPort; public float fpsShellLength;
     }
     [System.Serializable] private class PartsCoverJson { public float[] hinge; public float[] center; public float openAngle; }
     [System.Serializable] private class PartsSideJson { public float[] magOffset; public bool magInFront; public float[] muzzle; public float[] magDir; public float[] loadPort; public PartsCoverJson cover; }
@@ -127,6 +131,7 @@ public class WeaponVisual : MonoBehaviour
         public float[] magOffset; public float[] muzzle; public PartsCoverJson cover;
         public float[] magDir;
         public bool customPlacement; public float screenHeight, centerHeight, rightOverhang, reloadRoll;
+        public float[] loadPort; public float shellLength;
     }
     [System.Serializable] private class PartsJson { public string magType; public float ppu = 100f; public bool hudOriginal; public float cycleDelay; public float cycleTime = -1f; public PartsSideJson side; public PartsFpsJson fps; }
     private static readonly Dictionary<string, Parts> partsCache = new Dictionary<string, Parts>();
@@ -174,8 +179,10 @@ public class WeaponVisual : MonoBehaviour
     private bool OpenBody => parts != null && parts.sideOpen != null
                              && (boltOpen || (parts.slide && Time.time >= cycleStart && Time.time < cycleUntil));
     // 1인칭 그림: 슬라이드가 뒤로 간 그림을 써야 하는지 (권총: 쏠 때마다 잠깐 / 탄이 떨어지면 / 재장전 중)
-    private bool FpsSlideOpen => parts != null && parts.slide && !parts.pump && parts.fpsOpen != null
-                                 && (boltOpen || (Time.time >= cycleStart && Time.time < cycleUntil));
+    //  개런드: 탄이 떨어지면 / 재장전 중 노리쇠 후퇴 고정 그림
+    //  샷건: 쏘고 나서 펌프를 당기는 동안 / 빈 총으로 장전하는 동안 펌프가 뒤로 간 그림
+    private bool FpsSlideOpen => parts != null && parts.fpsOpen != null && !parts.belt
+                                 && (boltOpen || (parts.slide && Time.time >= cycleStart && Time.time < cycleUntil));
     // 1인칭 전용 그림을 쓰는 중인지
     private bool FpsImageMode => isFirstPerson && parts != null && parts.fpsNoMag != null;
 
@@ -503,8 +510,42 @@ public class WeaponVisual : MonoBehaviour
         {
             body.sprite = slideBack && parts.fpsOpenNoMag != null ? parts.fpsOpenNoMag : s;
             // 탄창은 무기 그림 바로 뒤 (카메라에서 2mm 더 멀리)
-            PlaceMagazine(parts.fpsMag, parts.fpsMagOffset, 0.002f / Mathf.Max(0.0001f, k));
+            //  빈 총을 재장전할 때 빠지는 탄창은 빈 탄창 그림, 새로 끼우는 탄창은 탄이 든 그림
+            Sprite magSprite = parts.fpsMag;
+            if (parts.fpsMagEmpty != null && magInsert < 0f && pumpStartedEmpty) magSprite = parts.fpsMagEmpty;
+            PlaceMagazine(magSprite, parts.fpsMagOffset, 0.002f / Mathf.Max(0.0001f, k));
         }
+        if (parts.pump) PlaceShellFps(k);
+    }
+
+    // 샷건 1인칭: 손에 든 탄이 아래에서 다가와 기관부 아래 구멍으로 쑥 들어감 (총 그림 뒤로 사라짐)
+    //  진행도는 탑뷰와 같음: 0.15~0.60 다가옴, 0.60~0.88 밀어 넣음
+    private void PlaceShellFps(float k)
+    {
+        if (shellR == null) return;
+        float u = shellPhase;
+        bool show = parts.hasFpsLoadPort && weapon != null && weapon.isReloading && body.enabled && u >= 0.15f && u <= 0.88f;
+        shellR.enabled = show;
+        if (!show) return;
+        float len = parts.fpsShellLength > 0f ? parts.fpsShellLength : 0.42f;
+        // 1인칭 그림은 총구가 왼쪽 위 → 탄도 총열 방향(약 165°)으로 눕혀서 앞쪽으로 밀어 넣음
+        const float barrelAngle = 165f;
+        Vector2 fwd = new Vector2(Mathf.Cos(barrelAngle * Mathf.Deg2Rad), Mathf.Sin(barrelAngle * Mathf.Deg2Rad));
+        Vector2 off;
+        if (u < 0.6f)
+        {
+            float t = (u - 0.15f) / 0.45f; t = 1f - (1f - t) * (1f - t);   // 빠르게 다가와 멈춤
+            off = Vector2.Lerp(new Vector2(-0.6f * len, -2.6f * len), new Vector2(0f, -0.55f * len), t);
+        }
+        else
+        {
+            float t = (u - 0.6f) / 0.28f; t *= t;                           // 점점 빨라지며 쑥
+            off = Vector2.Lerp(new Vector2(0f, -0.55f * len), fwd * 0.6f * len + new Vector2(0f, 0.15f * len), t);
+        }
+        shellR.sprite = HitEffects.CasingSprite(HitEffects.CasingType.Shotgun);
+        shellR.transform.localPosition = new Vector3(parts.fpsLoadPort.x + off.x, parts.fpsLoadPort.y + off.y, 0.002f / Mathf.Max(0.0001f, k));
+        shellR.transform.localRotation = Quaternion.Euler(0f, 0f, barrelAngle);
+        shellR.transform.localScale = new Vector3(len, len, 1f);
     }
 
     // 기관총 1인칭: 평소엔 완성 그림 한 장. 재장전 중에는 '덮개 열린 그림' 위에 덮개 그림을 경첩 기준으로 회전시키고,
@@ -595,7 +636,9 @@ public class WeaponVisual : MonoBehaviour
                 float u = (t - approach) / (1f - approach); u = u * u;
                 lift = 1f - u;
             }
-            off = new Vector2(-Mathf.Max(0f, lift - 1f) * 0.25f * len, lift * len);
+            // 1인칭 그림은 조준경이 위를 가리므로 오른쪽 위(뒤쪽)에서 비스듬히 내려옴
+            float fromSide = FpsImageMode ? 0.9f : -0.25f;
+            off = new Vector2(Mathf.Max(0f, lift - 1f) * fromSide * len, lift * len);
             return;
         }
         if (TryMagDir(out Vector2 magAxis))
@@ -1002,9 +1045,19 @@ public class WeaponVisual : MonoBehaviour
         Transform bt = body.transform;
         Vector3 lossy = bt.lossyScale;
         float sy = Mathf.Sign(lossy.y), sx = Mathf.Sign(lossy.x);
-        Vector3 pos = bt.TransformPoint(new Vector3(parts.sideMagOffset.x, parts.sideMagOffset.y + sprite.bounds.extents.y, 0f));
+        // 1인칭 그림: 1인칭용 클립 그림과 위치 (탄이 든 클립 → FPS_Mag, 빈 클립 → FPS_ClipEmpty)
+        bool fps = FpsImageMode;
+        Vector2 seat = parts.sideMagOffset;
+        if (fps)
+        {
+            Sprite fpsSprite = sprite == parts.sideClipEmpty ? parts.fpsClipEmpty : parts.fpsMag;
+            if (fpsSprite != null) sprite = fpsSprite;
+            seat = parts.fpsMagOffset;
+        }
+        Vector3 pos = bt.TransformPoint(new Vector3(seat.x, seat.y + sprite.bounds.extents.y, 0f));
         Vector3 scale = new Vector3(Mathf.Abs(lossy.x), lossy.y, 1f);
-        Vector3 gunUp = bt.up * sy, gunBack = -bt.right * sx;
+        // 1인칭 그림은 총구가 왼쪽 위라, 클립은 오른쪽(사수 쪽)으로 튐
+        Vector3 gunUp = bt.up * sy, gunBack = fps ? bt.right * 0.6f : -bt.right * sx;
         float roll = Vector3.SignedAngle(camT.up, Vector3.ProjectOnPlane(gunUp, camT.forward), camT.forward);
         Vector3 vel = Vector3.up * clipEjectUp + gunUp * (clipEjectUp * 0.35f) + gunBack * clipEjectBack;
         float floorY = pos.y - 1.5f;
@@ -1210,12 +1263,16 @@ public class WeaponVisual : MonoBehaviour
                 p.fpsCustom = d.fps.customPlacement;
                 p.fpsScreenH = d.fps.screenHeight; p.fpsCenterH = d.fps.centerHeight; p.fpsOverhang = d.fps.rightOverhang;
                 p.fpsReloadRoll = d.fps.reloadRoll;
-                // 권총: 슬라이드가 뒤로 간 1인칭 그림 (탄창 있음 / 없음)
-                if (p.slide && d.fps.cover == null)
+                if (d.fps.loadPort != null && d.fps.loadPort.Length >= 2) { p.hasFpsLoadPort = true; p.fpsLoadPort = V2(d.fps.loadPort) / ppu; }
+                p.fpsShellLength = d.fps.shellLength / ppu;
+                // 권총: 슬라이드가 뒤로 간 / 개런드: 노리쇠가 뒤로 간 1인칭 그림 (탄창 있음 / 없음)
+                if ((p.slide || p.clip) && d.fps.cover == null)
                 {
                     p.fpsOpen = Resources.Load<Sprite>(root + "FPS_Open");
                     p.fpsOpenNoMag = Resources.Load<Sprite>(root + "FPS_OpenNoMag");
                 }
+                if (p.clip) p.fpsClipEmpty = Resources.Load<Sprite>(root + "FPS_ClipEmpty");
+                p.fpsMagEmpty = Resources.Load<Sprite>(root + "FPS_MagEmpty");
                 if (d.fps.cover != null)
                 {
                     p.fpsOpen = Resources.Load<Sprite>(root + "FPS_Open");
