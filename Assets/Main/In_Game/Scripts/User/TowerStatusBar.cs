@@ -115,8 +115,7 @@ public class TowerStatusBar : MonoBehaviour
     {
         if (font == null)
         {
-            font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Arial" }, 32);
-            if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            font = UIFont.Regular;
         }
 
         GameObject root = new GameObject("StatusBar", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler));
@@ -171,9 +170,8 @@ public class TowerStatusBar : MonoBehaviour
         rt.anchoredPosition = pos;
         rt.sizeDelta = box;
         Text t = go.GetComponent<Text>();
-        t.font = font;
         t.fontSize = size;
-        t.fontStyle = style;
+        UIFont.Apply(t, style);
         t.alignment = TextAnchor.MiddleCenter;
         t.horizontalOverflow = HorizontalWrapMode.Overflow;
         t.verticalOverflow = VerticalWrapMode.Overflow;

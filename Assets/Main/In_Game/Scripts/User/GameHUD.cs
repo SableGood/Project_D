@@ -516,8 +516,7 @@ public class GameHUD : MonoBehaviour
         scaler.matchWidthOrHeight = 0.5f;
         gameObject.AddComponent<GraphicRaycaster>();
 
-        font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Arial" }, 32);
-        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = UIFont.Regular;
 
         float groupW = 5 * Slot + 4 * SlotGap;
         float width = Pad * 2 + groupW * 2 + GroupGap * 2 + Portrait;
@@ -596,6 +595,7 @@ public class GameHUD : MonoBehaviour
         GoldManager gm = GoldManager.Instance;
         if (gm != null) { gm.OnGoldShort += HandleGoldShort; gm.OnGoldChanged += HandleGoldChanged; }
 
+        UIFont.FixBold(this);
         root.gameObject.SetActive(false);
         weaponCard.gameObject.SetActive(false);
     }
@@ -651,6 +651,7 @@ public class GameHUD : MonoBehaviour
 
             towerKeys[i] = KeyLabel(towerGroup, (i + 1).ToString(), x, labelY, Color.white);
         }
+        UIFont.FixBold(towerGroup);
     }
 
     // 무기 카드: 하단 상태창 오른쪽의 남는 공간을 꽉 채움 (상태창과 같은 높이·바닥선)

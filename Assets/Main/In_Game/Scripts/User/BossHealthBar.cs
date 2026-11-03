@@ -131,8 +131,7 @@ public class BossHealthBar : MonoBehaviour
         scaler.referenceResolution = new Vector2(1920f, 1080f);
         scaler.matchWidthOrHeight = 0.5f;
 
-        font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Arial" }, 32);
-        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = UIFont.Regular;
 
         root = NewRect("BossPanel", transform);
         root.anchorMin = root.anchorMax = new Vector2(0.5f, 1f);
@@ -162,6 +161,7 @@ public class BossHealthBar : MonoBehaviour
         phaseBanner.fontStyle = FontStyle.Bold;
         phaseBanner.gameObject.SetActive(false);
 
+        UIFont.FixBold(this);
         root.gameObject.SetActive(false);
     }
 

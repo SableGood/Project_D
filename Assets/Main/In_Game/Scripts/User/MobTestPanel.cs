@@ -474,8 +474,7 @@ public class MobTestPanel : MonoBehaviour
         gameObject.AddComponent<GraphicRaycaster>();
         canvasRect = (RectTransform)transform;
 
-        font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Arial" }, 32);
-        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = UIFont.Regular;
 
         // 패널 (내용 크기에 맞춰 세로로 늘어남)
         panel = NewRect("Panel", transform);

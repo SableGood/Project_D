@@ -198,8 +198,7 @@ public class MenuSkin : MonoBehaviour
     private static void EnsureFont()
     {
         if (font != null) return;
-        font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Arial" }, 32);
-        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = UIFont.Regular;
     }
 
     // ── 버튼: HUD 칸과 같은 테두리 + 어두운 배경, 마우스를 올리면 노란 테두리 ──
@@ -335,10 +334,9 @@ public class MenuSkin : MonoBehaviour
     // ── 공통 ──
     private static void StyleText(Text t, int size, Color color, bool bold)
     {
-        t.font = font;
         t.fontSize = size;
         t.color = color;
-        t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
+        UIFont.Apply(t, bold ? FontStyle.Bold : FontStyle.Normal);
         t.alignment = t.alignment == TextAnchor.UpperCenter ? TextAnchor.UpperCenter : TextAnchor.MiddleCenter;
         t.horizontalOverflow = HorizontalWrapMode.Overflow;
         if (t.GetComponent<Shadow>() == null)

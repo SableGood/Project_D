@@ -500,8 +500,7 @@ public class AugmentManager : MonoBehaviour
 
     private void BuildUI()
     {
-        font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "맑은 고딕", "Apple SD Gothic Neo", "Arial" }, 32);
-        if (font == null) font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+        font = UIFont.Regular;
 
         canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -669,9 +668,8 @@ public class AugmentManager : MonoBehaviour
     {
         RectTransform r = NewRect(name, parent);
         var t = r.gameObject.AddComponent<Text>();
-        t.font = font;
         t.fontSize = size;
-        t.fontStyle = style;
+        UIFont.Apply(t, style);
         t.alignment = anchor;
         t.color = color;
         t.horizontalOverflow = HorizontalWrapMode.Wrap;
