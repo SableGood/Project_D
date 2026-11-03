@@ -122,6 +122,7 @@ public class HitEffects : MonoBehaviour
     private void OnAnyDamaged(Health h, float amount)
     {
         if (!Enabled || h == null || !h.isActiveAndEnabled) return;
+        if (Health.DotTick) return; // 지속 피해는 피격 이펙트 없음
 
         float now = Time.time;
         if (lastEffectTime.TryGetValue(h, out float last) && now - last < perTargetCooldown) return;

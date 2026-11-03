@@ -85,7 +85,7 @@ public class GameHUD : MonoBehaviour
     private Text[] towerCosts;
     private Text[] towerKeys;
     private bool[] towerHasIcon;
-    private int lastGold = int.MinValue, lastSelected = int.MinValue;
+    private int lastGold = int.MinValue, lastSelected = int.MinValue, lastUnlockVersion = int.MinValue;
 
     // 무기
     private Text weaponNameText, ammoText, ammoMaxText, weaponHintText;
@@ -232,18 +232,22 @@ public class GameHUD : MonoBehaviour
         int gold = gm != null ? gm.Gold : 0;
         int selected = builder.SelectedSlot;
 
-        if (gold != lastGold || selected != lastSelected)
+        if (gold != lastGold || selected != lastSelected || RunProgress.Version != lastUnlockVersion)
         {
             lastGold = gold;
             lastSelected = selected;
+            lastUnlockVersion = RunProgress.Version;
             goldText.text = $"골드  <color=#FFE066>{gold}</color>";
             for (int i = 0; i < towerFrames.Length; i++)
             {
+                bool unlocked = builder.IsUnlocked(i);
                 bool affordable = gold >= builder.GetTowerCost(i);
                 towerFrames[i].color = i == selected ? Accent : FrameNormal;
-                towerKeys[i].color = i == selected ? Accent : Color.white;
-                if (towerHasIcon[i]) towerIcons[i].color = affordable ? Color.white : new Color(0.45f, 0.45f, 0.45f, 1f);
-                towerCosts[i].color = affordable ? CostOk : Warn;
+                towerKeys[i].color = i == selected ? Accent : (unlocked ? Color.white : SubText);
+                // 잠긴 포탑: 흐린 그림 + '잠김' (엘리트 상점에서 해금)
+                if (towerHasIcon[i]) towerIcons[i].color = !unlocked ? new Color(1f, 1f, 1f, 0.18f) : affordable ? Color.white : new Color(0.45f, 0.45f, 0.45f, 1f);
+                towerCosts[i].text = unlocked ? $"{builder.GetTowerCost(i)} G" : "잠김";
+                towerCosts[i].color = !unlocked ? SubText : affordable ? CostOk : Warn;
             }
         }
 
@@ -454,6 +458,7 @@ public class GameHUD : MonoBehaviour
         EntityData d = builder.GetTowerData(i);
         GameObject p = builder.GetTowerPrefab(i);
         string name = d != null && !string.IsNullOrEmpty(d.entityName) ? d.entityName : (p != null ? p.name : "");
+        if (!builder.IsUnlocked(i)) return $"<b>{name}</b>  <color=#AAAAAA>잠김 · 엘리트 상점에서 해금</color>";
         return $"<b>{name}</b>  <color=#FFE066>{builder.GetTowerCost(i)} G</color>";
     }
 
@@ -488,8 +493,9 @@ public class GameHUD : MonoBehaviour
     {
         if (index < 0 || index >= skillIcons.Length) return;
         bool has = !string.IsNullOrEmpty(label);
-        if (skillIcons[index].sprite == null) skillIcons[index].color = has ? SkillGrayBox : new Color(1f, 1f, 1f, 0f);
-        skillNames[index].text = has ? label : "";
+        bool pic = skillIcons[index].sprite != null;
+        if (!pic) skillIcons[index].color = has ? SkillGrayBox : new Color(1f, 1f, 1f, 0f);
+        skillNames[index].text = has && !pic ? label : "";   // 아이콘이 있으면 이름은 숨김
     }
 
     // 사용 중(조준·은신) 칸 테두리 강조

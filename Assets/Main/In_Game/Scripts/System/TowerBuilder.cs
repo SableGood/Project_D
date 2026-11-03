@@ -60,6 +60,8 @@ public class TowerBuilder : MonoBehaviour
     private bool placementOk = false;   // 자리만 놓고 보면 설치 가능 (골드와 무관)
     public int SlotCount => towerPrefabs != null ? towerPrefabs.Length : 0;
     public int SelectedSlot => isBuildMode ? currentTowerIndex : -1;
+    // 엘리트 상점에서 해금한 포탑만 지을 수 있음 (처음에는 RunProgress.StartTurrets)
+    public bool IsUnlocked(int index) { GameObject p = GetTowerPrefab(index); return p != null && RunProgress.IsTurretUnlocked(p.name); }
     public GameObject GetTowerPrefab(int index) => (towerPrefabs != null && index >= 0 && index < towerPrefabs.Length) ? towerPrefabs[index] : null;
 
     void Start()
@@ -137,6 +139,9 @@ public class TowerBuilder : MonoBehaviour
 
     private void HandleInput()
     {
+        // 재능 선택창이 열려 있거나 방금 닫혔으면 숫자 키는 선택창 몫
+        if (AugmentManager.IsOpen || Time.frameCount <= AugmentManager.ClosedFrame + 1) return;
+
         // 1번(0) ~ 5번(4) 키 입력 감지
         if (Input.GetKeyDown(KeyCode.Alpha1)) SelectTower(0);
         if (Input.GetKeyDown(KeyCode.Alpha2)) SelectTower(1);
@@ -149,6 +154,11 @@ public class TowerBuilder : MonoBehaviour
     {
         // 배열 범위를 벗어나거나 해당 슬롯에 프리팹이 비어있으면 무시
         if (index >= towerPrefabs.Length || towerPrefabs[index] == null) return;
+        if (!IsUnlocked(index))
+        {
+            AugmentManager.Toast($"{index + 1}번 포탑은 아직 잠겨 있어요 · 엘리트 상점에서 해금");
+            return;
+        }
 
         // 이미 같은 타워를 들고 있는 상태에서 해당 키를 한 번 더 누르면 건설 모드 취소 (토글 기능)
         if (isBuildMode && currentTowerIndex == index)

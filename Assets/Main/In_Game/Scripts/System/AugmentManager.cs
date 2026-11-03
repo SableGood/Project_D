@@ -7,19 +7,24 @@ using System.Text;
 
 // 재능 선택 (웨이브 클리어 후 3개 중 1개 고르기)  ※ 코드 안의 Augment(증강) = 게임 용어 '재능'
 //  - 재능 목록: Resources/Augment_Data.csv (구글 시트 Augment_Data 탭 → Tools/CSV 데이터 생성/0 으로 가져오기)
-//  - 언제: Wave_Data의 Info가 Elite / Boss인 웨이브를 클리어했을 때. 보스 웨이브 뒤에는 높은 등급(희귀 이상)만 등장
-//          Info를 아직 읽어오지 않았다면 스테이지 안에서 fallbackWaveNumbers 번째(기본 3, 6) 웨이브 클리어 시
-//  - 선택하는 동안 게임 일시정지. F3 = 테스트로 바로 열기. testEveryWave = 모든 웨이브 뒤에 등장 (테스트용)
-//  - 연출: 화면 위에서 카드 3장이 차례로 내려옴 → 마우스를 올린 카드는 살짝 들려 앞으로 당겨짐 → 고르면 고른 카드가 튀고 나머지는 사라지며 위로 올라감
+//  - 언제: 웨이브를 클리어할 때마다. 단 엘리트 웨이브 뒤에는 재능 대신 엘리트 상점(EliteShop)이 열림
+//          보스 웨이브 뒤에는 높은 등급(희귀 이상)만 등장
+//          Wave_Data의 Info가 비어 있으면 스테이지 안에서 fallbackWaveNumbers 번째(기본 3, 6) 웨이브를 엘리트로 봄
+//  - 선택창에 나왔지만 고르지 않은 재능은 그 판에서 다시 나오지 않음 (RunProgress)
+//  - 선택하는 동안 게임 일시정지. F3 = 테스트로 바로 열기
+//  - 화면 (B안 '작전 기록'): 왼쪽에서 목록 판이 밀려 들어오고, 오른쪽에 고른 재능의 상세가 나옴
+//    1~3 키 / 마우스 올리기 = 고르기, 같은 숫자 다시 / Enter / 클릭 = 확정, ↑↓ = 이동, Esc = 건너뛰기
 //    (일시정지 중이라 모든 연출은 Time.unscaledTime 기준)
-//  - 스킬 재능(은신·수류탄 등)을 고르면 "사용할 키를 눌러주세요" 단계로 넘어감 (Q / E / Shift / F 중 빈 칸)
+//  - 스킬 재능(은신·수류탄 등)을 고르면 "사용할 키를 눌러주세요" 단계로 넘어감 (Q / E / Shift / F 중 빈 칸, Esc = 목록으로)
 //    빈 스킬 칸이 없으면 스킬 재능은 선택지에 나오지 않음
 public class AugmentManager : MonoBehaviour
 {
     public static AugmentManager Instance { get; private set; }
-    public static bool IsOpen => Instance != null && Instance.open;
-    // 선택 창이 닫힌 프레임 (창에서 누른 키가 바로 스킬로 쓰이지 않게)
+    // 재능 선택창 또는 엘리트 상점이 열려 있으면 true (사격·이동·포탑 선택 등을 막는 데 씀)
+    public static bool IsOpen => (Instance != null && Instance.open) || EliteShop.IsOpen;
+    // 선택 창이 닫힌 프레임 (창에서 누른 키가 바로 스킬·포탑 선택으로 쓰이지 않게)
     public static int ClosedFrame { get; private set; } = -10;
+    public static void MarkClosed() => ClosedFrame = Time.frameCount;
 
     [Header("선택지")]
     public int choiceCount = 3;
@@ -29,62 +34,65 @@ public class AugmentManager : MonoBehaviour
     public float[] rarityWeights = { 50f, 30f, 15f, 5f, 0f, 0f };
 
     [Header("등장 시점")]
-    [Tooltip("이 종류(Wave_Data의 Info)의 웨이브를 클리어하면 재능 선택")]
-    public string[] offerOnWaveTypes = { "Elite", "Boss" };
+    [Tooltip("이 종류(Wave_Data의 Info)의 웨이브 뒤에는 재능 대신 엘리트 상점")]
+    public string[] shopWaveTypes = { "Elite" };
     [Tooltip("이 종류의 웨이브 뒤에는 높은 등급만 등장")]
     public string highTierWaveType = "Boss";
     [Tooltip("높은 등급 선택창의 최소 희귀도")]
     public string highTierMinRarity = "희귀";
-    [Tooltip("웨이브 종류 정보가 없을 때: 스테이지 안에서 이 번째 웨이브를 클리어하면 재능 선택")]
+    [Tooltip("웨이브 종류 정보가 없을 때: 스테이지 안에서 이 번째 웨이브를 엘리트로 봄 (상점)")]
     public int[] fallbackWaveNumbers = { 3, 6 };
 
     [Header("테스트")]
     public bool debugKey = true; // F3
-    [Tooltip("테스트: 모든 웨이브를 클리어할 때마다 재능 선택 (끄면 Elite·Boss 웨이브 뒤에만)")]
-    public bool testEveryWave = true;
 
     [Header("연출")]
-    [Tooltip("화면 위에서 내려오는 시간 (초)")]
-    public float dropDuration = 0.55f;
-    [Tooltip("카드가 차례로 내려오는 간격 (초)")]
-    public float cardStagger = 0.08f;
-    [Tooltip("마우스를 올린 카드: 커지는 배율 / 위로 들리는 거리(px)")]
-    public float hoverScale = 1.08f;
-    public float hoverLift = 24f;
+    [Tooltip("왼쪽 판이 밀려 들어오는 시간 (초)")]
+    public float slideDuration = 0.32f;
+    [Tooltip("목록 줄이 차례로 나타나는 간격 (초)")]
+    public float rowStagger = 0.06f;
 
-    private RectTransform content;
-    private Image dim;
-    private const float DimAlpha = 0.72f, CloseDuration = 0.4f, OffscreenY = 1150f;
-    private class CardFx
+    // 화면 배치 (기준 해상도 1920×1080)
+    private const float DimAlpha = 0.45f, CloseDuration = 0.32f;
+    private const float PanelW = 840f, PadX = 96f, ListW = 696f, RowH = 132f, RowGap = 12f;
+    private const float DetailX = 960f, DetailY = 216f, DetailW = 816f, DetailH = 560f;
+
+    private class Row
     {
-        public RectTransform inner, shadow;
-        public Image shadowImage;
+        public AugmentData data;
+        public RectTransform rt;
         public CanvasGroup group;
-        public float hover;
-        public bool hovered;
-        public int index;
+        public Image frame, inner, keyFrame, keyInner, tagBg;
+        public Text key, title, desc, tag;
     }
-    private readonly List<CardFx> cardFx = new List<CardFx>();
+    private readonly List<Row> rows = new List<Row>();
+    private int selected;
     private float openedAt, closeAt, keyShownAt;
     private bool closing;
-    private CardFx chosenFx;
-    private string pendingToast;
+    private Row chosenRow;
+    private string pendingToast, listTitle, listEyebrow;
 
     private bool open;
     private PlayerAugments player;
     private Canvas canvas;
-    private RectTransform root, cardRow;
-    private Text titleText, subtitleText, noteText, ownedText, toastText;
-    private readonly List<GameObject> cards = new List<GameObject>();
+    private Image dim;
+    private RectTransform root, panel, listRoot, keyGrid, detail;
+    private CanvasGroup detailGroup;
+    private Text eyebrowText, titleText, noteText, ownedText, hintText, toastText;
+    private Image detailTagBg;
+    private Text detailTag, detailName, detailDesc, detailLabels, detailValues;
+    private Text detailIconLabel;
+    private Image detailIcon;
     // 스킬 키 선택 단계
     private AugmentData pendingSkill;
-    private RectTransform keyRow;
     private readonly List<GameObject> keyBoxes = new List<GameObject>();
     private float toastUntil;
     private float prevTimeScale = 1f;
     private CursorLockMode prevLock;
     private bool prevCursorVisible;
-    private Font font;
+
+    private const string HintList = "1~3 고르기 · 다시 누르거나 Enter 확정 · Esc 건너뛰기";
+    private const string HintKeys = "Q · E · Shift · F 중 빈 키를 누르세요 · Esc 목록으로";
 
     public static AugmentManager EnsureExists()
     {
@@ -105,14 +113,37 @@ public class AugmentManager : MonoBehaviour
 
     void Update()
     {
-        if (debugKey && !open && Input.GetKeyDown(KeyCode.F3)) Open("재능 선택 (테스트)", "F3으로 연 테스트 선택창입니다", 0);
-        if (open) Animate();
-        if (open && !closing && pendingSkill != null)
+        if (debugKey && !open && Input.GetKeyDown(KeyCode.F3)) Open("재능 선택", "F3 테스트 선택창", 0);
+        if (open)
         {
-            int slot = PlayerSkills.SlotFromKeyDown();
-            if (slot >= 0) PickSkillKey(slot);
+            HandleKeys();
+            Animate();
         }
         if (toastText != null && toastText.gameObject.activeSelf && Time.unscaledTime > toastUntil) toastText.gameObject.SetActive(false);
+    }
+
+    private void HandleKeys()
+    {
+        if (closing) return;
+        if (pendingSkill != null)
+        {
+            if (Input.GetKeyDown(KeyCode.Escape)) { BackToList(); return; }
+            int slot = PlayerSkills.SlotFromKeyDown();
+            if (slot >= 0) PickSkillKey(slot);
+            return;
+        }
+        for (int i = 0; i < rows.Count && i < 9; i++)
+        {
+            if (Input.GetKeyDown(KeyCode.Alpha1 + i) || Input.GetKeyDown(KeyCode.Keypad1 + i))
+            {
+                if (selected == i) Choose(i); else Select(i);
+                return;
+            }
+        }
+        if (Input.GetKeyDown(KeyCode.UpArrow)) Select(Mathf.Max(0, selected - 1));
+        else if (Input.GetKeyDown(KeyCode.DownArrow)) Select(Mathf.Min(rows.Count - 1, selected + 1));
+        else if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter)) Choose(selected);
+        else if (Input.GetKeyDown(KeyCode.Escape)) { PassOver(null); BeginClose(null, "재능 선택을 건너뛰었어요"); }
     }
 
     // ===== 웨이브 클리어 후 (WaveManager가 호출) =====
@@ -120,15 +151,16 @@ public class AugmentManager : MonoBehaviour
     {
         PlayerAugments pa = FindPlayer();
         string waveNote = pa != null ? pa.OnWaveCleared() : null;
-        if (!ShouldOffer(wave, waveNumberInStage))
+        if (IsShopWave(wave, waveNumberInStage))
         {
             if (!string.IsNullOrEmpty(waveNote)) Toast(waveNote);
+            yield return EliteShop.Ensure().OpenAndWait($"엘리트 웨이브 {waveNumberInStage} 클리어 · 다음 엘리트 웨이브 뒤에 다시 열려요");
             yield break;
         }
         bool high = wave != null && string.Equals((wave.waveType ?? "").Trim(), highTierWaveType, System.StringComparison.OrdinalIgnoreCase);
         int minTier = high ? Mathf.Max(0, RarityIndex(highTierMinRarity)) : 0;
-        string sub = high ? $"{waveNumberInStage}웨이브(보스) 클리어 · {highTierMinRarity} 이상 재능 중 하나를 고르세요"
-                          : $"{waveNumberInStage}웨이브 클리어 · 하나를 고르세요";
+        string sub = high ? $"{waveNumberInStage}웨이브(보스) 클리어 · {highTierMinRarity} 이상"
+                          : $"{waveNumberInStage}웨이브 클리어";
         Open("재능 선택", sub, minTier, waveNote);
         while (open) yield return null;
     }
@@ -140,24 +172,32 @@ public class AugmentManager : MonoBehaviour
         return 0; // 비어 있거나 모르는 값 = 일반
     }
 
-    // 이 웨이브를 클리어하면 재능 선택창이 뜨는지 (WaveManager가 '웨이브 종료' 문구를 얼마나 보여줄지 정할 때)
-    public bool WillOffer(WaveData wave, int waveNumberInStage) => ShouldOffer(wave, waveNumberInStage);
+    // 이 웨이브를 클리어하면 선택창(재능 또는 상점)이 뜨는지 (WaveManager가 '웨이브 종료' 문구를 얼마나 보여줄지 정할 때)
+    //  지금은 모든 웨이브 뒤에 무언가 열림
+    public bool WillOffer(WaveData wave, int waveNumberInStage) => true;
 
-    private bool ShouldOffer(WaveData wave, int waveNumberInStage)
+    // 엘리트 웨이브인지 (Info가 비어 있으면 fallbackWaveNumbers 번째 웨이브)
+    private bool IsShopWave(WaveData wave, int waveNumberInStage)
     {
-        if (testEveryWave) return true;
         string type = wave != null ? (wave.waveType ?? "").Trim() : "";
         if (!string.IsNullOrEmpty(type))
         {
-            foreach (string t in offerOnWaveTypes) if (string.Equals(t, type, System.StringComparison.OrdinalIgnoreCase)) return true;
+            foreach (string t in shopWaveTypes) if (string.Equals(t, type, System.StringComparison.OrdinalIgnoreCase)) return true;
             return false;
         }
         foreach (int n in fallbackWaveNumbers) if (n == waveNumberInStage) return true;
         return false;
     }
 
+    // 고른 재능 말고 선택지에 있던 재능은 그 판에서 다시 나오지 않음 (chosen = null: 건너뛰기, 모두)
+    private void PassOver(AugmentData chosen)
+    {
+        foreach (Row r in rows) if (r.data != null && r.data != chosen) RunProgress.PassTalent(r.data.code);
+    }
+
     // ===== 선택 창 =====
-    public void Open(string title, string subtitle, int minTier, string note = null)
+    // title = 큰 제목, eyebrow = 제목 위의 짧은 줄 (예: '2웨이브 클리어'), note = 안내 (웨이브 보너스 등)
+    public void Open(string title, string eyebrow, int minTier, string note = null)
     {
         if (open) return;
         player = FindPlayer();
@@ -177,49 +217,62 @@ public class AugmentManager : MonoBehaviour
         Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
         EnsureEventSystem();
 
+        listTitle = title;
+        listEyebrow = eyebrow;
+        eyebrowText.text = eyebrow;
         titleText.text = title;
-        subtitleText.text = subtitle;
         noteText.text = note ?? "";
         noteText.gameObject.SetActive(!string.IsNullOrEmpty(note));
         ownedText.text = OwnedSummary(player);
+        hintText.text = HintList;
 
-        foreach (GameObject c in cards) Destroy(c);
-        cards.Clear();
-        cardFx.Clear();
-        for (int i = 0; i < choices.Count; i++) cards.Add(MakeCard(choices[i], i));
+        foreach (Row r in rows) if (r.rt != null) Destroy(r.rt.gameObject);
+        rows.Clear();
+        for (int i = 0; i < choices.Count; i++) rows.Add(MakeRow(choices[i], i));
         pendingSkill = null;
-        cardRow.gameObject.SetActive(true);
-        keyRow.gameObject.SetActive(false);
+        listRoot.gameObject.SetActive(true);
+        keyGrid.gameObject.SetActive(false);
 
-        // 연출 시작: 화면 위에서 내려옴
         closing = false;
-        chosenFx = null;
+        chosenRow = null;
         pendingToast = null;
         openedAt = Time.unscaledTime;
-        content.anchoredPosition = new Vector2(0f, OffscreenY);
-        SetDim(0f);
+        Select(0);
         root.gameObject.SetActive(true);
         Animate();
     }
 
-    private void Choose(AugmentData a, CardFx fx)
+    private void Select(int i)
     {
-        if (!open || closing || player == null || pendingSkill != null) return;
+        if (rows.Count == 0) return;
+        selected = Mathf.Clamp(i, 0, rows.Count - 1);
+        for (int k = 0; k < rows.Count; k++) StyleRow(rows[k], k == selected);
+        ShowDetail(rows[selected].data);
+    }
+
+    private void Choose(int i)
+    {
+        if (!open || closing || player == null || pendingSkill != null || i < 0 || i >= rows.Count) return;
+        Select(i);
+        AugmentData a = rows[i].data;
         if (PlayerSkills.IsSkillEffect(a.effect) && player.Skills != null && player.Skills.HasFreeSlot)
         {
             ShowKeySelect(a);
             return;
         }
-        string note = player.Acquire(a);
-        BeginClose(fx, string.IsNullOrEmpty(note) ? $"'{a.name}' 획득" : $"'{a.name}' 획득\n{note}");
+        string got = player.Acquire(a);
+        PassOver(a);
+        BeginClose(rows[i], string.IsNullOrEmpty(got) ? $"'{a.name}' 획득" : $"'{a.name}' 획득\n{got}");
     }
 
     // ===== 연출 =====
-    private static float EaseOutBack(float t) { const float c1 = 1.4f, c3 = c1 + 1f; t -= 1f; return 1f + c3 * t * t * t + c1 * t * t; }
     private static float EaseOutCubic(float t) { t = 1f - t; return 1f - t * t * t; }
     private static float EaseInCubic(float t) => t * t * t;
+    private static float EaseOutBack(float t) { const float c1 = 1.4f, c3 = c1 + 1f; t -= 1f; return 1f + c3 * t * t * t + c1 * t * t; }
 
     private void SetDim(float a) { if (dim != null) { Color c = dim.color; c.a = a; dim.color = c; } }
+
+    private static float RowY(int i) => -i * (RowH + RowGap);
 
     private void Animate()
     {
@@ -227,49 +280,39 @@ public class AugmentManager : MonoBehaviour
         if (!closing)
         {
             float t = now - openedAt;
-            // 판 전체가 위에서 내려옴 (끝에서 살짝 지나쳤다가 제자리)
-            float u = Mathf.Clamp01(t / Mathf.Max(0.05f, dropDuration));
-            content.anchoredPosition = new Vector2(0f, Mathf.LerpUnclamped(OffscreenY, 0f, EaseOutBack(u)));
-            SetDim(DimAlpha * Mathf.Clamp01(t / 0.25f));
-            float dt = Time.unscaledDeltaTime;
-            foreach (CardFx fx in cardFx)
+            // 왼쪽 판이 밀려 들어오고, 줄이 위에서부터 차례로 나타남, 상세는 오른쪽에서 살짝 밀려 나타남
+            float u = EaseOutCubic(Mathf.Clamp01(t / Mathf.Max(0.05f, slideDuration)));
+            panel.anchoredPosition = new Vector2(Mathf.Lerp(-PanelW - 16f, 0f, u), 0f);
+            SetDim(DimAlpha * Mathf.Clamp01(t / 0.2f));
+            for (int i = 0; i < rows.Count; i++)
             {
-                if (fx.inner == null) continue;
-                // 카드는 판보다 조금 늦게, 왼쪽부터 차례로 내려와 '착' 자리 잡음
-                float cu = Mathf.Clamp01((t - 0.1f - fx.index * cardStagger) / 0.45f);
-                float drop = Mathf.LerpUnclamped(260f, 0f, EaseOutBack(cu));
-                bool canHover = cu >= 1f && pendingSkill == null;
-                fx.hover = Mathf.MoveTowards(fx.hover, fx.hovered && canHover ? 1f : 0f, dt * 7f);
-                float h = EaseOutCubic(fx.hover);
-                PoseCard(fx, drop + h * hoverLift, 1f + (hoverScale - 1f) * h, h);
+                Row r = rows[i];
+                if (r.rt == null) continue;
+                float ru = EaseOutCubic(Mathf.Clamp01((t - 0.12f - i * rowStagger) / 0.25f));
+                r.rt.anchoredPosition = new Vector2(Mathf.Lerp(-48f, 0f, ru), RowY(i));
+                r.group.alpha = ru;
             }
-            if (keyRow.gameObject.activeSelf)
+            float du = EaseOutCubic(Mathf.Clamp01((t - 0.15f) / 0.3f));
+            detail.anchoredPosition = new Vector2(DetailX + Mathf.Lerp(40f, 0f, du), -DetailY);
+            detailGroup.alpha = du;
+            if (keyGrid.gameObject.activeSelf)
             {
-                float k = Mathf.Clamp01((now - keyShownAt) / 0.28f);
-                keyRow.localScale = Vector3.one * Mathf.LerpUnclamped(0.8f, 1f, EaseOutBack(k));
+                float k = Mathf.Clamp01((now - keyShownAt) / 0.25f);
+                keyGrid.localScale = Vector3.one * Mathf.LerpUnclamped(0.92f, 1f, EaseOutBack(k));
             }
             return;
         }
 
-        // 닫기: 고른 카드는 한 번 툭 튀고, 나머지는 아래로 가라앉으며 사라짐 → 판 전체가 위로 올라감
+        // 닫기: 고른 줄이 한 번 툭 튀고 → 상세가 사라지며 → 판이 왼쪽으로 빠짐
         float c = Mathf.Clamp01((now - closeAt) / CloseDuration);
-        foreach (CardFx fx in cardFx)
+        if (chosenRow != null && chosenRow.rt != null)
         {
-            if (fx.inner == null) continue;
-            if (fx == chosenFx)
-            {
-                float pop = Mathf.Sin(Mathf.Clamp01(c / 0.45f) * Mathf.PI) * 0.1f;
-                PoseCard(fx, hoverLift * fx.hover + pop * 100f, 1f + (hoverScale - 1f) * fx.hover + pop, fx.hover);
-            }
-            else
-            {
-                float f = Mathf.Clamp01(c / 0.4f);
-                PoseCard(fx, -90f * EaseInCubic(f), 1f - 0.08f * f, 0f);
-                fx.group.alpha = 1f - f;
-            }
+            float pop = Mathf.Sin(Mathf.Clamp01(c / 0.5f) * Mathf.PI) * 0.04f;
+            chosenRow.rt.localScale = Vector3.one * (1f + pop);
         }
-        float up = Mathf.Clamp01((c - 0.35f) / 0.65f);
-        content.anchoredPosition = new Vector2(0f, Mathf.Lerp(0f, OffscreenY, EaseInCubic(up)));
+        float o = EaseInCubic(Mathf.Clamp01((c - 0.2f) / 0.8f));
+        panel.anchoredPosition = new Vector2(Mathf.Lerp(0f, -PanelW - 16f, o), 0f);
+        detailGroup.alpha = 1f - Mathf.Clamp01(c / 0.5f);
         SetDim(DimAlpha * (1f - c));
         if (c >= 1f)
         {
@@ -279,45 +322,44 @@ public class AugmentManager : MonoBehaviour
         }
     }
 
-    // 카드 자세: y = 위로 들린 정도(px), 그림자는 들릴수록 멀어지고 진해짐
-    private static void PoseCard(CardFx fx, float y, float scale, float lift)
-    {
-        fx.inner.anchoredPosition = new Vector2(0f, y);
-        fx.inner.localScale = Vector3.one * scale;
-        if (fx.shadow != null)
-        {
-            fx.shadow.anchoredPosition = new Vector2(6f + lift * 8f, y - 10f - lift * 18f);
-            fx.shadow.localScale = Vector3.one * scale;
-            Color sc = fx.shadowImage.color; sc.a = (0.35f + lift * 0.2f) * (fx.group != null ? fx.group.alpha : 1f); fx.shadowImage.color = sc;
-        }
-    }
-
-    private void BeginClose(CardFx chosen, string toast)
+    private void BeginClose(Row chosen, string toast)
     {
         closing = true;
         closeAt = Time.unscaledTime;
-        chosenFx = chosen;
+        chosenRow = chosen;
         pendingToast = toast;
-        foreach (CardFx fx in cardFx) if (fx.group != null) fx.group.interactable = false;
     }
 
     // ===== 스킬 키 선택 =====
     private void ShowKeySelect(AugmentData a)
     {
         pendingSkill = a;
-        cardRow.gameObject.SetActive(false);
+        listRoot.gameObject.SetActive(false);
+        eyebrowText.text = $"'{a.name}'을(를) 쓸 키";
         titleText.text = "스킬 키 선택";
-        subtitleText.text = $"'{a.name}' — 사용할 키를 눌러주세요";
         noteText.text = "";
         noteText.gameObject.SetActive(false);
+        hintText.text = HintKeys;
 
         foreach (GameObject k in keyBoxes) Destroy(k);
         keyBoxes.Clear();
-        // 키보드 배치 순서로 보여줌: Q  E  Shift  F
-        foreach (int slot in new[] { 1, 2, 0, 3 }) keyBoxes.Add(MakeKeyBox(slot));
-        keyRow.gameObject.SetActive(true);
+        // 키보드 배치 순서: Q  E / Shift  F
+        int[] order = { 1, 2, 0, 3 };
+        for (int i = 0; i < order.Length; i++) keyBoxes.Add(MakeKeyBox(order[i], i % 2, i / 2));
+        keyGrid.gameObject.SetActive(true);
         keyShownAt = Time.unscaledTime;
-        keyRow.localScale = Vector3.one * 0.8f;
+        keyGrid.localScale = Vector3.one * 0.92f;
+    }
+
+    private void BackToList()
+    {
+        pendingSkill = null;
+        keyGrid.gameObject.SetActive(false);
+        listRoot.gameObject.SetActive(true);
+        titleText.text = listTitle;
+        eyebrowText.text = listEyebrow;
+        noteText.gameObject.SetActive(false);
+        hintText.text = HintList;
     }
 
     private void PickSkillKey(int slot)
@@ -326,39 +368,41 @@ public class AugmentManager : MonoBehaviour
         if (player.Skills == null || !player.Skills.IsSlotFree(slot))
         {
             PlayerSkills.Skill s = player.Skills != null ? player.Skills.GetSlot(slot) : null;
-            noteText.text = s != null ? $"{PlayerSkills.SlotKeyNames[slot]} 키에는 이미 '{s.data.name}'이(가) 있어요. 빈 키를 골라주세요" : "빈 키를 골라주세요";
+            noteText.text = s != null ? $"{PlayerSkills.SlotKeyNames[slot]} 키에는 이미 '{s.data.name}'이(가) 있어요" : "빈 키를 골라주세요";
             noteText.gameObject.SetActive(true);
             return;
         }
         AugmentData a = pendingSkill;
         pendingSkill = null;
         player.Acquire(a, slot);
-        BeginClose(null, $"'{a.name}' 획득\n{PlayerSkills.SlotKeyNames[slot]} 키로 사용");
+        PassOver(a);
+        BeginClose(rows.Count > selected ? rows[selected] : null, $"'{a.name}' 획득\n{PlayerSkills.SlotKeyNames[slot]} 키로 사용");
     }
 
-    private GameObject MakeKeyBox(int slot)
+    private GameObject MakeKeyBox(int slot, int col, int row)
     {
         PlayerSkills.Skill owned = player != null && player.Skills != null ? player.Skills.GetSlot(slot) : null;
         bool free = owned == null;
-        RectTransform box = NewRect("Key_" + PlayerSkills.SlotKeyNames[slot], keyRow);
-        box.sizeDelta = new Vector2(190f, 190f);
-        var bg = box.gameObject.AddComponent<Image>();
-        bg.color = free ? CardBg : new Color(0.07f, 0.07f, 0.08f, 0.9f);
-        var outline = box.gameObject.AddComponent<Outline>();
-        outline.effectColor = free ? new Color(1f, 0.85f, 0.35f) : new Color(0.35f, 0.35f, 0.38f);
-        outline.effectDistance = new Vector2(3f, -3f);
+        const float w = 336f, h = 156f, gap = 24f;
+        RectTransform box = NewRect("Key_" + PlayerSkills.SlotKeyNames[slot], keyGrid);
+        TL(box, col * (w + gap), row * (h + gap), w, h);
+        Image frame = box.gameObject.AddComponent<Image>();
+        frame.color = free ? Accent : Line;
+        RectTransform inRt = Inset(NewRect("Inner", box), 4f);
+        Image inner = inRt.gameObject.AddComponent<Image>();
+        inner.color = free ? RowBg : DisabledBg;
+        inner.raycastTarget = false;
         if (free)
         {
             var button = box.gameObject.AddComponent<Button>();
-            button.targetGraphic = bg;
+            button.targetGraphic = frame;
             button.onClick.AddListener(() => PickSkillKey(slot));
         }
-
-        Text key = NewText(box, "Key", 52, FontStyle.Bold, TextAnchor.MiddleCenter, free ? Color.white : new Color(0.5f, 0.5f, 0.53f));
-        TopPlace(key.rectTransform, 30f, 80f);
+        Text key = NewText(box, "Key", 48, FontStyle.Bold, TextAnchor.MiddleCenter, free ? TextMain : Muted);
+        TopPlace(key.rectTransform, 24f, 60f);
         key.text = PlayerSkills.SlotKeyNames[slot];
-        Text sub = NewText(box, "Owned", 22, FontStyle.Normal, TextAnchor.MiddleCenter, free ? new Color(0.62f, 0.65f, 0.7f) : new Color(0.5f, 0.5f, 0.53f));
-        TopPlace(sub.rectTransform, 120f, 50f);
+        Text sub = NewText(box, "Owned", 24, FontStyle.Normal, TextAnchor.MiddleCenter, free ? TextSub : Muted);
+        TopPlace(sub.rectTransform, 96f, 36f);
         sub.text = free ? "비어 있음" : owned.data.name;
         return box.gameObject;
     }
@@ -401,6 +445,7 @@ public class AugmentManager : MonoBehaviour
     private static bool IsEligible(PlayerAugments pa, AugmentData a)
     {
         if (!a.enabled) return false;
+        if (RunProgress.IsTalentPassed(a.code)) return false; // 전에 고르지 않은 재능
         if (pa.StackOf(a.code) >= a.maxStacks) return false;
         if (!string.IsNullOrEmpty(a.prerequisite) && !HasAnyPrerequisite(pa, a.prerequisite)) return false;
         if (PlayerSkills.IsSkillEffect(a.effect) && (pa.Skills == null || !pa.Skills.HasFreeSlot)) return false; // 빈 스킬 칸이 없으면 안 나옴
@@ -484,24 +529,36 @@ public class AugmentManager : MonoBehaviour
     }
 
     // ===== UI =====
-    private static readonly Color CardBg = new Color(0.11f, 0.12f, 0.15f, 0.97f);
+    // 테마: 바탕 #3A3A3A, 강조 #C6E7A7, 글씨 #EDEDE6 (Galmuri11)
+    private static Color Hex(string h) { ColorUtility.TryParseHtmlString(h, out Color c); return c; }
+    private static readonly Color PanelBg = Hex("#3A3A3A");
+    private static readonly Color RowBg = Hex("#333331");
+    private static readonly Color Line = Hex("#4C4C4A");
+    private static readonly Color LineStrong = Hex("#6A6A66");
+    private static readonly Color DisabledBg = Hex("#2E2E2C");
+    private static readonly Color Accent = Hex("#C6E7A7");
+    private static readonly Color Dark = Hex("#232323");
+    private static readonly Color DarkSub = Hex("#3B4A30");
+    private static readonly Color TextMain = Hex("#EDEDE6");
+    private static readonly Color TextSub = Hex("#A8A8A0");
+    private static readonly Color Muted = Hex("#8A8A84");
+    private static readonly Color Gold = Hex("#E8C27A");
+
     private static Color RarityColor(string rarity)
     {
         switch (RarityIndex(rarity))
         {
-            case 1: return new Color(0.42f, 0.85f, 0.45f);  // 고급
-            case 2: return new Color(0.32f, 0.64f, 1f);     // 희귀
-            case 3: return new Color(0.74f, 0.45f, 1f);     // 영웅
-            case 4: return new Color(1f, 0.66f, 0.2f);      // 전설
-            case 5: return new Color(1f, 0.32f, 0.32f);     // 신화
-            default: return new Color(0.70f, 0.74f, 0.80f); // 일반
+            case 1: return Hex("#7EC4CF"); // 고급
+            case 2: return Hex("#8FA8F0"); // 희귀
+            case 3: return Hex("#C49AF0"); // 영웅
+            case 4: return Hex("#F0C46A"); // 전설
+            case 5: return Hex("#F08A7A"); // 신화
+            default: return Hex("#B5B5AD"); // 일반
         }
     }
 
     private void BuildUI()
     {
-        font = UIFont.Regular;
-
         canvas = gameObject.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
         canvas.sortingOrder = 500;
@@ -514,42 +571,91 @@ public class AugmentManager : MonoBehaviour
         root = NewRect("AugmentSelect", transform);
         Stretch(root);
         dim = root.gameObject.AddComponent<Image>();
-        dim.color = new Color(0f, 0f, 0f, DimAlpha);
-        // 내려오고 올라가는 판 (제목·카드·보유 목록)
-        content = NewRect("Content", root);
-        Stretch(content);
+        dim.color = new Color(0.08f, 0.08f, 0.08f, DimAlpha);
 
-        titleText = NewText(content, "Title", 56, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
-        Place(titleText.rectTransform, new Vector2(0f, 380f), new Vector2(1200f, 70f));
-        subtitleText = NewText(content, "Subtitle", 26, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.8f, 0.82f, 0.86f));
-        Place(subtitleText.rectTransform, new Vector2(0f, 320f), new Vector2(1200f, 40f));
-        noteText = NewText(content, "Note", 26, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.85f, 0.35f));
-        Place(noteText.rectTransform, new Vector2(0f, 276f), new Vector2(1400f, 40f));
+        // ── 왼쪽 판 ──
+        panel = NewRect("Panel", root);
+        panel.anchorMin = new Vector2(0f, 0f); panel.anchorMax = new Vector2(0f, 1f);
+        panel.pivot = new Vector2(0f, 0.5f);
+        panel.sizeDelta = new Vector2(PanelW, 0f);
+        panel.gameObject.AddComponent<Image>().color = PanelBg;
+        RectTransform edge = NewRect("Edge", panel);           // 오른쪽 가장자리 강조선
+        edge.anchorMin = new Vector2(1f, 0f); edge.anchorMax = new Vector2(1f, 1f);
+        edge.pivot = new Vector2(0f, 0.5f); edge.sizeDelta = new Vector2(4f, 0f); edge.anchoredPosition = Vector2.zero;
+        edge.gameObject.AddComponent<Image>().color = Accent;
+        RectTransform shade = NewRect("Shade", panel);         // 그 바깥 그림자 띠
+        shade.anchorMin = new Vector2(1f, 0f); shade.anchorMax = new Vector2(1f, 1f);
+        shade.pivot = new Vector2(0f, 0.5f); shade.sizeDelta = new Vector2(8f, 0f); shade.anchoredPosition = new Vector2(4f, 0f);
+        shade.gameObject.AddComponent<Image>().color = new Color(0f, 0f, 0f, 0.35f);
 
-        cardRow = NewRect("Cards", content);
-        Place(cardRow, new Vector2(0f, -10f), new Vector2(1400f, 480f));
-        var layout = cardRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        layout.spacing = 40f;
-        layout.childAlignment = TextAnchor.MiddleCenter;
-        layout.childControlWidth = false; layout.childControlHeight = false;
-        layout.childForceExpandWidth = false; layout.childForceExpandHeight = false;
+        eyebrowText = NewText(panel, "Eyebrow", 24, FontStyle.Normal, TextAnchor.MiddleLeft, Accent);
+        TL(eyebrowText.rectTransform, PadX, 96f, ListW, 36f);
+        titleText = NewText(panel, "Title", 48, FontStyle.Normal, TextAnchor.MiddleLeft, TextMain);
+        TL(titleText.rectTransform, PadX, 136f, ListW, 64f);
+        noteText = NewText(panel, "Note", 24, FontStyle.Normal, TextAnchor.MiddleLeft, Gold);
+        TL(noteText.rectTransform, PadX, 208f, ListW, 36f);
 
-        keyRow = NewRect("SkillKeys", content);
-        Place(keyRow, new Vector2(0f, 20f), new Vector2(1000f, 220f));
-        var keyLayout = keyRow.gameObject.AddComponent<HorizontalLayoutGroup>();
-        keyLayout.spacing = 36f;
-        keyLayout.childAlignment = TextAnchor.MiddleCenter;
-        keyLayout.childControlWidth = false; keyLayout.childControlHeight = false;
-        keyLayout.childForceExpandWidth = false; keyLayout.childForceExpandHeight = false;
-        keyRow.gameObject.SetActive(false);
+        listRoot = NewRect("List", panel);
+        TL(listRoot, PadX, 264f, ListW, 3 * RowH + 2 * RowGap);
+        keyGrid = NewRect("SkillKeys", panel);
+        TL(keyGrid, PadX, 264f, ListW, 336f);
+        keyGrid.pivot = new Vector2(0.5f, 1f);
+        keyGrid.anchoredPosition = new Vector2(PadX + ListW * 0.5f, -264f);
+        keyGrid.gameObject.SetActive(false);
 
-        ownedText = NewText(content, "Owned", 22, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.75f, 0.77f, 0.82f));
-        Place(ownedText.rectTransform, new Vector2(0f, -320f), new Vector2(1600f, 60f));
-        ownedText.horizontalOverflow = HorizontalWrapMode.Wrap;
+        ownedText = NewText(panel, "Owned", 24, FontStyle.Normal, TextAnchor.LowerLeft, TextSub);
+        BL(ownedText.rectTransform, PadX, 124f, ListW, 72f);
+        hintText = NewText(panel, "Hint", 24, FontStyle.Normal, TextAnchor.MiddleLeft, TextMain);
+        BL(hintText.rectTransform, PadX, 72f, ListW, 36f);
+
+        // ── 오른쪽 상세 ──
+        detail = NewRect("Detail", root);
+        detail.anchorMin = detail.anchorMax = new Vector2(0f, 1f);
+        detail.pivot = new Vector2(0f, 1f);
+        detail.sizeDelta = new Vector2(DetailW, DetailH);
+        detail.anchoredPosition = new Vector2(DetailX, -DetailY);
+        detail.gameObject.AddComponent<Image>().color = LineStrong;
+        detailGroup = detail.gameObject.AddComponent<CanvasGroup>();
+        detailGroup.blocksRaycasts = false;
+        RectTransform dIn = Inset(NewRect("Inner", detail), 4f);
+        dIn.gameObject.AddComponent<Image>().color = new Color(0.165f, 0.165f, 0.157f, 0.95f);
+
+        RectTransform icon = NewRect("Icon", detail);
+        TL(icon, 48f, 48f, 192f, 192f);
+        icon.gameObject.AddComponent<Image>().color = Line;
+        Inset(NewRect("Inner", icon), 4f).gameObject.AddComponent<Image>().color = Hex("#2C2C2C");
+        detailIconLabel = NewText(icon, "Label", 12, FontStyle.Normal, TextAnchor.MiddleCenter, Muted);
+        Stretch(detailIconLabel.rectTransform);
+        detailIconLabel.text = "아이콘";
+        detailIcon = Inset(NewRect("Picture", icon), 16f).gameObject.AddComponent<Image>();
+        detailIcon.preserveAspect = true;
+        detailIcon.raycastTarget = false;
+        detailIcon.enabled = false;
+
+        RectTransform tag = NewRect("Tag", detail);
+        TL(tag, 276f, 48f, 200f, 40f);
+        detailTagBg = tag.gameObject.AddComponent<Image>();
+        detailTag = NewText(tag, "Text", 24, FontStyle.Bold, TextAnchor.MiddleCenter, Dark);
+        Stretch(detailTag.rectTransform);
+        detailName = NewText(detail, "Name", 48, FontStyle.Normal, TextAnchor.MiddleLeft, TextMain);
+        TL(detailName.rectTransform, 276f, 100f, 492f, 64f);
+        detailDesc = NewText(detail, "Desc", 24, FontStyle.Normal, TextAnchor.UpperLeft, TextMain);
+        TL(detailDesc.rectTransform, 276f, 176f, 492f, 144f);
+        detailDesc.lineSpacing = 1.4f;
+
+        RectTransform divider = NewRect("Divider", detail);
+        TL(divider, 48f, 336f, DetailW - 96f, 4f);
+        divider.gameObject.AddComponent<Image>().color = Hex("#555552");
+        detailLabels = NewText(detail, "Labels", 24, FontStyle.Normal, TextAnchor.UpperLeft, TextSub);
+        TL(detailLabels.rectTransform, 48f, 368f, 216f, 168f);
+        detailLabels.lineSpacing = 1.5f;
+        detailValues = NewText(detail, "Values", 24, FontStyle.Normal, TextAnchor.UpperLeft, TextMain);
+        TL(detailValues.rectTransform, 288f, 368f, DetailW - 336f, 168f);
+        detailValues.lineSpacing = 1.5f;
 
         root.gameObject.SetActive(false);
 
-        toastText = NewText(transform, "Toast", 30, FontStyle.Bold, TextAnchor.MiddleCenter, new Color(1f, 0.92f, 0.55f));
+        toastText = NewText(transform, "Toast", 30, FontStyle.Bold, TextAnchor.MiddleCenter, Accent);
         toastText.rectTransform.anchorMin = toastText.rectTransform.anchorMax = new Vector2(0.5f, 1f);
         toastText.rectTransform.pivot = new Vector2(0.5f, 1f);
         toastText.rectTransform.anchoredPosition = new Vector2(0f, -150f);
@@ -560,70 +666,159 @@ public class AugmentManager : MonoBehaviour
         toastText.gameObject.SetActive(false);
     }
 
-    private GameObject MakeCard(AugmentData a, int index)
+    // 목록 한 줄: [번호] 이름 / 짧은 설명 ........ [희귀도]
+    private Row MakeRow(AugmentData a, int index)
     {
-        Color rc = RarityColor(a.rarity);
-        // 자리(레이아웃이 위치를 정함) 안에 그림자 + 실제 카드. 연출은 카드와 그림자만 움직임
-        RectTransform slot = NewRect("Card_" + a.code, cardRow);
-        slot.sizeDelta = new Vector2(380f, 480f);
-        RectTransform shadow = NewRect("Shadow", slot);
-        Stretch(shadow);
-        var shadowImage = shadow.gameObject.AddComponent<Image>();
-        shadowImage.color = new Color(0f, 0f, 0f, 0.35f);
-        shadowImage.raycastTarget = false;
-        RectTransform card = NewRect("Card", slot);
-        Stretch(card);
-        var fx = new CardFx { inner = card, shadow = shadow, shadowImage = shadowImage, index = index };
-        fx.group = card.gameObject.AddComponent<CanvasGroup>();
-        cardFx.Add(fx);
-        var hover = card.gameObject.AddComponent<GameHUDHoverRelay>();
-        hover.onEnter = () => fx.hovered = true;
-        hover.onExit = () => fx.hovered = false;
-        var bg = card.gameObject.AddComponent<Image>();
-        bg.color = CardBg;
-        var outline = card.gameObject.AddComponent<Outline>();
-        outline.effectColor = rc;
-        outline.effectDistance = new Vector2(3f, -3f);
+        var r = new Row { data = a };
+        r.rt = NewRect("Row_" + a.code, listRoot);
+        TL(r.rt, 0f, 0f, ListW, RowH);
+        r.rt.anchoredPosition = new Vector2(0f, RowY(index));
+        r.group = r.rt.gameObject.AddComponent<CanvasGroup>();
+        r.frame = r.rt.gameObject.AddComponent<Image>();
+        r.inner = Inset(NewRect("Inner", r.rt), 4f).gameObject.AddComponent<Image>();
+        r.inner.raycastTarget = false;
 
-        var button = card.gameObject.AddComponent<Button>();
-        var colors = button.colors;
-        colors.normalColor = Color.white;
-        colors.highlightedColor = new Color(1.25f, 1.25f, 1.35f);
-        colors.pressedColor = new Color(0.8f, 0.8f, 0.85f);
-        colors.fadeDuration = 0.05f;
-        button.colors = colors;
-        button.targetGraphic = bg;
-        button.onClick.AddListener(() => Choose(a, fx));
+        var hover = r.rt.gameObject.AddComponent<GameHUDHoverRelay>();
+        hover.onEnter = () => { if (!closing && pendingSkill == null) Select(index); };
+        var button = r.rt.gameObject.AddComponent<Button>();
+        button.transition = Selectable.Transition.None;
+        button.onClick.AddListener(() => Choose(index));
 
-        RectTransform band = NewRect("Band", card);
-        band.anchorMin = new Vector2(0f, 1f); band.anchorMax = new Vector2(1f, 1f);
-        band.pivot = new Vector2(0.5f, 1f);
-        band.sizeDelta = new Vector2(0f, 10f);
-        band.anchoredPosition = Vector2.zero;
-        band.gameObject.AddComponent<Image>().color = rc;
+        RectTransform keyBox = NewRect("Key", r.rt);
+        keyBox.anchorMin = keyBox.anchorMax = new Vector2(0f, 0.5f);
+        keyBox.pivot = new Vector2(0f, 0.5f);
+        keyBox.sizeDelta = new Vector2(48f, 48f);
+        keyBox.anchoredPosition = new Vector2(24f, 0f);
+        r.keyFrame = keyBox.gameObject.AddComponent<Image>();
+        r.keyFrame.raycastTarget = false;
+        r.keyInner = Inset(NewRect("Inner", keyBox), 4f).gameObject.AddComponent<Image>();
+        r.keyInner.raycastTarget = false;
+        r.key = NewText(keyBox, "Num", 24, FontStyle.Normal, TextAnchor.MiddleCenter, TextMain);
+        Stretch(r.key.rectTransform);
+        r.key.text = (index + 1).ToString();
 
-        Text rarity = NewText(card, "Rarity", 22, FontStyle.Bold, TextAnchor.MiddleCenter, rc);
-        TopPlace(rarity.rectTransform, 30f, 34f);
-        rarity.text = string.IsNullOrEmpty(a.rarity) ? "일반" : a.rarity;
+        r.title = NewText(r.rt, "Name", 36, FontStyle.Bold, TextAnchor.MiddleLeft, TextMain);
+        LeftMid(r.title.rectTransform, 96f, 22f, 440f, 48f);
+        r.title.horizontalOverflow = HorizontalWrapMode.Overflow;
+        r.title.text = a.name;
+        r.desc = NewText(r.rt, "Desc", 24, FontStyle.Normal, TextAnchor.MiddleLeft, TextSub);
+        LeftMid(r.desc.rectTransform, 96f, -24f, 440f, 36f);
+        r.desc.verticalOverflow = VerticalWrapMode.Truncate;
+        r.desc.text = ShortDesc(a);
 
-        Text name = NewText(card, "Name", 34, FontStyle.Bold, TextAnchor.MiddleCenter, Color.white);
-        TopPlace(name.rectTransform, 74f, 90f);
-        name.text = a.name;
+        RectTransform tagRt = NewRect("Rarity", r.rt);
+        tagRt.anchorMin = tagRt.anchorMax = new Vector2(1f, 0.5f);
+        tagRt.pivot = new Vector2(1f, 0.5f);
+        tagRt.anchoredPosition = new Vector2(-24f, 0f);
+        r.tagBg = tagRt.gameObject.AddComponent<Image>();
+        r.tagBg.raycastTarget = false;
+        r.tag = NewText(tagRt, "Text", 24, FontStyle.Bold, TextAnchor.MiddleCenter, Dark);
+        Stretch(r.tag.rectTransform);
+        r.tag.text = string.IsNullOrEmpty(a.rarity) ? "일반" : a.rarity;
+        tagRt.sizeDelta = new Vector2(r.tag.preferredWidth + 24f, 40f);
 
-        Text desc = NewText(card, "Desc", 23, FontStyle.Normal, TextAnchor.UpperCenter, new Color(0.86f, 0.88f, 0.92f));
-        TopPlace(desc.rectTransform, 182f, 230f);
-        desc.lineSpacing = 1.15f;
-        desc.text = a.description;
+        r.group.alpha = 0f;
+        return r;
+    }
 
+    // 고른 줄은 강조색으로 뒤집힘
+    private static void StyleRow(Row r, bool on)
+    {
+        Color rc = RarityColor(r.data.rarity);
+        r.frame.color = on ? Accent : Line;
+        r.inner.color = on ? Accent : RowBg;
+        r.keyFrame.color = on ? Dark : LineStrong;
+        r.keyInner.color = on ? Dark : RowBg;
+        r.key.color = on ? Accent : TextMain;
+        r.title.color = on ? Dark : TextMain;
+        r.desc.color = on ? DarkSub : TextSub;
+        r.tagBg.color = on ? Dark : rc;
+        r.tag.color = on ? rc : Dark;
+    }
+
+    private void ShowDetail(AugmentData a)
+    {
+        bool skill = PlayerSkills.IsSkillEffect(a.effect);
+        string rarity = string.IsNullOrEmpty(a.rarity) ? "일반" : a.rarity;
+        detailTagBg.color = RarityColor(a.rarity);
+        detailTag.text = rarity + " · " + (skill ? "스킬" : "재능");
+        ((RectTransform)detailTagBg.transform).sizeDelta = new Vector2(detailTag.preferredWidth + 24f, 40f);
+        detailName.text = a.name;
+        detailDesc.text = a.description;
+        Sprite pic = a.Icon;
+        detailIcon.sprite = pic;
+        detailIcon.enabled = pic != null;
+        detailIconLabel.enabled = pic == null;
+
+        var labels = new StringBuilder();
+        var values = new StringBuilder();
+        void Add(string l, string v) { if (labels.Length > 0) { labels.Append('\n'); values.Append('\n'); } labels.Append(l); values.Append(v); }
+        if (a.cooldown > 0f) Add("재사용 대기", $"{a.cooldown:0.#}초");
+        if (skill) Add("사용 키", "고르면 Shift·Q·E·F 중 지정");
         int owned = player != null ? player.StackOf(a.code) : 0;
-        Text foot = NewText(card, "Stack", 21, FontStyle.Normal, TextAnchor.MiddleCenter, new Color(0.62f, 0.65f, 0.7f));
-        foot.rectTransform.anchorMin = new Vector2(0f, 0f); foot.rectTransform.anchorMax = new Vector2(1f, 0f);
-        foot.rectTransform.pivot = new Vector2(0.5f, 0f);
-        foot.rectTransform.sizeDelta = new Vector2(-40f, 40f);
-        foot.rectTransform.anchoredPosition = new Vector2(0f, 22f);
-        foot.text = a.maxStacks > 1 ? (owned > 0 ? $"보유 {owned} / {a.maxStacks}" : $"최대 {a.maxStacks}번 중복") : "중복 불가";
-        if (PlayerSkills.IsSkillEffect(a.effect)) foot.text = "스킬 · 고른 뒤 사용할 키 선택";
-        return slot.gameObject;
+        Add("중복", a.maxStacks > 1 ? $"보유 {owned} / 최대 {a.maxStacks}" : "불가");
+        if (!string.IsNullOrEmpty(a.prerequisite)) Add("필요 재능", PrerequisiteNames(a.prerequisite));
+        detailLabels.text = labels.ToString();
+        detailValues.text = values.ToString();
+    }
+
+    private static string PrerequisiteNames(string prerequisite)
+    {
+        var names = new List<string>();
+        foreach (string c in prerequisite.Split('/', '|', ','))
+        {
+            AugmentData p = AugmentDatabase.Get(c.Trim());
+            if (p != null) names.Add(p.name);
+        }
+        return names.Count > 0 ? string.Join(" 또는 ", names) : prerequisite;
+    }
+
+    // 목록에 쓰는 한 줄 설명: 설명의 첫 문장
+    private static string ShortDesc(AugmentData a)
+    {
+        string d = (a.description ?? "").Replace('\n', ' ').Trim();
+        int cut = -1;
+        foreach (string end in new[] { ". ", "! ", "? " })
+        {
+            int i = d.IndexOf(end, System.StringComparison.Ordinal);
+            if (i >= 0 && (cut < 0 || i < cut)) cut = i;
+        }
+        return cut > 0 ? d.Substring(0, cut + 1) : d;
+    }
+
+    // 왼쪽 위 기준 배치 (x, y = 부모 왼쪽 위에서 오른쪽·아래로)
+    private static void TL(RectTransform r, float x, float y, float w, float h)
+    {
+        r.anchorMin = r.anchorMax = new Vector2(0f, 1f);
+        r.pivot = new Vector2(0f, 1f);
+        r.sizeDelta = new Vector2(w, h);
+        r.anchoredPosition = new Vector2(x, -y);
+    }
+
+    // 왼쪽 아래 기준 배치
+    private static void BL(RectTransform r, float x, float y, float w, float h)
+    {
+        r.anchorMin = r.anchorMax = new Vector2(0f, 0f);
+        r.pivot = new Vector2(0f, 0f);
+        r.sizeDelta = new Vector2(w, h);
+        r.anchoredPosition = new Vector2(x, y);
+    }
+
+    // 왼쪽 가운데 기준 배치 (y = 가운데에서 위로)
+    private static void LeftMid(RectTransform r, float x, float y, float w, float h)
+    {
+        r.anchorMin = r.anchorMax = new Vector2(0f, 0.5f);
+        r.pivot = new Vector2(0f, 0.5f);
+        r.sizeDelta = new Vector2(w, h);
+        r.anchoredPosition = new Vector2(x, y);
+    }
+
+    // 부모를 꽉 채우되 사방으로 d만큼 안쪽 (도트 테두리용)
+    private static RectTransform Inset(RectTransform r, float d)
+    {
+        r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one;
+        r.offsetMin = new Vector2(d, d); r.offsetMax = new Vector2(-d, -d);
+        return r;
     }
 
     private static void EnsureEventSystem()

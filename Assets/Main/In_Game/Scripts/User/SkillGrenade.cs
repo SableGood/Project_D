@@ -9,6 +9,9 @@ public class SkillGrenade : MonoBehaviour
     public enum Kind { HighExplosive, Fragment }
 
     private const float Radius = 0.11f;
+    private const float BodySize = 0.42f;   // 수류탄 그림 높이 (미터)
+    private float spin;
+    private Camera cam;
 
     private Kind kind;
     private Vector3 velocity;
@@ -27,13 +30,30 @@ public class SkillGrenade : MonoBehaviour
         float damage, float radius, float fuse, int fragCount, float fragRange,
         Transform owner, int mobMask, int envMask, float floorY)
     {
-        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        GameObject go;
+        Sprite body = GrenadeArt.Body(kind == Kind.HighExplosive);
+        if (body != null)
+        {
+            // 도트 그림 (카메라를 바라보며 날아가는 동안 빙글빙글 돎)
+            go = new GameObject();
+            go.transform.position = origin;
+            var art = new GameObject("Art");
+            art.transform.SetParent(go.transform, false);
+            var sr = art.AddComponent<SpriteRenderer>();
+            sr.sprite = body;
+            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            float s = BodySize / Mathf.Max(0.01f, body.bounds.size.y);
+            art.transform.localScale = Vector3.one * s;
+        }
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            DestroyImmediate(go.GetComponent<Collider>());
+            go.transform.position = origin;
+            go.GetComponent<MeshRenderer>().sharedMaterial = Mat(kind == Kind.HighExplosive ? new Color(0.32f, 0.45f, 0.26f) : new Color(0.38f, 0.38f, 0.42f));
+        }
         go.name = kind == Kind.HighExplosive ? "Skill_HEGrenade" : "Skill_FragGrenade";
-        DestroyImmediate(go.GetComponent<Collider>());
-        go.transform.position = origin;
-        go.transform.localScale = Vector3.one * Radius * 2f;
-        var r = go.GetComponent<MeshRenderer>();
-        r.sharedMaterial = Mat(kind == Kind.HighExplosive ? new Color(0.32f, 0.45f, 0.26f) : new Color(0.38f, 0.38f, 0.42f));
+        go.transform.localScale = body != null ? Vector3.one : Vector3.one * Radius * 2f;
 
         var g = go.AddComponent<SkillGrenade>();
         g.kind = kind;
@@ -50,6 +70,8 @@ public class SkillGrenade : MonoBehaviour
         g.floorY = floorY;
         g.explodeAt = Time.time + Mathf.Max(0.1f, fuse);
         g.dieAt = Time.time + 12f;
+        g.hasArt = body != null;
+        g.spin = Random.Range(0f, 360f);
         return g;
     }
 
@@ -60,6 +82,18 @@ public class SkillGrenade : MonoBehaviour
         m = new Material(s != null ? s : Shader.Find("Standard")) { color = c };
         mats[c] = m;
         return m;
+    }
+
+    private bool hasArt;
+
+    // 그림은 카메라를 바라보고, 날아가는 동안만 회전
+    void LateUpdate()
+    {
+        if (!hasArt) return;
+        if (cam == null) cam = Camera.main;
+        if (cam == null) return;
+        if (!landed) spin += Time.deltaTime * 540f;
+        transform.rotation = cam.transform.rotation * Quaternion.Euler(0f, 0f, spin);
     }
 
     void Update()
@@ -95,7 +129,7 @@ public class SkillGrenade : MonoBehaviour
         {
             // 터지기 직전 1초: 깜빡임
             float left = explodeAt - Time.time;
-            if (left < 1f) transform.localScale = Vector3.one * Radius * 2f * (1f + 0.25f * Mathf.Abs(Mathf.Sin(Time.time * 18f)));
+            if (left < 1f) transform.localScale = (hasArt ? Vector3.one : Vector3.one * Radius * 2f) * (1f + 0.25f * Mathf.Abs(Mathf.Sin(Time.time * 18f)));
         }
 
         if (kind == Kind.HighExplosive && Time.time >= explodeAt) Explode();
@@ -124,14 +158,14 @@ public class SkillGrenade : MonoBehaviour
         if (kind == Kind.HighExplosive)
         {
             DamageArea(c, radius, damage, null);
-            ExplosionFx(c, radius);
+            ExplosionFx(c, radius, true, floorY);
         }
         else
         {
             // 직접 맞은 적: 파편 하나만큼 피해 (파편은 그 적을 지나침)
             var direct = new HashSet<Health>();
             DamageArea(c, 0.7f, damage, direct);
-            ExplosionFx(c, 0.9f);
+            ExplosionFx(c, 0.45f, false, floorY);
             float step = 360f / Mathf.Max(1, fragCount);
             float offset = Random.Range(0f, step);
             for (int i = 0; i < fragCount; i++)
@@ -156,7 +190,13 @@ public class SkillGrenade : MonoBehaviour
         }
     }
 
-    // 폭발 연출 (그레이박스): 번쩍임 구 + 둥글게 퍼지는 연기
+    // 폭발 연출: 도트 폭발 그림(GrenadeArt)이 있으면 그것, 없으면 그레이박스 (번쩍임 구 + 연기)
+    public static void ExplosionFx(Vector3 center, float radius, bool highExplosive, float floorY)
+    {
+        if (GrenadeArt.PlayExplosion(highExplosive, center, radius, floorY)) return;
+        ExplosionFx(center, radius);
+    }
+
     public static void ExplosionFx(Vector3 center, float radius)
     {
         HitEffects.Impact(center + Vector3.up * 0.2f, false);

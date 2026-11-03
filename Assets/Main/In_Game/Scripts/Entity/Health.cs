@@ -26,6 +26,8 @@ public class Health : MonoBehaviour
     public static event System.Action<Health, float> AnyDamaged;
     // 위와 같지만 공격한 쪽(몹·플레이어 루트)도 함께 알림. 공격자를 모르면 null (재능: 흡혈·피해 반사 등)
     public static event System.Action<Health, float, Transform> AnyDamagedBy;
+    // 지금 들어가는 피해가 화상·중독 같은 지속 피해인지 (StatusEffects가 피해를 넣는 동안만 true → 피격 연출 생략용)
+    public static bool DotTick;
 
     // 재능 등으로 붙는 추가 방어력 / 기본 방어력 무시(부활 페널티)
     [HideInInspector] public float bonusDefense;

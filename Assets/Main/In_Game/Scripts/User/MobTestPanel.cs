@@ -520,6 +520,20 @@ public class MobTestPanel : MonoBehaviour
         UpdateCrosshairButton();
         UpdateSlotButtons();
 
+        // 상태이상 테스트: 지금 있는 몹 전부에게 걸기 (기본 수치)
+        RectTransform statusRow = NewGrid(panel, 3, 36f);
+        NewButton(statusRow, "화상", () => ApplyStatusToAll(m => StatusEffects.Apply(m, StatusType.Burn)));
+        NewButton(statusRow, "둔화", () => ApplyStatusToAll(m => StatusEffects.Apply(m, StatusType.Slow)));
+        NewButton(statusRow, "기절", () => ApplyStatusToAll(m => StatusEffects.Apply(m, StatusType.Stun)));
+        NewButton(statusRow, "중독", () => ApplyStatusToAll(m => StatusEffects.Apply(m, StatusType.Poison)));
+        NewButton(statusRow, "치명타 표시", () => ApplyStatusToAll(m => StatusEffects.MarkCrit(m)));
+        Text barText = null;
+        barText = NewButton(statusRow, "체력바 항상: 꺼짐", () =>
+        {
+            MobHealthBar.AlwaysShow = !MobHealthBar.AlwaysShow;
+            barText.text = "체력바 항상: " + (MobHealthBar.AlwaysShow ? "켜짐" : "꺼짐");
+        });
+
         // 걷기 애니메이션 비교 (애니메이션이 있는 몹이 하나라도 있을 때만)
         animClipNames = CollectAnimClipNames();
         if (animClipNames.Count > 0)
@@ -549,6 +563,17 @@ public class MobTestPanel : MonoBehaviour
         if (-pos.y > maxDown) pos.y = -Mathf.Max(10f, maxDown);
         // 정수 좌표로 (소수점 위치는 글자를 흐리게 만듦)
         panel.anchoredPosition = new Vector2(Mathf.Round(pos.x), Mathf.Round(pos.y));
+    }
+
+    private static void ApplyStatusToAll(System.Action<MobAI> act)
+    {
+        int n = 0;
+        foreach (MobAI m in FindObjectsByType<MobAI>(FindObjectsSortMode.None))
+        {
+            if (m == null || !m.isActiveAndEnabled) continue;
+            act(m); n++;
+        }
+        Debug.Log($"[몹 테스트] 상태이상 적용: 몹 {n}마리");
     }
 
     // 크로스헤어 종류 바꾸기 (씬의 PlayerHUD에 등록된 크로스헤어 순서대로)

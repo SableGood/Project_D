@@ -47,8 +47,64 @@ public class CameraController : MonoBehaviour
     private float blinkStart = -999f;
     private Image blinkImage;
 
+    // ===== 화면 흔들림 · 번쩍임 (폭발 등에서 호출) =====
+    private static CameraController instance;
+    private static float shakeAmp, shakeDur = 1f, shakeUntil;
+    private static Color flashColor;
+    private static float flashAlpha, flashDur = 1f, flashStart = -999f;
+    private Image flashImage;
+
+    // amplitude: 미터 단위 최대 흔들림, duration: 초 (점점 약해짐). 더 약한 흔들림은 진행 중인 것을 덮지 않음
+    public static void Shake(float amplitude, float duration)
+    {
+        if (amplitude <= 0.001f || duration <= 0f) return;
+        float now = Time.time;
+        float current = now < shakeUntil ? shakeAmp * (shakeUntil - now) / shakeDur : 0f;
+        if (amplitude < current) return;
+        shakeAmp = amplitude; shakeDur = duration; shakeUntil = now + duration;
+    }
+
+    // 화면 전체를 color로 잠깐 덮었다가 사라짐 (alpha: 시작 진하기)
+    public static void Flash(Color color, float alpha, float duration)
+    {
+        if (alpha <= 0.01f || duration <= 0f) return;
+        flashColor = color; flashAlpha = Mathf.Clamp01(alpha); flashDur = duration; flashStart = Time.unscaledTime;
+    }
+
+    private void ApplyShake()
+    {
+        float now = Time.time;
+        if (now >= shakeUntil) return;
+        float k = (shakeUntil - now) / Mathf.Max(0.01f, shakeDur);
+        transform.position += Random.insideUnitSphere * shakeAmp * k * k;
+    }
+
+    private void UpdateFlash()
+    {
+        float t = (Time.unscaledTime - flashStart) / Mathf.Max(0.01f, flashDur);
+        float a = t >= 1f || t < 0f ? 0f : flashAlpha * (1f - t);
+        if (a <= 0f && flashImage == null) return;
+        if (flashImage == null)
+        {
+            GameObject go = new GameObject("ExplosionFlashOverlay", typeof(RectTransform));
+            Canvas canvas = go.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 450;   // HUD 위, 메뉴(재능·상점) 아래
+            GameObject img = new GameObject("Flash", typeof(RectTransform));
+            img.transform.SetParent(go.transform, false);
+            RectTransform rt = (RectTransform)img.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            flashImage = img.AddComponent<Image>();
+            flashImage.raycastTarget = false;
+        }
+        Color c = flashColor; c.a = a; flashImage.color = c;
+        if (flashImage.enabled != a > 0f) flashImage.enabled = a > 0f;
+    }
+
     void Start()
     {
+        instance = this;
         cam = GetComponent<Camera>();
         topDownNearClip = cam.nearClipPlane;
     }
@@ -109,6 +165,8 @@ public class CameraController : MonoBehaviour
         transform.rotation = Quaternion.Slerp(tdRot, fpsRot, e);
         cam.fieldOfView = Mathf.Lerp(topDownFOV, fpsFOV, e);
         cam.nearClipPlane = Mathf.Lerp(topDownNearClip, fpsNearClip, e);
+        ApplyShake();
+        UpdateFlash();
     }
 
     // 전환 순간 화면을 어둡게 했다가 빠르게 밝힘
@@ -141,6 +199,8 @@ public class CameraController : MonoBehaviour
 
     void OnDestroy()
     {
+        if (instance == this) instance = null;
         if (blinkImage != null) Destroy(blinkImage.transform.parent.gameObject);
+        if (flashImage != null) Destroy(flashImage.transform.parent.gameObject);
     }
 }

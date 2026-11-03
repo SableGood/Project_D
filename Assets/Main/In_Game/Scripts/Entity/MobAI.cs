@@ -133,6 +133,17 @@ public class MobAI : MonoBehaviour
     public void Stun(float seconds)
     {
         stunUntil = Mathf.Max(stunUntil, Time.time + seconds);
+        // 하던 공격(예비동작·저격 조준)도 끊음
+        if (attackRoutine != null)
+        {
+            StopCoroutine(attackRoutine);
+            attackRoutine = null;
+            state = State.Chase;
+            SetBodyColor(bodyBaseColor);
+            if (aimLine != null) aimLine.enabled = false;
+            lastAttackTime = Time.time;
+            LastAction = "기절로 공격 취소";
+        }
     }
     public bool IsStunned => Time.time < stunUntil;
     private float movingTime;
@@ -181,7 +192,13 @@ public class MobAI : MonoBehaviour
 
         int towerLayer = LayerMask.NameToLayer("Tower");
         towerMask = towerLayer >= 0 ? (1 << towerLayer) : 0;
+
+        // 상태이상과 머리 위 체력바 (보스는 화면 위 BossHealthBar를 쓰므로 체력바 없음)
+        if (GetComponent<StatusEffects>() == null) gameObject.AddComponent<StatusEffects>();
+        if (GetComponent<BossPhases>() == null && GetComponent<MobHealthBar>() == null) gameObject.AddComponent<MobHealthBar>();
     }
+
+    public SpriteRenderer BodySprite => bodySprite;
 
     // 풀에서 꺼내질 때마다 호출 → 스탯/상태 초기화
     void OnEnable()
@@ -763,6 +780,7 @@ public class MobAI : MonoBehaviour
     private void HandleDamaged(float amount)
     {
         if (!isActiveAndEnabled) return;
+        if (Health.DotTick) return; // 화상·중독 지속 피해는 번쩍임·흔들림 없음
         if (flashRoutine != null) StopCoroutine(flashRoutine);
         flashRoutine = StartCoroutine(HitFlashRoutine());
         if (bodyBoard != null) bodyBoard.Shake(hitShakeAmount, hitShakeDuration); // 타격감: 그림만 흔들림

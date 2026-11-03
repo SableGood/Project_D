@@ -18,6 +18,23 @@ public class AugmentData
     public int maxStacks = 1;
     public string prerequisite; // 선행 재능 코드 (비우면 없음)
     public bool enabled = true;
+
+    // 아이콘: Resources/Image/UI/Talents/{코드}.png (없으면 null → 회색 칸·짧은 이름)
+    private Sprite icon;
+    private bool iconLoaded;
+    public Sprite Icon
+    {
+        get
+        {
+            if (!iconLoaded)
+            {
+                iconLoaded = true;
+                icon = Resources.Load<Sprite>("Image/UI/Talents/" + code);
+                if (icon != null) icon.texture.filterMode = FilterMode.Point;
+            }
+            return icon;
+        }
+    }
 }
 
 public static class AugmentDatabase

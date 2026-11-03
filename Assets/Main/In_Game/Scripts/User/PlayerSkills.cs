@@ -72,7 +72,7 @@ public class PlayerSkills : MonoBehaviour
     public float throwGravity = 20f;
     [Tooltip("가까이 / 멀리 던질 때 날아가는 시간 (초)")]
     public float minFlightTime = 0.45f, maxFlightTime = 1.1f;
-    public Color trajectoryColor = new Color(1f, 0.9f, 0.45f, 0.9f);
+    public Color trajectoryColor = new Color(0.776f, 0.906f, 0.655f, 0.9f); // #C6E7A7 (UI 강조색)
 
     [Header("은신")]
     [Tooltip("은신 중 캐릭터·무기 색 (반투명 대신 색으로 표시)")]
@@ -81,7 +81,7 @@ public class PlayerSkills : MonoBehaviour
     public Color cloakScreenTint = new Color(0.35f, 0.55f, 1f, 0.12f);
 
     // 기본값 (시트 수치가 비었을 때)
-    private const float DefaultHeRadius = 3f, DefaultHeFuse = 4f, DefaultFragRange = 6f, DefaultCloak = 3f;
+    private const float DefaultHeRadius = 1.5f, DefaultHeFuse = 4f, DefaultFragRange = 3f, DefaultCloak = 3f;
     private const int DefaultFragCount = 8;
 
     private PlayerController pc;
@@ -430,7 +430,12 @@ public class PlayerSkills : MonoBehaviour
         {
             Skill s = slots[i];
             string label = s != null ? ShortName(s.data) : null;
-            if (label != shownLabel[i]) { hud.SetSkillSlot(i, label); shownLabel[i] = label; }
+            if (label != shownLabel[i])
+            {
+                hud.SetSkillIcon(i, s != null ? s.data.Icon : null);
+                hud.SetSkillSlot(i, label);
+                shownLabel[i] = label;
+            }
             float left = s != null ? Mathf.Max(0f, s.readyTime - Time.time) : 0f;
             float ratio = s != null && s.cooldownUsed > 0f ? left / s.cooldownUsed : 0f;
             hud.SetSkillCooldown(i, ratio, left);

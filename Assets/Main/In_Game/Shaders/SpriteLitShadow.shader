@@ -21,6 +21,8 @@ Shader "Project_D/Sprite Shadow"
         _Cutoff ("Alpha Cutoff", Range(0,1)) = 0.5
         [PerRendererData] _FlashColor ("Flash Color", Color) = (1,1,1,1)
         [PerRendererData] _FlashAmount ("Flash Amount", Range(0,1)) = 0
+        [PerRendererData] _StatusColor ("Status Tint (rgb, a = amount)", Color) = (0,0,0,0)
+        [PerRendererData] _StatusDesat ("Status Desaturate", Range(0,1)) = 0
         _OutlineColor ("Outline Color", Color) = (0,0,0,1)
         _OutlineWidth ("Outline Width (screen px)", Range(0, 4)) = 1.5
         [Toggle] _UprightDepth ("Upright Depth (feet plane)", Float) = 1
@@ -60,6 +62,8 @@ Shader "Project_D/Sprite Shadow"
             fixed _Cutoff;
             fixed4 _FlashColor;
             fixed _FlashAmount;
+            fixed4 _StatusColor;
+            fixed _StatusDesat;
             fixed4 _OutlineColor;
             float _OutlineWidth;
             float _UprightDepth;
@@ -155,6 +159,10 @@ Shader "Project_D/Sprite Shadow"
             {
                 fixed4 c = SampleSpriteTexture(i.uv) * i.color;
                 clip(c.a - _Cutoff);
+                // status effects (StatusEffects.cs): desaturate (stun), then a faint color wash (burn / slow / poison)
+                fixed lum = dot(c.rgb, fixed3(0.299, 0.587, 0.114));
+                c.rgb = lerp(c.rgb, lum.xxx, _StatusDesat);
+                c.rgb = lerp(c.rgb, _StatusColor.rgb, _StatusColor.a);
                 c.rgb = lerp(c.rgb, _FlashColor.rgb, _FlashAmount); // hit flash (MaterialPropertyBlock)
                 if (_FpsLight.z > 0.001)
                 {

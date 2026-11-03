@@ -1,14 +1,24 @@
 ﻿using UnityEngine;
 using UnityEngine.EventSystems;
+using System.Collections.Generic;
 
 public class PlayerWeaponManager : MonoBehaviour
 {
     [Header("무기 장착 위치")]
     public Transform weaponMountPoint;
 
-    [Header("테스트용 무기 프리팹 리스트")]
-    [Tooltip("Tools/플레이어/2. 테스트: 모든 플레이어 무기 장착 메뉴로 자동으로 채울 수 있습니다.")]
+    [Header("무기 목록 (모든 무기)")]
+    [Tooltip("게임에 있는 모든 무기. Tools/플레이어/2. 테스트: 모든 플레이어 무기 장착 메뉴로 자동으로 채울 수 있습니다. 상점·시작 무기는 여기서 코드로 찾음")]
     public GameObject[] weaponPrefabs;
+
+    [Header("무기 보유 (최대 2정)")]
+    [Tooltip("처음 들고 시작하는 무기 코드 (Weapon_Data의 코드명, 예: W002 = 콜트). 최대 2개")]
+    public string[] startWeaponCodes = { "W002" };
+    [Tooltip("테스트: 목록의 모든 무기를 휠로 돌려 쓰기 (끄면 보유한 무기만)")]
+    public bool testAllWeapons = false;
+    public const int MaxOwned = 2;
+    // 보유한 무기 (weaponPrefabs 안의 번호), 최대 2개
+    private readonly List<int> owned = new List<int>();
 
     [Header("1인칭 무기 위치 (모든 무기 공통) - 플레이 중에 조절해 보고 값을 기록해 두세요")]
     [Tooltip("카메라 기준 위치 (x: 오른쪽, y: 위, z: 앞). x를 줄이면 몸 안쪽으로, z를 줄이면 몸 가까이로 옵니다.")]
@@ -62,23 +72,82 @@ public class PlayerWeaponManager : MonoBehaviour
 
         if (weaponPrefabs != null && weaponPrefabs.Length > 0)
         {
-            EquipWeapon(0);
+            owned.Clear();
+            if (startWeaponCodes != null)
+                foreach (string code in startWeaponCodes)
+                {
+                    int i = FindCatalogIndex(code);
+                    if (i >= 0 && !owned.Contains(i) && owned.Count < MaxOwned) owned.Add(i);
+                }
+            if (owned.Count == 0) owned.Add(0);
+            EquipWeapon(owned[0]);
         }
+    }
+
+    // ===== 보유 무기 (엘리트 상점이 사용) =====
+    public IReadOnlyList<int> Owned => owned;
+    public int CurrentCatalogIndex => currentWeaponIndex;
+    public bool HasFreeSlot => owned.Count < MaxOwned;
+    public bool Owns(int catalogIndex) => owned.Contains(catalogIndex);
+    public int CatalogCount => weaponPrefabs != null ? weaponPrefabs.Length : 0;
+
+    public int FindCatalogIndex(string code)
+    {
+        if (weaponPrefabs == null || string.IsNullOrEmpty(code)) return -1;
+        for (int i = 0; i < weaponPrefabs.Length; i++)
+            if (weaponPrefabs[i] != null && weaponPrefabs[i].name == code.Trim()) return i;
+        return -1;
+    }
+
+    // 목록 i번 무기의 데이터 (프리팹에 연결된 것 → 없으면 코드명으로 검색)
+    public PlayerWeaponData DataAt(int i)
+    {
+        if (weaponPrefabs == null || i < 0 || i >= weaponPrefabs.Length || weaponPrefabs[i] == null) return null;
+        Weapon w = weaponPrefabs[i].GetComponent<Weapon>();
+        if (w != null && w.playerWepData != null) return w.playerWepData;
+        return Resources.Load<PlayerWeaponData>($"Data/Weapons/PlayerWeapons/{weaponPrefabs[i].name}");
+    }
+
+    // 새 무기 얻기: 빈 칸이 있으면 추가, 없으면 replaceSlot(0 또는 1) 자리의 무기를 버리고 그 자리에. 얻은 무기를 바로 듦
+    public void GiveWeapon(int catalogIndex, int replaceSlot = -1)
+    {
+        if (catalogIndex < 0 || catalogIndex >= CatalogCount) return;
+        if (owned.Contains(catalogIndex)) { EquipWeapon(catalogIndex); return; }
+        if (owned.Count < MaxOwned) owned.Add(catalogIndex);
+        else if (replaceSlot >= 0 && replaceSlot < owned.Count) owned[replaceSlot] = catalogIndex;
+        else return;
+        EnsureAmmoSlots();
+        savedAmmo[catalogIndex] = -1;
+        EquipWeapon(catalogIndex);
+    }
+
+    // 강화: 보유 칸의 무기를 다음 단계 무기로 바꿈 (탄창은 가득). 들고 있던 무기면 바로 바꿔 듦
+    public void UpgradeOwned(int ownedSlot, int newCatalogIndex)
+    {
+        if (ownedSlot < 0 || ownedSlot >= owned.Count || newCatalogIndex < 0 || newCatalogIndex >= CatalogCount) return;
+        bool wasHeld = owned[ownedSlot] == currentWeaponIndex;
+        owned[ownedSlot] = newCatalogIndex;
+        EnsureAmmoSlots();
+        savedAmmo[newCatalogIndex] = -1;
+        if (wasHeld || owned.Count == 1) EquipWeapon(newCatalogIndex);
     }
 
     void Update()
     {
         if (weaponPrefabs == null || weaponPrefabs.Length == 0) return;
 
-        // 마우스 휠 무기 교체
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (scroll > 0f)
+        // 마우스 휠 무기 교체 (보유한 무기끼리. 테스트 모드면 목록 전체)
+        float scroll = AugmentManager.IsOpen ? 0f : Input.GetAxis("Mouse ScrollWheel");
+        if (scroll != 0f)
         {
-            EquipWeapon((currentWeaponIndex + 1) % weaponPrefabs.Length);
-        }
-        else if (scroll < 0f)
-        {
-            EquipWeapon((currentWeaponIndex - 1 + weaponPrefabs.Length) % weaponPrefabs.Length);
+            int dir = scroll > 0f ? 1 : -1;
+            if (testAllWeapons)
+                EquipWeapon((currentWeaponIndex + dir + weaponPrefabs.Length) % weaponPrefabs.Length);
+            else if (owned.Count > 1)
+            {
+                int pos = Mathf.Max(0, owned.IndexOf(currentWeaponIndex));
+                EquipWeapon(owned[(pos + dir + owned.Count) % owned.Count]);
+            }
         }
 
         if (currentWeapon == null) return;
