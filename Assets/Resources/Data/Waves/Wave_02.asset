@@ -13,17 +13,33 @@ MonoBehaviour:
   m_Name: Wave_02
   m_EditorClassIdentifier: Assembly-CSharp::WaveData
   stageNumber: 1
+  waveType: Normal
   waveSpawnPoints: []
   mobList:
   - mobPrefab: {fileID: 1749953442760117039, guid: ae5476325c7cf114189d78f6ad822e9c, type: 3}
-    spawnCount: 3
+    spawnCount: 8
     spawnPointIndex: 1
   - mobPrefab: {fileID: 2610851043922675693, guid: b2beb42f7c8a622479fbc956e7b6fb16, type: 3}
+    spawnCount: 2
+    spawnPointIndex: 1
+  - mobPrefab: {fileID: 1749953442760117039, guid: 88b5e8629ce1b8646b1458242bc11398, type: 3}
     spawnCount: 1
     spawnPointIndex: 1
   - mobPrefab: {fileID: 1749953442760117039, guid: ae5476325c7cf114189d78f6ad822e9c, type: 3}
-    spawnCount: 3
+    spawnCount: 8
     spawnPointIndex: 2
   - mobPrefab: {fileID: 2610851043922675693, guid: b2beb42f7c8a622479fbc956e7b6fb16, type: 3}
-    spawnCount: 1
+    spawnCount: 2
     spawnPointIndex: 2
+  - mobPrefab: {fileID: 1749953442760117039, guid: ae5476325c7cf114189d78f6ad822e9c, type: 3}
+    spawnCount: 8
+    spawnPointIndex: 3
+  - mobPrefab: {fileID: 2610851043922675693, guid: b2beb42f7c8a622479fbc956e7b6fb16, type: 3}
+    spawnCount: 2
+    spawnPointIndex: 3
+  - mobPrefab: {fileID: 1749953442760117039, guid: ae5476325c7cf114189d78f6ad822e9c, type: 3}
+    spawnCount: 8
+    spawnPointIndex: 4
+  - mobPrefab: {fileID: 2610851043922675693, guid: b2beb42f7c8a622479fbc956e7b6fb16, type: 3}
+    spawnCount: 2
+    spawnPointIndex: 4

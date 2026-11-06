@@ -81,7 +81,7 @@ public class PlayerSkills : MonoBehaviour
     public Color cloakScreenTint = new Color(0.35f, 0.55f, 1f, 0.12f);
 
     // 기본값 (시트 수치가 비었을 때)
-    private const float DefaultHeRadius = 1.5f, DefaultHeFuse = 4f, DefaultFragRange = 3f, DefaultCloak = 3f;
+    private const float DefaultHeRadius = 2.25f, DefaultHeFuse = 1f, DefaultFragRange = 2.25f, DefaultCloak = 3f;
     private const int DefaultFragCount = 8;
 
     private PlayerController pc;
@@ -104,7 +104,9 @@ public class PlayerSkills : MonoBehaviour
     private readonly string[] shownLabel = new string[SlotCount];
 
     public static bool IsCloaked(Transform t) =>
-        Instance != null && t != null && Instance.CloakActive && (t.IsChildOf(Instance.transform) || Instance.transform.IsChildOf(t));
+        Instance != null && t != null && (Instance.CloakActive || Time.time < DecoyUntil) && (t.IsChildOf(Instance.transform) || Instance.transform.IsChildOf(t));
+    // 잔상 (재능): 분신이 있는 동안 몹은 플레이어를 놓치고 가장 가까운 포탑(분신 포함)을 노림
+    public static float DecoyUntil;
     public bool CloakActive => Time.time < cloakUntil;
     public bool IsAiming => aimSlot >= 0;
     // 사격을 막아야 하는지 (조준 중 / 던진 클릭을 아직 떼지 않음)
@@ -197,6 +199,7 @@ public class PlayerSkills : MonoBehaviour
             case FragGrenade:
                 aimSlot = pressed;
                 UpdateAim(s);
+                Sfx.Play("Gun/Frag_Pull", 0.7f);
                 break;
         }
     }
@@ -268,6 +271,7 @@ public class PlayerSkills : MonoBehaviour
         CancelAim();
         if (!ok) return;
 
+        Sfx.Play("Gun/Frag_Bounce", 0.7f); // 던지는 소리
         float dmgMul = PlayerAugments.DamageMul * PlayerAugments.Power * PlayerAugments.ExplosionMul;
         float sizeMul = PlayerAugments.ExplosionMul;
         int mobs = MobMask(), env = EnvMask();

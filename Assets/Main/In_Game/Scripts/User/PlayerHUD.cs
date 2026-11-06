@@ -43,6 +43,9 @@ public class PlayerHUD : MonoBehaviour
     private PlayerController playerController;
     private Vector2[] homePositions;   // 1인칭(화면 가운데) 위치
     private bool hidingCursor;
+    private TowerBuilder builder;
+    private RawImage skillAimMark;      // 1인칭 수류탄 조준 중 화면 가운데 표시 (Cursor_Skill 그림)
+    private const float SkillAimMarkSize = 48f;
 
     public int CrosshairCount => crosshairs != null ? crosshairs.Length : 0;
     public string CrosshairName(int i) => (crosshairs != null && i >= 0 && i < crosshairs.Length && crosshairs[i] != null)
@@ -120,8 +123,13 @@ public class PlayerHUD : MonoBehaviour
         // 탑뷰: 마우스를 따라다님. 단, UI(버튼·창) 위에 있거나 일시정지 중이면 일반 커서로
         bool overUI = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
         bool paused = Time.timeScale <= 0f;
-        bool topDownShow = !fps && showInTopDown && !overUI && !paused && Application.isFocused;
-        bool shouldBeVisible = fps || topDownShow;
+        // 스킬(수류탄) 조준 중·포탑 칸 선택 중: 크로스헤어 대신 마우스 커서(GameCursor의 스킬/포탑 커서)를 보여줌
+        bool skillAim = PlayerSkills.Instance != null && PlayerSkills.Instance.IsAiming;
+        if (builder == null) builder = FindFirstObjectByType<TowerBuilder>();
+        bool towerSel = builder != null && builder.SelectedSlot >= 0;
+        bool topDownShow = !fps && showInTopDown && !overUI && !paused && Application.isFocused && !skillAim && !towerSel;
+        bool shouldBeVisible = (fps && !skillAim) || topDownShow;
+        UpdateSkillAimMark(fps && skillAim && !paused);
 
         for (int i = 0; i < crosshairs.Length; i++)
         {
@@ -143,6 +151,38 @@ public class PlayerHUD : MonoBehaviour
             if (hide != hidingCursor || Cursor.visible == hide) { Cursor.visible = !hide; hidingCursor = hide; }
         }
         else hidingCursor = false;
+    }
+
+    // 1인칭 수류탄 조준: 커서가 잠겨 있으므로 스킬 커서 그림을 화면 가운데에 띄움
+    private void UpdateSkillAimMark(bool show)
+    {
+        if (!show)
+        {
+            if (skillAimMark != null && skillAimMark.gameObject.activeSelf) skillAimMark.gameObject.SetActive(false);
+            return;
+        }
+        if (skillAimMark == null)
+        {
+            Transform parent = null;
+            foreach (GameObject c in crosshairs) if (c != null) { parent = c.transform.parent; break; }
+            if (parent == null) return;
+            Texture2D tex = Resources.Load<Texture2D>("Image/UI/Cursors/Cursor_Skill");
+            if (tex == null) return;
+            tex.filterMode = FilterMode.Point;
+            GameObject go = new GameObject("SkillAimMark", typeof(RectTransform), typeof(RawImage));
+            go.layer = 5;
+            RectTransform rt = (RectTransform)go.transform;
+            rt.SetParent(parent, false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            rt.sizeDelta = new Vector2(SkillAimMarkSize, SkillAimMarkSize);
+            skillAimMark = go.GetComponent<RawImage>();
+            skillAimMark.texture = tex;
+            skillAimMark.raycastTarget = false;
+        }
+        if (!skillAimMark.gameObject.activeSelf) skillAimMark.gameObject.SetActive(true);
+        skillAimMark.transform.SetAsLastSibling();
     }
 
     // 1인칭: 화면 가운데(원래 자리) / 탑뷰: 마우스 위치

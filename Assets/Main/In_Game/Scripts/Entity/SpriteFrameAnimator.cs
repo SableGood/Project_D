@@ -11,6 +11,7 @@ using System.Collections.Generic;
 // 프레임 이미지 규칙: Assets/Resources/Image/Mobs/Anim/{몹코드}/{클립이름}_{번호}.png
 //   예) Anim/MM001/Walk6_01.png ~ Walk6_06.png
 //   [Tools/몹/1. 몹 프리팹 정리] 실행 시 자동으로 이 컴포넌트가 붙고 클립이 채워집니다.
+// 공격 그림: Anim/{몹코드}/Attack3_01~03.png (1 = 들어 올림, 2 = 휘두름, 3 = 마무리). MobAI가 PlayOnce로 잠깐 덮어씀
 [System.Serializable]
 public class SpriteClip
 {
@@ -80,6 +81,12 @@ public class SpriteFrameAnimator : MonoBehaviour
     private float phase;
     private int shownStep = -1;
 
+    // 공격 등 잠깐 덮어쓰는 그림 (걷기·대기보다 우선). 길이 0 이하 = 다음 호출까지 유지
+    private Sprite[] seqFrames;
+    private float[] seqDurations;
+    private float seqStart;
+    public bool IsOverriding => seqFrames != null;
+
     // 정보 표시용
     public bool IsWalking { get; private set; }
     public int CurrentFrameNumber => (IsWalking && CurrentClip != null) ? CurrentClip.FrameAt(shownStep) + 1 : 0;
@@ -107,7 +114,48 @@ public class SpriteFrameAnimator : MonoBehaviour
         shownStep = -1;
         IsWalking = false;
         lastPos = transform.position;
+        seqFrames = null;
         ShowIdle();
+    }
+
+    // 그림 여러 장을 정해진 시간만큼 차례로 보여주고 원래(걷기·대기)로 돌아감
+    public void PlayOnce(Sprite[] frames, float[] durations)
+    {
+        if (frames == null || frames.Length == 0) { StopOverride(); return; }
+        seqFrames = frames;
+        seqDurations = durations;
+        seqStart = Time.time;
+        if (sr == null) sr = GetComponent<SpriteRenderer>();
+        if (frames[0] != null) sr.sprite = frames[0];
+    }
+
+    public void StopOverride()
+    {
+        if (seqFrames == null) return;
+        seqFrames = null;
+        shownStep = -1;
+        ShowIdle();
+    }
+
+    // 덮어쓰는 중이면 true (그 그림을 보여줌)
+    private bool UpdateOverride()
+    {
+        if (seqFrames == null) return false;
+        float t = Time.time - seqStart;
+        for (int i = 0; i < seqFrames.Length; i++)
+        {
+            float d = seqDurations != null && i < seqDurations.Length ? seqDurations[i] : 0.1f;
+            if (d <= 0f || t < d)
+            {
+                Sprite s = seqFrames[i];
+                if (s != null && sr.sprite != s) sr.sprite = s;
+                return true;
+            }
+            t -= d;
+        }
+        seqFrames = null;   // 다 보여줌 → 원래대로
+        shownStep = -1;
+        return false;
     }
 
     void Update()
@@ -117,6 +165,8 @@ public class SpriteFrameAnimator : MonoBehaviour
         if (agent != null && agent.enabled && agent.isOnNavMesh) speed = agent.velocity.magnitude;
         else speed = (transform.position - lastPos).magnitude / Mathf.Max(Time.deltaTime, 0.0001f);
         lastPos = transform.position;
+
+        if (UpdateOverride()) { UpdateBob(false, 0f); return; }
 
         SpriteClip clip = CurrentClip;
         bool noClip = clip == null || clip.Length == 0;

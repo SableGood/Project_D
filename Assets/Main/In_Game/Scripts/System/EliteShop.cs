@@ -10,7 +10,8 @@ using System.Collections.Generic;
 //    · 무기 강화: 보유 무기의 다음 단계. 기본 → 모던, 모던 → 3티어(어썰트·레인저·발리스타 중 하나를 사면서 고름)
 //    · 새 무기: 아직 없는 계열의 기본형. 무기는 최대 2정 → 꽉 차 있으면 버릴 무기를 고르는 창 (취소 가능)
 //    · 포탑 다음 단계(TR011 등)는 프리팹과 업그레이드 기능이 생기면 추가
-//  - 가격은 모두 price(기본 200 골드), 골드가 되는 만큼 여러 개 살 수 있음, 다시 뽑기 무료 1회
+//  - 가격 (v91): 새 포탑 150 / 새 무기 150 (배틀 200) / 무기 강화 → 모던 150, → 3티어 250. 직업(학생) 할인 반영
+//    골드가 되는 만큼 여러 개 살 수 있음. 다시 뽑기: 무료 1회, 이후 30 G부터 할 때마다 +20
 //  - 화면: 아래쪽 진열대 (위에 노란 차양 줄무늬, 골드색 강조). 재능 선택창(왼쪽 목록, 연두색)과 일부러 다르게
 //  - 1~4 키 / 마우스 올리기 = 고르기, Enter / 버튼 = 사기, Esc = 나가기. 여는 동안 일시정지. F4 = 테스트로 열기
 public class EliteShop : MonoBehaviour
@@ -21,8 +22,14 @@ public class EliteShop : MonoBehaviour
     [Header("상점")]
     [Tooltip("진열 칸 수")]
     public int slotCount = 4;
-    [Tooltip("모든 상품의 가격 (골드). 나중에 경제 설계 때 상품별로")]
-    public int price = 200;
+    [Header("가격 (골드)")]
+    public int priceNewTurret = 150;
+    public int priceNewWeapon = 150;
+    public int priceNewWeaponPremium = 200;   // 고급 무기 (배틀)
+    public int priceUpgradeModern = 150;
+    public int priceUpgradeTier3 = 250;
+    public int rerollBaseCost = 30, rerollStep = 20;
+    private int paidRerolls;
     [Tooltip("상점을 열 때마다 공짜로 다시 뽑을 수 있는 횟수")]
     public int freeRerolls = 1;
 
@@ -45,6 +52,7 @@ public class EliteShop : MonoBehaviour
         public string category, title, desc, verb;
         public Sprite icon;
         public bool sold;
+        public int price;
         // 화면
         public RectTransform crate;
         public Image frame, inner, tagBg, buyBg;
@@ -80,7 +88,7 @@ public class EliteShop : MonoBehaviour
 
     void Update()
     {
-        if (debugKey && !open && !AugmentManager.IsOpen && Input.GetKeyDown(KeyCode.F4)) Open("F4 테스트 상점");
+        if (debugKey && PlayerWeaponManager.TestModeAllWeapons && !open && !AugmentManager.IsOpen && Input.GetKeyDown(KeyCode.F4)) Open("F4 테스트 상점");
         if (!open) return;
         HandleKeys();
         Animate();
@@ -108,6 +116,7 @@ public class EliteShop : MonoBehaviour
 
         eyebrowText.text = eyebrow;
         rerollsLeft = Mathf.Max(0, freeRerolls);
+        paidRerolls = 0;
         CloseDialog();
         Restock();
         openedAt = Time.unscaledTime;
@@ -204,11 +213,12 @@ public class EliteShop : MonoBehaviour
                 it.title = d != null && !string.IsNullOrEmpty(d.entityName) ? d.entityName : p.name;
                 it.desc = d != null && !string.IsNullOrEmpty(d.abilityText) ? d.abilityText : $"{i + 1}번 칸 · 짓는 비용 {tb.GetTowerCost(i)} G";
                 it.icon = Resources.Load<Sprite>($"Image/TurretIcons/{p.name}");
+                it.price = Jobs.ShopPrice(priceNewTurret);
                 pool.Add(it);
             }
 
         PlayerWeaponManager pw = Weapons();
-        if (pw != null && pw.CatalogCount > 0)
+        if (pw != null && pw.CatalogCount > 0 && Jobs.CanUseWeapons) // 대통령: 무기 상품 없음
         {
             var ownedFamilies = new HashSet<string>();
             foreach (int o in pw.Owned) ownedFamilies.Add(Family(WName(pw.DataAt(o))));
@@ -226,6 +236,7 @@ public class EliteShop : MonoBehaviour
                     if (ni.Length > 0 && Family(ni) == Family(n) && Tier(ni) == Tier(n) + 1) it.weapons.Add(i);
                 }
                 if (it.weapons.Count == 0) continue;
+                it.price = Jobs.ShopPrice(Tier(n) + 1 >= 3 ? priceUpgradeTier3 : priceUpgradeModern);
                 if (it.weapons.Count == 1)
                 {
                     PlayerWeaponData to = pw.DataAt(it.weapons[0]);
@@ -252,6 +263,7 @@ public class EliteShop : MonoBehaviour
                 if (n.Length == 0 || Tier(n) != 1 || ownedFamilies.Contains(Family(n))) continue;
                 var it = new Item { kind = Kind.NewWeapon, category = "새 무기", verb = "사기", title = Display(d), icon = d.weaponSprite };
                 it.desc = !string.IsNullOrEmpty(d.role) ? d.role.Trim() : n;
+                it.price = Jobs.ShopPrice(Family(n) == "Battle" ? priceNewWeaponPremium : priceNewWeapon);
                 it.weapons.Add(i);
                 pool.Add(it);
             }
@@ -272,10 +284,19 @@ public class EliteShop : MonoBehaviour
         Select(0);
     }
 
+    private int RerollCost => rerollBaseCost + rerollStep * paidRerolls;
+
     private void Reroll()
     {
-        if (closing || dialog != null || rerollsLeft <= 0) return;
-        rerollsLeft--;
+        if (closing || dialog != null) return;
+        if (rerollsLeft > 0) rerollsLeft--;
+        else
+        {
+            GoldManager gm = GoldManager.Instance;
+            int cost = RerollCost;
+            if (gm != null && !gm.TrySpend(cost)) { Notice($"골드가 모자라요 ({cost} G 필요)"); return; }
+            paidRerolls++;
+        }
         Restock();
     }
 
@@ -302,13 +323,13 @@ public class EliteShop : MonoBehaviour
         Item it = items[index];
         if (it.sold || !StillValid(it)) return;
         GoldManager gm = GoldManager.Instance;
-        if (gm != null && !gm.CanAfford(price)) { Notice($"골드가 모자라요 ({price} G 필요)"); gm.NotifyShort(price); return; }
+        if (gm != null && !gm.CanAfford(it.price)) { Notice($"골드가 모자라요 ({it.price} G 필요)"); gm.NotifyShort(it.price); return; }
 
         PlayerWeaponManager pw = Weapons();
         switch (it.kind)
         {
             case Kind.NewTurret:
-                if (!Pay()) return;
+                if (!Pay(it)) return;
                 RunProgress.UnlockTurret(it.turretCode);
                 Sold(it, $"'{it.title}' 해금 · 이제 지을 수 있어요");
                 break;
@@ -317,7 +338,7 @@ public class EliteShop : MonoBehaviour
                 if (pw == null) return;
                 if (pw.HasFreeSlot)
                 {
-                    if (!Pay()) return;
+                    if (!Pay(it)) return;
                     pw.GiveWeapon(it.weapons[0]);
                     Sold(it, $"'{it.title}' 획득");
                 }
@@ -325,9 +346,9 @@ public class EliteShop : MonoBehaviour
                 {
                     var names = new List<string>();
                     foreach (int o in pw.Owned) names.Add(Display(pw.DataAt(o)) + " 버리기");
-                    ShowDialog("무기 교체", $"무기는 2정까지 들 수 있어요. '{it.title}' 대신 버릴 무기를 고르세요.", names, k =>
+                    ShowDialog("무기 교체", $"무기는 {PlayerWeaponManager.MaxOwned}정까지 들 수 있어요. '{it.title}' 대신 버릴 무기를 고르세요.", names, k =>
                     {
-                        if (!Pay()) return;
+                        if (!Pay(it)) return;
                         pw.GiveWeapon(it.weapons[0], k);
                         Sold(it, $"'{it.title}' 획득");
                     });
@@ -341,18 +362,18 @@ public class EliteShop : MonoBehaviour
                 if (slot < 0) return;
                 if (it.weapons.Count == 1)
                 {
-                    if (!Pay()) return;
+                    if (!Pay(it)) return;
                     pw.UpgradeOwned(slot, it.weapons[0]);
                     Sold(it, $"'{it.title}'(으)로 강화");
                 }
                 else
                 {
-                    var names = new List<string>();
-                    foreach (int w in it.weapons) names.Add(Display(pw.DataAt(w)));
+                    var opts = new List<PlayerWeaponData>();
+                    foreach (int w in it.weapons) opts.Add(pw.DataAt(w));
                     int s = slot;
-                    ShowDialog("3티어 업그레이드", $"{Display(pw.DataAt(it.weaponFrom))}을(를) 어느 쪽으로 강화할까요?", names, k =>
+                    ShowWeaponChoice("3티어 업그레이드", $"{Display(pw.DataAt(it.weaponFrom))}을(를) 어느 쪽으로 강화할까요?  <size=20><color=#A8A8A0>숫자 키 · 클릭으로 고르기</color></size>", pw.DataAt(it.weaponFrom), opts, k =>
                     {
-                        if (!Pay()) return;
+                        if (!Pay(it)) return;
                         pw.UpgradeOwned(s, it.weapons[k]);
                         Sold(it, $"'{Display(pw.DataAt(it.weapons[k]))}'(으)로 강화");
                     });
@@ -361,12 +382,12 @@ public class EliteShop : MonoBehaviour
         }
     }
 
-    private bool Pay()
+    private bool Pay(Item it)
     {
         GoldManager gm = GoldManager.Instance;
         if (gm == null) return true;
-        if (gm.TrySpend(price)) return true;
-        Notice($"골드가 모자라요 ({price} G 필요)");
+        if (gm.TrySpend(it.price)) return true;
+        Notice($"골드가 모자라요 ({it.price} G 필요)");
         return false;
     }
 
@@ -414,9 +435,9 @@ public class EliteShop : MonoBehaviour
         it.name.color = can ? TextMain : Muted;
         it.info.color = can ? TextSub : Muted;
         it.tagBg.color = can ? Gold : Hex("#555552");
-        it.tag.text = it.sold ? "구매함" : can ? $"{price} G" : "살 수 없음";
+        it.tag.text = it.sold ? "구매함" : can ? $"{it.price} G" : "살 수 없음";
         it.buy.SetActive(on && can);
-        it.buyText.text = $"{price} G 내고 {it.verb}";
+        it.buyText.text = $"{it.price} G 내고 {it.verb}";
     }
 
     private void RefreshGold()
@@ -432,8 +453,10 @@ public class EliteShop : MonoBehaviour
 
     private void RefreshReroll()
     {
-        bool can = rerollsLeft > 0;
-        rerollText.text = can ? $"다시 뽑기 (무료 {rerollsLeft}회)" : "다시 뽑기 (다 씀)";
+        bool free = rerollsLeft > 0;
+        int g = GoldManager.Instance != null ? GoldManager.Instance.Gold : int.MaxValue;
+        bool can = free || g >= RerollCost;
+        rerollText.text = free ? $"다시 뽑기 (무료 {rerollsLeft}회)" : $"다시 뽑기 ({RerollCost} G)";
         rerollText.color = can ? TextMain : Muted;
         rerollFrame.color = can ? LineStrong : Line;
     }
@@ -684,6 +707,119 @@ public class EliteShop : MonoBehaviour
 
     private System.Action<int> dialogPick;
     private int dialogCount, dialogFrame;
+
+    // ===== 3티어 고르는 창 (v106): 갈래마다 그림 · 역할 · 설명 · 지금 무기와 비교한 능력치 =====
+    private void ShowWeaponChoice(string title, string message, PlayerWeaponData from, List<PlayerWeaponData> options, System.Action<int> onPick)
+    {
+        CloseDialog();
+        dialog = NewRect("Dialog", root);
+        Stretch(dialog);
+        dialog.gameObject.AddComponent<Image>().color = new Color(0.05f, 0.05f, 0.05f, 0.7f);
+
+        const float cardW = 400f, cardH = 560f, gap = 28f, pad = 48f;
+        float boxW = pad * 2f + options.Count * cardW + (options.Count - 1) * gap;
+        float boxH = 150f + cardH + 110f;
+        RectTransform box = NewRect("Box", dialog);
+        box.anchorMin = box.anchorMax = new Vector2(0.5f, 0.5f);
+        box.sizeDelta = new Vector2(boxW, boxH);
+        box.gameObject.AddComponent<Image>().color = Gold;
+        Inset(NewRect("Inner", box), 4f).gameObject.AddComponent<Image>().color = PanelBg;
+
+        Text t = NewText(box, "Title", 36, FontStyle.Bold, TextAnchor.MiddleLeft, TextMain);
+        TL(t.rectTransform, pad, 36f, boxW - pad * 2f, 48f);
+        t.text = title;
+        Text m = NewText(box, "Message", 24, FontStyle.Normal, TextAnchor.UpperLeft, TextSub);
+        m.supportRichText = true;
+        TL(m.rectTransform, pad, 94f, boxW - pad * 2f, 40f);
+        m.text = message;
+
+        for (int i = 0; i < options.Count; i++)
+        {
+            int k = i;
+            PlayerWeaponData d = options[i];
+            RectTransform c = NewRect("Card_" + i, box);
+            TL(c, pad + i * (cardW + gap), 150f, cardW, cardH);
+            Image frame = c.gameObject.AddComponent<Image>();
+            frame.color = LineStrong;
+            Inset(NewRect("Inner", c), 4f).gameObject.AddComponent<Image>().color = Pick;
+            Button btn = c.gameObject.AddComponent<Button>();
+            btn.targetGraphic = frame;
+            ColorBlock cb = btn.colors; cb.highlightedColor = Gold; cb.pressedColor = GoldDark; cb.selectedColor = LineStrong; btn.colors = cb;
+            btn.onClick.AddListener(() => { CloseDialog(); onPick(k); });
+
+            Text num = NewText(c, "Key", 22, FontStyle.Bold, TextAnchor.MiddleLeft, Gold);
+            TL(num.rectTransform, 20f, 14f, 60f, 30f);
+            num.text = (i + 1).ToString();
+
+            // 그림
+            RectTransform pic = NewRect("Picture", c);
+            TL(pic, 30f, 46f, cardW - 60f, 120f);
+            if (d != null && d.weaponSprite != null)
+            {
+                Image img = pic.gameObject.AddComponent<Image>();
+                img.sprite = d.weaponSprite;
+                img.preserveAspect = true;
+                img.raycastTarget = false;
+            }
+
+            Text name = NewText(c, "Name", 28, FontStyle.Bold, TextAnchor.MiddleCenter, TextMain);
+            TL(name.rectTransform, 16f, 176f, cardW - 32f, 36f);
+            name.text = Display(d);
+            Text role = NewText(c, "Role", 20, FontStyle.Normal, TextAnchor.MiddleCenter, Gold);
+            TL(role.rectTransform, 16f, 212f, cardW - 32f, 28f);
+            role.text = d != null && !string.IsNullOrEmpty(d.role) ? d.role.Trim() : "";
+
+            Text desc = NewText(c, "Desc", 19, FontStyle.Normal, TextAnchor.UpperLeft, TextSub);
+            TL(desc.rectTransform, 24f, 248f, cardW - 48f, 80f);
+            desc.text = d != null && !string.IsNullOrEmpty(d.description) ? d.description.Trim() : "";
+
+            Text stats = NewText(c, "Stats", 20, FontStyle.Normal, TextAnchor.UpperLeft, TextMain);
+            stats.supportRichText = true;
+            stats.lineSpacing = 1.1f;
+            TL(stats.rectTransform, 24f, 336f, cardW - 48f, cardH - 352f);
+            stats.text = StatLines(from, d);
+        }
+
+        RectTransform cancel = MakeButton(box, "Cancel", "취소  Esc", 200f, out _, out _);
+        cancel.anchorMin = cancel.anchorMax = new Vector2(1f, 0f); cancel.pivot = new Vector2(1f, 0f);
+        cancel.anchoredPosition = new Vector2(-pad, 32f);
+        cancel.GetComponent<Button>().onClick.AddListener(CloseDialog);
+        dialogPick = onPick;
+        dialogCount = options.Count;
+        dialogFrame = Time.frameCount;
+    }
+
+    // 능력치 줄: 값 + 지금 무기와의 차이 (좋아지면 초록, 나빠지면 빨강)
+    private static string StatLines(PlayerWeaponData a, PlayerWeaponData b)
+    {
+        if (b == null) return "";
+        var sb = new System.Text.StringBuilder();
+        void Row(string label, float va, float vb, string fmt, bool higherBetter, string unit = "")
+        {
+            string v = vb.ToString(fmt) + unit;
+            string diff = "";
+            if (a != null && Mathf.Abs(vb - va) > 0.0001f)
+            {
+                bool better = higherBetter ? vb > va : vb < va;
+                string sign = vb > va ? "+" : "−";
+                diff = $"  <color={(better ? "#9BE08A" : "#F08A7A")}>{sign}{Mathf.Abs(vb - va).ToString(fmt)}{unit}</color>";
+            }
+            sb.Append($"<color=#A8A8A0>{label}</color>  {v}{diff}\n");
+        }
+        int pa = a != null ? Mathf.Max(1, a.projectileCount) : 1, pb = Mathf.Max(1, b.projectileCount);
+        Row("공격력", a != null ? a.damage : 0f, b.damage, "0.#", true);
+        if (pa > 1 || pb > 1) Row("한 번에", pa, pb, "0", true, "발");
+        Row("공격속도", a != null ? a.fireRate : 0f, b.fireRate, "0.##", true, "/초");
+        if (b.UsesAmmo) Row("장탄수", a != null ? a.maxAmmo : 0f, b.maxAmmo, "0", true);
+        if (b.UsesAmmo) Row("재장전", a != null ? a.reloadTime : 0f, b.reloadTime, "0.##", false, "초");
+        Row("사거리", a != null ? a.range : 0f, b.range, "0.#", true);
+        Row("탄퍼짐", a != null ? a.spread : 0f, b.spread, "0.#", false, "°");
+        if (b.armorPenetration > 0f || (a != null && a.armorPenetration > 0f)) Row("방어 무시", a != null ? a.armorPenetration : 0f, b.armorPenetration, "0.#", true);
+        if (b.knockback > 0f || (a != null && a.knockback > 0f)) Row("넉백", a != null ? a.knockback : 0f, b.knockback, "0.##", true);
+        if (b.canPierce) sb.Append("<color=#E8C27A>관통</color>\n");
+        if (!string.IsNullOrEmpty(b.fireMechanism)) sb.Append($"<color=#A8A8A0>{(b.IsAuto ? "연사" : "단발")}</color>");
+        return sb.ToString();
+    }
 
     void LateUpdate()
     {

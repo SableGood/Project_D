@@ -767,7 +767,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 4"
+  m_Text: "\uACF5\uBB34\uC6D0"
 --- !u!222 &171931946
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -1899,7 +1899,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 1"
+  m_Text: "\uACF5\uB3CC\uC774"
 --- !u!222 &321812951
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2432,7 +2432,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 2"
+  m_Text: "\uD5EC\uC2A4 \uC911\uB3C5\uC790"
 --- !u!222 &439444593
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2511,7 +2511,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 6"
+  m_Text: "\uD559\uC0DD"
 --- !u!222 &466395212
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -2737,7 +2737,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 8"
+  m_Text: "\uB300\uD1B5\uB839"
 --- !u!222 &511948525
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -3250,7 +3250,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 7"
+  m_Text: "\uAD70\uC778"
 --- !u!222 &582203612
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -4494,7 +4494,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 5"
+  m_Text: "\uC0AC\uC5C5\uAC00"
 --- !u!222 &926783374
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -5546,7 +5546,7 @@ Transform:
   m_GameObject: {fileID: 1153211634}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 10, y: 0, z: -10}
+  m_LocalPosition: {x: 18, y: 0, z: -9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6707,7 +6707,7 @@ Transform:
   m_GameObject: {fileID: 1548835083}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 10, y: 0, z: 10}
+  m_LocalPosition: {x: 18, y: 0, z: 9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6929,7 +6929,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uAC8C\uC784 \uC885\uB8CC\n"
+  m_Text: "\uAC8C\uC784 \uC885\uB8CC"
 --- !u!222 &1594943962
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7008,7 +7008,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 \uC120\uD0DD"
+  m_Text: "\uC9C1\uC5C5 \uC120\uD0DD"
 --- !u!222 &1597312848
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -7163,7 +7163,7 @@ Transform:
   m_GameObject: {fileID: 1606214932}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -10, y: 0, z: -10}
+  m_LocalPosition: {x: -18, y: 0, z: -9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -7451,7 +7451,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: "\uC7AC\uB2A5 3"
+  m_Text: "\uB3C8 \uB9CE\uC740 \uBC31\uC218"
 --- !u!222 &1698643130
 CanvasRenderer:
   m_ObjectHideFlags: 0
@@ -8442,7 +8442,7 @@ Transform:
   m_GameObject: {fileID: 1853679826}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -10, y: 0, z: 10}
+  m_LocalPosition: {x: -18, y: 0, z: 9}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

@@ -155,6 +155,7 @@ public class SkillGrenade : MonoBehaviour
     private void Explode()
     {
         Vector3 c = transform.position;
+        Sfx.Play(kind == Kind.HighExplosive ? "Gun/HE_Explode" : "Gun/Frag_Explode", 0.85f);
         if (kind == Kind.HighExplosive)
         {
             DamageArea(c, radius, damage, null);

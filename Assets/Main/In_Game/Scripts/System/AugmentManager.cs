@@ -21,7 +21,7 @@ public class AugmentManager : MonoBehaviour
 {
     public static AugmentManager Instance { get; private set; }
     // 재능 선택창 또는 엘리트 상점이 열려 있으면 true (사격·이동·포탑 선택 등을 막는 데 씀)
-    public static bool IsOpen => (Instance != null && Instance.open) || EliteShop.IsOpen;
+    public static bool IsOpen => (Instance != null && Instance.open) || EliteShop.IsOpen || TalentBrowser.IsOpen;
     // 선택 창이 닫힌 프레임 (창에서 누른 키가 바로 스킬·포탑 선택으로 쓰이지 않게)
     public static int ClosedFrame { get; private set; } = -10;
     public static void MarkClosed() => ClosedFrame = Time.frameCount;
@@ -31,7 +31,14 @@ public class AugmentManager : MonoBehaviour
     // 희귀도 (낮은 등급 → 높은 등급)
     public static readonly string[] Rarities = { "일반", "고급", "희귀", "영웅", "전설", "신화" };
     [Tooltip("희귀도별 등장 가중치 (일반 / 고급 / 희귀 / 영웅 / 전설 / 신화). 0이면 등장하지 않음")]
-    public float[] rarityWeights = { 50f, 30f, 15f, 5f, 0f, 0f };
+    public float[] rarityWeights = { 55f, 30f, 12f, 3f, 0f, 0f };
+    [Tooltip("웨이브마다 일반 → 희귀 / 영웅으로 옮기는 확률 (%p)")]
+    public float rarePerWave = 1.5f, epicPerWave = 0.5f;
+    [Tooltip("보스 뒤 높은 등급 선택창의 희귀도별 확률 (일반 / 고급 / 희귀 / 영웅 / 전설 / 신화)")]
+    public float[] highTierWeights = { 0f, 0f, 75f, 25f, 0f, 0f };
+    private int rollWave = 1;   // 지금 선택창을 연 웨이브 (스테이지 안 번호)
+    // 침팬지(무능력도 능력이다): 선택지 +1장
+    private int ChoiceCount => choiceCount + (GameManager.Instance != null && GameManager.Instance.SelectedCharacter == 0 ? 1 : 0);
 
     [Header("등장 시점")]
     [Tooltip("이 종류(Wave_Data의 Info)의 웨이브 뒤에는 재능 대신 엘리트 상점")]
@@ -91,7 +98,7 @@ public class AugmentManager : MonoBehaviour
     private CursorLockMode prevLock;
     private bool prevCursorVisible;
 
-    private const string HintList = "1~3 고르기 · 다시 누르거나 Enter 확정 · Esc 건너뛰기";
+    private const string HintList = "숫자 키로 고르기 · 다시 누르거나 Enter 확정 · Esc 건너뛰기";
     private const string HintKeys = "Q · E · Shift · F 중 빈 키를 누르세요 · Esc 목록으로";
 
     public static AugmentManager EnsureExists()
@@ -113,7 +120,7 @@ public class AugmentManager : MonoBehaviour
 
     void Update()
     {
-        if (debugKey && !open && Input.GetKeyDown(KeyCode.F3)) Open("재능 선택", "F3 테스트 선택창", 0);
+        // F3: 테스트 모드면 재능 목록(TalentBrowser)이 열림 (v101). 예전 무작위 3개 테스트 창은 없앰
         if (open)
         {
             HandleKeys();
@@ -150,6 +157,7 @@ public class AugmentManager : MonoBehaviour
     public IEnumerator OfferAfterWave(WaveData wave, int waveNumberInStage)
     {
         PlayerAugments pa = FindPlayer();
+        rollWave = Mathf.Max(1, waveNumberInStage);
         string waveNote = pa != null ? pa.OnWaveCleared() : null;
         if (IsShopWave(wave, waveNumberInStage))
         {
@@ -203,7 +211,7 @@ public class AugmentManager : MonoBehaviour
         player = FindPlayer();
         if (player == null) { Debug.LogWarning("[재능] 플레이어를 찾을 수 없어 재능 선택을 건너뜁니다."); return; }
 
-        List<AugmentData> choices = Roll(player, choiceCount, null, minTier);
+        List<AugmentData> choices = Roll(player, ChoiceCount, null, minTier);
         if (choices.Count == 0)
         {
             Toast(note ?? "더 얻을 수 있는 재능이 없습니다");
@@ -419,8 +427,70 @@ public class AugmentManager : MonoBehaviour
     }
 
     // ===== 뽑기 =====
-    // minTier 이상 등급에서 먼저 뽑고, 모자라면 낮은 등급으로 채움
+    // v91: 희귀도를 먼저 뽑고, 그 희귀도 안에서 재능을 고르게 뽑음 (재능 수가 많은 등급이 확률을 독차지하지 않게)
+    //  일반 55 / 고급 30 / 희귀 12 / 영웅 3 에서 시작해 웨이브마다 일반 → 희귀 +1.5%p, 영웅 +0.5%p
+    //  보스 뒤(minTier > 0): 희귀 75 / 영웅 25. 뽑힌 희귀도에 남은 재능이 없으면 다른 희귀도에서
     private List<AugmentData> Roll(PlayerAugments pa, int count, AugmentData exclude, int minTier)
+    {
+        var byTier = new List<AugmentData>[Rarities.Length];
+        for (int t = 0; t < byTier.Length; t++) byTier[t] = new List<AugmentData>();
+        foreach (AugmentData a in AugmentDatabase.All)
+        {
+            if (a == exclude || !IsEligible(pa, a) || Weight(a) <= 0f) continue;
+            byTier[Mathf.Clamp(RarityIndex(a.rarity), 0, byTier.Length - 1)].Add(a);
+        }
+        float[] w = TierWeights(minTier);
+        var result = new List<AugmentData>();
+        while (result.Count < count)
+        {
+            float total = 0f;
+            for (int t = 0; t < w.Length; t++) if (byTier[t].Count > 0) total += w[t];
+            int tier = -1;
+            if (total > 0f)
+            {
+                float r = Random.value * total;
+                for (int t = 0; t < w.Length; t++)
+                {
+                    if (byTier[t].Count == 0 || w[t] <= 0f) continue;
+                    r -= w[t];
+                    if (r <= 0f) { tier = t; break; }
+                }
+                if (tier < 0) for (int t = w.Length - 1; t >= 0; t--) if (byTier[t].Count > 0 && w[t] > 0f) { tier = t; break; }
+            }
+            if (tier < 0)
+            {
+                // 확률이 있는 등급이 다 떨어짐 → 높은 등급부터 남은 것으로 채움
+                for (int t = byTier.Length - 1; t >= 0; t--) if (byTier[t].Count > 0) { tier = t; break; }
+                if (tier < 0) break;
+            }
+            List<AugmentData> pool = byTier[tier];
+            AugmentData pick = pool[Random.Range(0, pool.Count)];
+            result.Add(pick);
+            pool.Remove(pick);
+        }
+        return result;
+    }
+
+    // 지금 웨이브의 희귀도별 확률
+    private float[] TierWeights(int minTier)
+    {
+        float[] w = new float[Rarities.Length];
+        if (minTier > 0 && highTierWeights != null)
+        {
+            for (int t = 0; t < w.Length && t < highTierWeights.Length; t++) w[t] = t >= minTier ? Mathf.Max(0f, highTierWeights[t]) : 0f;
+            return w;
+        }
+        for (int t = 0; t < w.Length && rarityWeights != null && t < rarityWeights.Length; t++) w[t] = Mathf.Max(0f, rarityWeights[t]);
+        float steps = Mathf.Max(0, rollWave - 1);
+        float rare = rarePerWave * steps, epic = epicPerWave * steps;
+        float moved = Mathf.Min(w[0], rare + epic);
+        float k = rare + epic > 0f ? moved / (rare + epic) : 0f;
+        w[0] -= moved; w[2] += rare * k; w[3] += epic * k;
+        return w;
+    }
+
+    // (예전 방식) 재능마다 희귀도 가중치 — '무작위' 재능에서만 씀
+    private List<AugmentData> RollPerItem(PlayerAugments pa, int count, AugmentData exclude, int minTier)
     {
         var high = new List<AugmentData>();
         var low = new List<AugmentData>();
@@ -544,7 +614,7 @@ public class AugmentManager : MonoBehaviour
     private static readonly Color Muted = Hex("#8A8A84");
     private static readonly Color Gold = Hex("#E8C27A");
 
-    private static Color RarityColor(string rarity)
+    public static Color RarityColor(string rarity)
     {
         switch (RarityIndex(rarity))
         {

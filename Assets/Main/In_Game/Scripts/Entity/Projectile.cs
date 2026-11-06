@@ -12,12 +12,79 @@ public class Projectile : MonoBehaviour
     // 외부(Weapon)에서 주입받는 동적 스펙
     [HideInInspector] public int attackDamage;
     [HideInInspector] public Transform attacker; // 쏜 개체 (피격 알림용, 없으면 null)
+    [HideInInspector] public bool isCrit;        // 치명타 탄 (플레이어 무기, Weapon이 정함)
+    [HideInInspector] public bool fromPlayerGun; // 플레이어 총에서 나간 탄 (재능 효과)
     [HideInInspector] public LayerMask targetLayer;
     [HideInInspector] public float armorPenetration;   // 방어구 무시
     [HideInInspector] public float knockbackDistance;  // 명중 시 넉백 거리
     [HideInInspector] public float hitSlowPercent;     // 명중 시 이동 둔화 (제압 사격)
     [HideInInspector] public float hitSlowDuration;
-    [HideInInspector] public float stopDistance;       // >0 이면 이 거리(조준점)에서 멈추고 착탄 이펙트 (플레이어 총탄)
+    [HideInInspector] public float stopDistance;
+    // v109: 그림 탄 (몹 총탄·포탄). null이면 프리팹 원래 모양(육면체 등)
+    [HideInInspector] public Sprite visualSprite;
+    [HideInInspector] public float visualLength = 0.4f;   // 그림 길이 (m)
+    [HideInInspector] public string explosionFx;          // 범위 폭발 때 재생할 도트 이펙트 (PixelFx 이름)
+    private SpriteRenderer visualSr;
+    private Renderer[] meshRenderers;
+    private Vector3 lastPos;
+
+    // 그림 탄 켜기/끄기 (풀에서 재사용되므로 쏠 때마다 호출)
+    public void SetVisual(Sprite s, float length)
+    {
+        if (meshRenderers == null) meshRenderers = GetComponentsInChildren<MeshRenderer>(true);
+        visualSprite = s;
+        visualLength = length;
+        foreach (Renderer r in meshRenderers) if (r != null) r.enabled = s == null;
+        if (s != null && visualSr == null)
+        {
+            GameObject go = new GameObject("Visual");
+            go.transform.SetParent(transform, false);
+            visualSr = go.AddComponent<SpriteRenderer>();
+            visualSr.sortingOrder = 15;
+            visualSr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
+        if (visualSr != null)
+        {
+            visualSr.enabled = s != null;
+            visualSr.sprite = s;
+        }
+        lastPos = transform.position;
+    }
+
+    // 그림 탄: 카메라를 보게 하고, 화면에서 날아가는 방향으로 머리를 돌림 (그림은 위쪽이 머리)
+    void LateUpdate()
+    {
+        if (visualSr == null || !visualSr.enabled || visualSprite == null) return;
+        Camera cam = Camera.main;
+        Vector3 v = transform.position - lastPos;
+        lastPos = transform.position;
+        if (cam == null) return;
+        Transform vt = visualSr.transform;
+        float px = visualLength / Mathf.Max(1f, visualSprite.rect.height);
+        // 부모(프리팹) 크기를 상쇄
+        Vector3 ps = transform.lossyScale;
+        vt.localScale = new Vector3(px / Mathf.Max(1e-4f, ps.x), px / Mathf.Max(1e-4f, ps.y), px / Mathf.Max(1e-4f, ps.z));
+        float ang = 0f;
+        if (v.sqrMagnitude > 1e-8f)
+        {
+            float x = Vector3.Dot(v, cam.transform.right), y = Vector3.Dot(v, cam.transform.up);
+            ang = Mathf.Atan2(y, x) * Mathf.Rad2Deg - 90f;
+            lastAng = ang;
+        }
+        else ang = lastAng;
+        vt.rotation = cam.transform.rotation * Quaternion.Euler(0f, 0f, ang);
+    }
+    private float lastAng;
+
+    // 범위 폭발 설정: radius > 0 이면 그 반경으로 폭발, 아니면 프리팹 원래 설정으로 되돌림 (풀 재사용 대비)
+    private bool aoeDefaultsSaved, defaultAoe;
+    private float defaultRadius;
+    public void ApplyAoe(float radius)
+    {
+        if (!aoeDefaultsSaved) { aoeDefaultsSaved = true; defaultAoe = isAreaOfEffect; defaultRadius = explosionRadius; }
+        if (radius > 0f) { isAreaOfEffect = true; explosionRadius = radius; }
+        else { isAreaOfEffect = defaultAoe; explosionRadius = defaultRadius; }
+    }       // >0 이면 이 거리(조준점)에서 멈추고 착탄 이펙트 (플레이어 총탄)
 
     private Transform target;
     private Vector3 straightDir;
@@ -166,7 +233,10 @@ public class Projectile : MonoBehaviour
             directHealth = hitTransform.GetComponentInParent<Health>();
             if (directHealth != null && !directHealth.IsDead)
             {
+                Health.NextHitCrit = isCrit;
+                Weapon.MarkPlayerGunHit(fromPlayerGun);
                 directHealth.TakeDamage(attackDamage, armorPenetration, attacker);
+                Weapon.MarkPlayerGunHit(false);
                 KnockbackReceiver.TryApply(directHealth.transform, hitDir, knockbackDistance);
                 if (hitSlowPercent > 0f) MobAI.TryApplySlow(directHealth, hitSlowPercent, hitSlowDuration);
             }
@@ -174,6 +244,14 @@ public class Projectile : MonoBehaviour
 
         if (isAreaOfEffect)
         {
+            // v109: 폭발 이펙트 (도트). 연기 고리가 폭발 범위만큼 퍼지게
+            if (!string.IsNullOrEmpty(explosionFx) && PixelFx.Has(explosionFx))
+            {
+                Camera cam = Camera.main;
+                Vector3 p = transform.position + (cam != null ? -cam.transform.forward * 0.3f : Vector3.zero);
+                PixelFx.Play(explosionFx, p, Vector3.zero, explosionRadius * 2f / 56f);
+                Sfx.Play("Gun/Frag_Explode", 0.55f);
+            }
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, targetLayer);
             HashSet<Health> damaged = new HashSet<Health>();
             if (directHealth != null) damaged.Add(directHealth); // ★ 직격 대상은 폭발 피해 중복 제외
@@ -195,6 +273,8 @@ public class Projectile : MonoBehaviour
 
     private void ReturnToPool()
     {
+        isCrit = false;
+        fromPlayerGun = false;
         if (TryGetComponent(out PooledObject pooledObj))
         {
             pooledObj.ReleaseToPool();

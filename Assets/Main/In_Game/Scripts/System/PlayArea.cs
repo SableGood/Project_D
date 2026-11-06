@@ -9,6 +9,8 @@ using UnityEngine.SceneManagement;
 //  - 바깥: Floor와 같은 텍스처의 넓은 바닥(자연스럽게 이어짐) + 빨간 빗금 (불투명도 20%, 넓은 간격)
 //  - 씬에 'Floor'가 있으면 실행 시 자동으로 생깁니다. (씬 파일은 수정하지 않음, 바깥 바닥도 실행 중에만 생성)
 //  * Floor 크기를 바꾸면 내비메쉬(몹 길찾기)도 다시 구워야 몹이 새 범위를 모두 다닙니다.
+//  * 섬 지형(IslandMap) 파일이 있으면: Floor를 섬 지형으로 바꾸고, 빗금·경계선·바깥 바닥 대신 물로 둘러쌈
+//      구역 = 맵 전체(물 포함). 플레이어는 물에 들어갈 수 있지만(WaterHazard) 몹은 땅에서만 다님
 public class PlayArea : MonoBehaviour
 {
     public static PlayArea Instance { get; private set; }
@@ -107,6 +109,12 @@ public class PlayArea : MonoBehaviour
             {
                 if (a == null || !a.isActiveAndEnabled) continue;
                 Vector3 p = a.transform.position;
+                if (IslandMap.IsWater(p, 0.05f))
+                {
+                    // 넉백 등으로 물에 밀려난 몹: 가장 가까운 땅(내비메쉬)으로 되돌림
+                    if (NavMesh.SamplePosition(p, out NavMeshHit hit, 6f, NavMesh.AllAreas)) a.Warp(hit.position);
+                    continue;
+                }
                 if (IsInside(p, 0f)) continue;
                 Vector3 c = Clamp(p, edgeMargin);
                 if (a.isOnNavMesh) a.Warp(c); else a.transform.position = c;
@@ -119,6 +127,16 @@ public class PlayArea : MonoBehaviour
     // ------------------------------------------------------------------
     private void Build(GameObject floor, Renderer floorRenderer)
     {
+        if (IslandMap.Apply(floor))
+        {
+            Area = IslandMap.MapBounds;
+            groundY = Area.center.y;
+            BuildWalls(Area.center, Area.size.x, Area.size.z);
+            gameObject.AddComponent<WaterHazard>();
+            Debug.Log($"[구역] 섬 지형 {Area.size.x:0.#} x {Area.size.z:0.#} m");
+            return;
+        }
+
         Area = floorRenderer.bounds;
         groundY = Area.max.y;
         Vector3 c = Area.center;

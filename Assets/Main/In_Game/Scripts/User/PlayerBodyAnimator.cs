@@ -58,7 +58,50 @@ public class PlayerBodyAnimator : MonoBehaviour
     [Header("1인칭 무기 그림자")]
     public bool fpsWeaponShadow = true;
 
+    [Header("새 몸 그림 + 손만 따로 (F5로 예전 그림과 비교)")]
+    [Tooltip("켜면 Resources/{armRigFolder}의 새 그림(팔 없는 상체 + 새 하체)을 쓰고, 무기는 작은 손 두 개가 잡음")]
+    public bool armRigTest = false; // v112: 기본은 팔이 그려진 원래 통짜 그림 (테스트 모드 F5로 팔 분리 그림과 비교)
+    public KeyCode armRigToggleKey = KeyCode.F5;
+    public string armRigFolder = "Image/Players/Chimp_Arm";
+    [Tooltip("무기 손잡이가 도는 중심 (상체 피벗=엉덩이 기준, 미터) — 가슴 앞")]
+    public Vector2 gripCenter = new Vector2(-0.02f, 0.31f);
+    [Tooltip("조준 방향으로 손잡이가 중심에서 떨어지는 거리 (가로, 세로 반지름)")]
+    public Vector2 gripRadius = new Vector2(0.25f, 0.17f);
+    [Tooltip("대기 자세에서 무기를 아래로 내리는 각도")]
+    public float idleArmAngle = -35f;
+    [Tooltip("앞손 위치 = 손잡이에서 무기 방향으로 '무기 길이 × 이 비율'")]
+    public float frontGripRatio = 0.33f;
+    [Tooltip("이 각도보다 위를 겨누면 무기·손이 몸 뒤로 (sin 값, 0.6 ≒ 37도). 1보다 크면 항상 몸 앞")]
+    public float gunBehindAboveSin = 2f;
+    public float handDepthBias = 0.02f; // 무기보다 앞
+    [Header("팔 (어깨 → 팔꿈치 → 손, 길이가 정해진 두 마디)")]
+    [Tooltip("어깨 높이 (상체 피벗=엉덩이 기준, 미터)")]
+    public float shoulderY = 0.40f;
+    [Tooltip("뒷손(손잡이) 팔의 어깨: 조준하는 쪽으로 이만큼")]
+    public float rearShoulderX = 0.125f;
+    [Tooltip("앞손 팔의 어깨: 조준하는 쪽으로 이만큼 (0 = 가슴 가운데)")]
+    public float frontShoulderX = 0f;
+    public float upperArmLength = 0.2167f;
+    public float forearmLength = 0.2167f;
+    [Tooltip("손이 너무 멀 때 팔을 최대 몇 배까지 늘릴지")]
+    public float maxArmStretch = 1.15f;
+    [Tooltip("한 손 무기: 어깨에서 손잡이까지 거리 (팔을 거의 다 뻗은 길이)")]
+    public float oneHandReach = 0.38f;
+    public float armDepthBias = 0.04f;
+
     public Dir CurrentDir { get; private set; }
+
+    // ---- 새 몸 + 손 ----
+    private Sprite handRearSprite, handFrontSprite;
+    private SpriteRenderer handRear, handFront;
+    private Sprite upperArmSprite, forearmSprite;
+    private SpriteRenderer rearUpper, rearFore, frontUpper, frontFore;
+    private Vector3 lastFeet;
+    private bool lastFeetValid, gunBehind, aimLeft;
+    private bool armRigLoaded, armRigOn;
+    private Sprite[] oldUpper, oldWalk, rigUpper, rigWalk;
+    private float oldUpperJointV, oldLowerJointV;
+    private const float RigUpperJointV = 14f / 240f, RigLowerJointV = 1f - 5f / 240f;
 
     private PlayerController pc;
     private PlayerWeaponManager weapons;
@@ -100,11 +143,209 @@ public class PlayerBodyAnimator : MonoBehaviour
         lastActiveTime = -999f;
     }
 
+    void Start()
+    {
+        if (armRigTest) SetArmRig(true);
+    }
+
+    // 새 그림 불러오기 (한 번만)
+    private bool LoadArmRig()
+    {
+        if (armRigLoaded) return rigUpper != null;
+        armRigLoaded = true;
+        string[] names = { "Idle", "Up", "UpRight", "Right", "DownRight", "Down", "DownLeft", "Left", "UpLeft" };
+        var up = new Sprite[9];
+        for (int i = 0; i < 9; i++)
+        {
+            up[i] = Resources.Load<Sprite>($"{armRigFolder}/Upper/Upper_{names[i]}");
+            if (up[i] == null) { Debug.LogWarning($"[새 몸 그림] {armRigFolder}/Upper/Upper_{names[i]} 그림이 없어 끕니다."); return false; }
+        }
+        var walk = new List<Sprite>();
+        for (int i = 1; i <= 12; i++)
+        {
+            Sprite s = Resources.Load<Sprite>($"{armRigFolder}/Lower/Walk6_{i:00}");
+            if (s == null) break;
+            walk.Add(s);
+        }
+        handRearSprite = Resources.Load<Sprite>($"{armRigFolder}/Hands/Hand_Rear");
+        handFrontSprite = Resources.Load<Sprite>($"{armRigFolder}/Hands/Hand_Front");
+        upperArmSprite = Resources.Load<Sprite>($"{armRigFolder}/Hands/UpperArm");
+        forearmSprite = Resources.Load<Sprite>($"{armRigFolder}/Hands/Forearm");
+        if (walk.Count == 0 || handRearSprite == null) { Debug.LogWarning("[새 몸 그림] 하체 또는 손 그림이 없어 끕니다."); return false; }
+        rigUpper = up;
+        rigWalk = walk.ToArray();
+        return true;
+    }
+
+    private void SetArmRig(bool on)
+    {
+        if (on && !LoadArmRig()) on = false;
+        if (on == armRigOn) return;
+        armRigOn = on;
+        if (on)
+        {
+            oldUpper = upperSprites; oldWalk = walkFrames;
+            oldUpperJointV = upperJointV; oldLowerJointV = lowerJointV;
+            upperSprites = rigUpper; walkFrames = rigWalk;
+            upperJointV = RigUpperJointV; lowerJointV = RigLowerJointV;
+            if (handRear == null && upperRenderer != null)
+            {
+                handRear = MakeHand("Hand_Rear", handRearSprite);
+                handFront = MakeHand("Hand_Front", handFrontSprite != null ? handFrontSprite : handRearSprite);
+                if (upperArmSprite != null && forearmSprite != null)
+                {
+                    rearUpper = MakeHand("Arm_Rear_Upper", upperArmSprite);
+                    rearFore = MakeHand("Arm_Rear_Fore", forearmSprite);
+                    frontUpper = MakeHand("Arm_Front_Upper", upperArmSprite);
+                    frontFore = MakeHand("Arm_Front_Fore", forearmSprite);
+                }
+                PlayerHands ph = gameObject.GetComponent<PlayerHands>();
+                if (ph == null) ph = gameObject.AddComponent<PlayerHands>();
+                ph.body = this;
+            }
+            SetRigPartsActive(true);
+        }
+        else
+        {
+            if (oldUpper != null) upperSprites = oldUpper;
+            if (oldWalk != null) walkFrames = oldWalk;
+            upperJointV = oldUpperJointV; lowerJointV = oldLowerJointV;
+            SetRigPartsActive(false);
+        }
+        waistCache.Clear();
+        Debug.Log(on ? "[새 몸 그림] 켜짐 (F5로 예전 그림)" : "[새 몸 그림] 꺼짐 (F5로 새 그림)");
+    }
+
+    private void SetRigPartsActive(bool on)
+    {
+        foreach (SpriteRenderer r in new[] { handRear, handFront, rearUpper, rearFore, frontUpper, frontFore })
+            if (r != null) r.gameObject.SetActive(on);
+    }
+
+    // 두 마디 팔: 어깨(상체 로컬)에서 손(월드)까지. 팔꿈치는 아래쪽으로 굽힘
+    private void PoseArm(SpriteRenderer up, SpriteRenderer fore, Vector2 shoulder, Vector3 handWorld, bool show, float bias)
+    {
+        if (up == null || fore == null) return;
+        up.enabled = fore.enabled = show;
+        if (!show) return;
+        Transform ut = upperRenderer.transform;
+        Vector2 hand = ut.InverseTransformPoint(handWorld);
+        Vector2 d = hand - shoulder;
+        float dist = Mathf.Max(0.001f, d.magnitude);
+        float k = Mathf.Clamp(dist / (upperArmLength + forearmLength), 1f, Mathf.Max(1f, maxArmStretch));
+        float lu = upperArmLength * k, lf = forearmLength * k;
+        float dd = Mathf.Min(dist, lu + lf - 0.0001f);
+        float cosA = Mathf.Clamp((lu * lu + dd * dd - lf * lf) / (2f * lu * dd), -1f, 1f);
+        float a = Mathf.Acos(cosA) * Mathf.Rad2Deg;
+        float baseAng = Mathf.Atan2(d.y, d.x) * Mathf.Rad2Deg;
+        float upAng = aimLeft ? baseAng + a : baseAng - a; // 팔꿈치가 아래로
+        Vector2 elbow = shoulder + new Vector2(Mathf.Cos(upAng * Mathf.Deg2Rad), Mathf.Sin(upAng * Mathf.Deg2Rad)) * lu;
+        Vector2 fd = hand - elbow;
+        float foreAng = Mathf.Atan2(fd.y, fd.x) * Mathf.Rad2Deg;
+        float foreK = fd.magnitude / Mathf.Max(0.001f, forearmLength);
+        float sy = aimLeft ? -1f : 1f; // 밝은 쪽(위)이 항상 위로
+        up.transform.localPosition = new Vector3(shoulder.x, shoulder.y, 0f);
+        up.transform.localRotation = Quaternion.Euler(0f, 0f, upAng);
+        up.transform.localScale = new Vector3(k, sy, 1f);
+        fore.transform.localPosition = new Vector3(elbow.x, elbow.y, 0f);
+        fore.transform.localRotation = Quaternion.Euler(0f, 0f, foreAng);
+        fore.transform.localScale = new Vector3(Mathf.Min(foreK, maxArmStretch), sy, 1f);
+        var shadow = lowerRenderer.shadowCastingMode;
+        up.shadowCastingMode = fore.shadowCastingMode = shadow;
+        SetFeet(up, lastFeet, lastFeetValid ? 1f + bias : 0f);
+        SetFeet(fore, lastFeet, lastFeetValid ? 1f + bias + 0.005f : 0f);
+    }
+
+    private SpriteRenderer MakeHand(string n, Sprite sp)
+    {
+        GameObject go = new GameObject(n);
+        go.layer = upperRenderer.gameObject.layer;
+        go.transform.SetParent(upperRenderer.transform, false);
+        SpriteRenderer r = go.AddComponent<SpriteRenderer>();
+        r.sprite = sp;
+        r.sharedMaterial = upperRenderer.sharedMaterial;
+        r.sortingLayerID = upperRenderer.sortingLayerID;
+        r.sortingOrder = upperRenderer.sortingOrder + 2;
+        r.receiveShadows = upperRenderer.receiveShadows;
+        return r;
+    }
+
+    // 한 손으로 드는 무기: 권총·근접 (앞손 없음)
+    private bool OneHanded()
+    {
+        Weapon w = weapons != null ? weapons.CurrentWeapon : null;
+        PlayerWeaponData d = w != null ? w.playerWepData : null;
+        if (d == null) return false;
+        string role = d.role ?? "";
+        string n = d.weaponName ?? "";
+        return role.Contains("권총") || role.Contains("근접") || n.StartsWith("Colt") || !d.UsesAmmo;
+    }
+
+    // 무기 손잡이 위치: 가슴 앞에서 조준 방향으로 타원을 그리며 돎
+    private Vector3 GripPoint(Vector2 aim, bool idle, bool fps)
+    {
+        float th = fps ? 0f : Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg;
+        if (idle) th = aim.x < 0f ? 180f - idleArmAngle : idleArmAngle;
+        float c = Mathf.Cos(th * Mathf.Deg2Rad), s = Mathf.Sin(th * Mathf.Deg2Rad);
+        gunBehind = !fps && !idle && s > gunBehindAboveSin;
+        aimLeft = c < 0f;
+        // 한 손 무기(권총·근접): 팔을 뻗어 어깨에서 조준 방향으로 (몸 위에 접히면 털색이 겹쳐 팔이 안 보임)
+        if (OneHanded())
+        {
+            float side = aimLeft ? -1f : 1f;
+            Vector2 sh = new Vector2(side * rearShoulderX, shoulderY);
+            return upperRenderer.transform.TransformPoint(new Vector3(sh.x + oneHandReach * c, sh.y + oneHandReach * s, 0f));
+        }
+        return upperRenderer.transform.TransformPoint(new Vector3(gripCenter.x + gripRadius.x * c, gripCenter.y + gripRadius.y * s, 0f));
+    }
+
+    // 무기가 자리를 잡은 뒤(WeaponVisual 다음) PlayerHands가 호출: 뒷손 = 손잡이, 앞손 = 무기 앞쪽
+    public void UpdateHands()
+    {
+        if (!armRigOn || handRear == null) return;
+        bool fps = pc != null && pc.isFirstPerson;
+        var shadow = lowerRenderer.shadowCastingMode;
+        handRear.shadowCastingMode = shadow;
+        handFront.shadowCastingMode = shadow;
+        if (weapons == null || weapons.weaponMountPoint == null || weapons.CurrentWeapon == null)
+        {
+            handRear.enabled = handFront.enabled = false;
+            PoseArm(rearUpper, rearFore, Vector2.zero, Vector3.zero, false, 0f);
+            PoseArm(frontUpper, frontFore, Vector2.zero, Vector3.zero, false, 0f);
+            return;
+        }
+        Transform mount = weapons.weaponMountPoint;
+        handRear.enabled = !fps;
+        handRear.transform.position = mount.position;
+
+        SpriteRenderer w = MainWeaponRenderer();
+        bool two = !OneHanded() && w != null && w.sprite != null;
+        handFront.enabled = two && !fps;
+        if (two)
+        {
+            Transform visual = w.transform.parent != null ? w.transform.parent : w.transform;
+            float len = w.sprite.bounds.size.x * Mathf.Abs(w.transform.lossyScale.x);
+            handFront.transform.position = mount.position + visual.right * len * frontGripRatio;
+        }
+        handRear.flipX = handFront.flipX = aimLeft;
+
+        float bias = gunBehind ? upperDepthBias - 0.015f : weaponDepthBias + handDepthBias;
+        SetFeet(handRear, lastFeet, lastFeetValid ? 1f + bias : 0f);
+        SetFeet(handFront, lastFeet, lastFeetValid ? 1f + bias : 0f);
+
+        // 팔: 어깨에서 손까지 (무기 뒤, 상체 앞)
+        float side = aimLeft ? -1f : 1f;
+        float armBias = gunBehind ? upperDepthBias - 0.02f : armDepthBias;
+        PoseArm(rearUpper, rearFore, new Vector2(side * rearShoulderX, shoulderY), handRear.transform.position, !fps, armBias);
+        PoseArm(frontUpper, frontFore, new Vector2(side * frontShoulderX, shoulderY), handFront.transform.position, handFront.enabled, armBias - 0.004f);
+    }
+
     void LateUpdate()
     {
         if (lowerRenderer == null || upperRenderer == null) return;
         if (cam == null) cam = Camera.main;
         bool fps = pc != null && pc.isFirstPerson;
+        if (Input.GetKeyDown(armRigToggleKey) && PlayerWeaponManager.TestModeAllWeapons && !AugmentManager.IsOpen) SetArmRig(!armRigOn);
 
         // 1인칭에서는 내 몸이 안 보이므로(그림자만) 하체 설정을 상체에도 그대로
         upperRenderer.shadowCastingMode = lowerRenderer.shadowCastingMode;
@@ -155,8 +396,13 @@ public class PlayerBodyAnimator : MonoBehaviour
         RefreshWeaponRenderers();
         if (!fps && weapons != null && weapons.weaponMountPoint != null)
         {
-            Vector2 hand = Get(handOffsets, (int)dir);
-            weapons.weaponMountPoint.position = upperRenderer.transform.TransformPoint(hand);
+            if (armRigOn)
+                weapons.weaponMountPoint.position = GripPoint(aim, dir == Dir.Idle, fps);
+            else
+            {
+                Vector2 hand = Get(handOffsets, (int)dir);
+                weapons.weaponMountPoint.position = upperRenderer.transform.TransformPoint(hand);
+            }
             CacheWeaponPose();
         }
         UpdateWeaponShadow(fps, dir);
@@ -165,19 +411,23 @@ public class PlayerBodyAnimator : MonoBehaviour
         bool valid = !fps && board != null && board.HasFeet;
         Vector3 feet = board != null ? board.FeetWorld : transform.position;
         SetFeet(upperRenderer, feet, valid ? 1f + upperDepthBias : 0f);
+        lastFeet = feet; lastFeetValid = valid;
+        if (fps) gunBehind = false;
+        // 새 몸 그림: 위를 겨누면 무기가 몸 뒤로
+        float wb = armRigOn && gunBehind ? upperDepthBias - 0.025f : weaponDepthBias;
         foreach (SpriteRenderer r in weaponRenderers)
             if (r != null)
             {
                 // 탄창(Magazine)은 무기 그림 바로 뒤에 (같은 깊이면 깜빡거림)
-                float bias = r.name == "Magazine" ? weaponDepthBias - 0.01f                                   // 무기 뒤
-                           : (r.name == "MagazineFront" || r.name == "Cover") ? weaponDepthBias + 0.01f   // 무기 앞 (기관총 탄통·덮개)
-                           : weaponDepthBias;
+                float bias = r.name == "Magazine" ? wb - 0.01f                                   // 무기 뒤
+                           : (r.name == "MagazineFront" || r.name == "Cover") ? wb + 0.01f   // 무기 앞 (기관총 탄통·덮개)
+                           : wb;
                 SetFeet(r, feet, valid ? 1f + bias : 0f);
             }
 
         // ---- 이음새: 상체 아래 / 하체 위 가장자리 외곽선 생략 ----
-        // 상체: 허리 아래로 늘어진 털(최대 6텍셀)까지 외곽선 생략, 단 하체가 실제로 있는 허리 폭 안에서만 (옆의 손은 외곽선 유지)
-        SetVector(upperRenderer, OutlineSkipId, new Vector4(upperJointV, Mathf.Max(upperJoinTexels, 7f), 0f, 0f));
+        // 상체: 허리 아래로 늘어진 털(최대 11텍셀, v86에서 그림을 아래로 늘림)까지 외곽선 생략, 단 하체가 실제로 있는 허리 폭 안에서만 (옆의 손은 외곽선 유지)
+        SetVector(upperRenderer, OutlineSkipId, new Vector4(upperJointV, Mathf.Max(upperJoinTexels, 12f), 0f, 0f));
         SetVector(upperRenderer, OutlineSkipSpanId, WaistSpan());
         SetVector(lowerRenderer, OutlineSkipId, new Vector4(0f, 0f, lowerJointV, lowerJoinTexels));
     }

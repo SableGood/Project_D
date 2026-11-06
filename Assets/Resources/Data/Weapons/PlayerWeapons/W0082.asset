@@ -20,7 +20,7 @@ MonoBehaviour:
   fireMode: Hitscan
   fireMechanism: Auto
   range: 21
-  damage: 27
+  damage: 21
   reloadTime: 1.7
   maxAmmo: 22
   fireRate: 9

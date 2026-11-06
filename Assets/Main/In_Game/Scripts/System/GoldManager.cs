@@ -30,7 +30,7 @@ public class GoldManager : MonoBehaviour
     private static void ResetStatics() { instance = null; quitting = false; }
 
     [Header("골드")]
-    public int startGold = 300;
+    public int startGold = 250;
     [Tooltip("웨이브를 클리어할 때마다 받는 보너스")]
     public int waveClearBonus = 50;
 

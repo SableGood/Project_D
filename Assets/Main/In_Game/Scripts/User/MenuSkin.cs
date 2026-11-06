@@ -3,7 +3,7 @@ using UnityEngine.UI;
 using UnityEngine.SceneManagement;
 using System.Collections.Generic;
 
-// 씬의 메뉴 창(Canvas > Center_Panels: 일시정지·게임오버·난이도·캐릭터·재능 선택)을
+// 씬의 메뉴 창(Canvas > Center_Panels: 일시정지·게임오버·난이도·캐릭터·직업 선택)을
 // 하단 HUD(GameHUD)와 같은 디자인으로 실행 중에 다시 꾸밉니다.
 //  - 씬 파일은 수정하지 않습니다. (버튼 연결·GameManager 동작은 그대로)
 //  - 씬이 열릴 때마다 자동 적용 (Center_Panels가 없는 씬은 무시)
@@ -220,7 +220,19 @@ public class MenuSkin : MonoBehaviour
         hover.onEnter = () => SetFrameColor(frame, Accent);
         hover.onExit = () => SetFrameColor(frame, FrameNormal);
 
-        foreach (Text t in b.GetComponentsInChildren<Text>(true)) StyleText(t, 22, Color.white, true);
+        foreach (Text t in b.GetComponentsInChildren<Text>(true))
+        {
+            StyleText(t, 22, Color.white, true);
+            // 버튼 바로 아래 글자는 버튼 전체를 채워 가운데 정렬 (씬에서 위치가 어긋나 있던 글자 바로잡기. 예: 게임 오버 '게임 종료')
+            if (t.transform.parent == b.transform)
+            {
+                RectTransform rt = t.rectTransform;
+                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.offsetMin = rt.offsetMax = Vector2.zero;
+                rt.localScale = Vector3.one;
+            }
+        }
     }
 
     // ── 캐릭터 카드: 일러스트 + 이름 + 능력치 + 고유능력 ──
@@ -295,7 +307,7 @@ public class MenuSkin : MonoBehaviour
 
     // Mob_Data.csv에서 코드 줄의 특정 칸 (13 = 고유능력, 14 = 특징)
     private static Dictionary<string, string[]> mobData;
-    private static string MobDataText(string code, int column)
+    public static string MobDataText(string code, int column)
     {
         if (mobData == null)
         {

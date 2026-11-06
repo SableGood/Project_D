@@ -92,6 +92,9 @@ public class TurretAI : MonoBehaviour
             if (w == null) continue;
             // 데이터 주입 (데이터가 없으면 무기 프리팹의 기본값 사용)
             if (myData != null) w.InitWeapon(myData.defaultWeapon);
+            // 저격 포탑: 방어 무시 (시트에 칸이 없어 코드 값. TR030 10, TR032 15)
+            if (myData != null && myData.entityCode == "TR030") w.SetArmorPenetration(10f);
+            if (myData != null && myData.entityCode == "TR032") w.SetArmorPenetration(15f);
             if (w.attackDamage <= 0)
             {
                 w.attackDamage = Mathf.RoundToInt(fallbackDamage);
@@ -226,7 +229,7 @@ public class TurretAI : MonoBehaviour
         if (w == null) return;
 
         w.FireAt(aimPoint);
-        nextFireTime = Time.time + Mathf.Max(0.05f, MainWeapon.attackCooldown);
+        nextFireTime = Time.time + Mathf.Max(0.05f, MainWeapon.EffectiveCooldown); // 재능(뿌리 박기·오버클럭) 공격속도 반영
     }
 
     private void OnDrawGizmosSelected()

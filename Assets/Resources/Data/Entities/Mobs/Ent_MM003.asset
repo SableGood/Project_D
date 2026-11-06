@@ -16,8 +16,8 @@ MonoBehaviour:
   entityCode: MM003
   entityName: 003
   maxHp: 30
-  defense: 5
+  defense: 0
   moveSpeed: 7
-  cost: 0
+  cost: 3
   abilityText: 
   defaultWeapon: {fileID: 11400000, guid: 0f3f2bcc49cdbf04ea3494403bc26d33, type: 2}

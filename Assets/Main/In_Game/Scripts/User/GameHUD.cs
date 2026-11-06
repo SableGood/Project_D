@@ -96,8 +96,9 @@ public class GameHUD : MonoBehaviour
     private RectTransform iconCoverPivot;
     private GameObject reloadBarRoot;
     private RectTransform reloadFill;
-    // 머리 위 재장전 바 (탑뷰): 너비 = 침팬치 히트박스 너비(월드 1m), 높이 = 무기 칸 재장전 바(6)의 0.7배
-    private const float OverheadWidthMeters = 1f, OverheadHeight = 4f, OverheadGap = 36f;   // Gap: 머리 꼭대기 위로 띄우는 거리 (화면 px)
+    // 발밑 재장전 바 (탑뷰): 너비 = 침팬치 히트박스 너비(월드 1m)의 80%, 높이 = 무기 칸 재장전 바(6)의 0.7배
+    private const float OverheadWidthMeters = 0.8f, OverheadHeight = 4f, OverheadGap = 14f;   // Gap: 발끝 아래로 띄우는 거리 (화면 px)
+    private static readonly Color OverheadFillColor = new Color(0.678f, 0.847f, 0.902f, 1f);  // #ADD8E6
     private Canvas hudCanvas;
     private RectTransform overheadBar, overheadFill;
     private SpriteRenderer[] playerBodyRenderers;
@@ -136,7 +137,7 @@ public class GameHUD : MonoBehaviour
         UpdateGoldEffects();
     }
 
-    // 캐릭터 머리 위 재장전 바 (탑뷰에서만). 무기 칸 바와 같은 진행도
+    // 캐릭터 발밑 재장전 바 (탑뷰에서만). 무기 칸 바와 같은 진행도
     private void UpdateOverheadReload()
     {
         if (overheadBar == null) return;
@@ -144,7 +145,7 @@ public class GameHUD : MonoBehaviour
         Camera cam = Camera.main;
         bool show = w != null && w.isReloading && !CameraController.FirstPersonView && cam != null && boundPlayer != null && hudCanvas != null;
         Vector3 c = Vector3.zero;
-        float top = float.MinValue;
+        float bottom = float.MaxValue;
         if (show)
         {
             c = cam.WorldToScreenPoint(boundPlayer.position);
@@ -152,16 +153,16 @@ public class GameHUD : MonoBehaviour
         }
         if (show)
         {
-            // 화면에서 캐릭터 그림의 가장 높은 점 = 머리 꼭대기.
-            // 그림 상자(bounds)는 투명 여백·기울기 때문에 캐릭터마다 실제 머리와 차이가 나서, 실제로 그려지는 점(스프라이트 꼭짓점)으로 계산
+            // 화면에서 캐릭터 그림의 가장 낮은 점 = 발끝.
+            // 그림 상자(bounds)는 투명 여백·기울기 때문에 실제 발과 차이가 나서, 실제로 그려지는 점(스프라이트 꼭짓점)으로 계산
             foreach (SpriteRenderer r in playerBodyRenderers)
             {
                 if (r == null || !r.enabled || r.sprite == null) continue;
                 Transform t = r.transform;
                 foreach (Vector2 v in r.sprite.vertices)
-                    top = Mathf.Max(top, cam.WorldToScreenPoint(t.TransformPoint(v)).y);
+                    bottom = Mathf.Min(bottom, cam.WorldToScreenPoint(t.TransformPoint(v)).y);
             }
-            if (top == float.MinValue) top = c.y;
+            if (bottom == float.MaxValue) bottom = c.y;
         }
         if (overheadBar.gameObject.activeSelf != show) overheadBar.gameObject.SetActive(show);
         if (!show) return;
@@ -170,7 +171,7 @@ public class GameHUD : MonoBehaviour
         float widthPx = Mathf.Abs(cam.WorldToScreenPoint(boundPlayer.position + right).x - cam.WorldToScreenPoint(boundPlayer.position - right).x);
         float k = Mathf.Max(0.0001f, hudCanvas.scaleFactor);
         overheadBar.sizeDelta = new Vector2(Mathf.Round(widthPx / k), OverheadHeight);
-        overheadBar.anchoredPosition = new Vector2(Mathf.Round(c.x / k), Mathf.Round(top / k + OverheadGap));
+        overheadBar.anchoredPosition = new Vector2(Mathf.Round(c.x / k), Mathf.Round(bottom / k - OverheadGap));
         overheadFill.anchorMax = new Vector2(w.ReloadProgress, 1f);
     }
 
@@ -722,15 +723,15 @@ public class GameHUD : MonoBehaviour
         reloadBarRoot = bar.gameObject;
         reloadBarRoot.SetActive(false);
 
-        // 캐릭터 머리 위 재장전 바 (화면 좌표로 매 프레임 위치를 옮김)
+        // 캐릭터 발밑 재장전 바 (화면 좌표로 매 프레임 위치를 옮김, 위쪽 가운데 기준)
         overheadBar = NewRect("OverheadReload", transform);
         overheadBar.anchorMin = overheadBar.anchorMax = Vector2.zero;
-        overheadBar.pivot = new Vector2(0.5f, 0f);
+        overheadBar.pivot = new Vector2(0.5f, 1f);
         overheadBar.SetAsFirstSibling();                 // 하단 패널·무기 칸보다 뒤에 그림
         AddImage(overheadBar, TrackColor, false);
         overheadFill = Stretch(NewRect("Fill", overheadBar));
         overheadFill.anchorMax = new Vector2(0f, 1f);
-        AddImage(overheadFill, CostOk, false);
+        AddImage(overheadFill, OverheadFillColor, false);
         overheadBar.gameObject.SetActive(false);
     }
 

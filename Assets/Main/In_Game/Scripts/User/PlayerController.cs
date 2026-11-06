@@ -31,6 +31,8 @@ public class PlayerController : MonoBehaviour
 
     // ★ 이동 입력 중인지 (무기 이동 탄퍼짐 등에서 사용)
     public bool IsMoving { get; private set; }
+    // 물속 감속 배율 (WaterHazard가 설정, 1 = 정상)
+    [HideInInspector] public float WaterSpeedMul = 1f;
 
     // 이동기 (Space: 점프 / 구르기) — 없으면 Start에서 자동으로 붙임
     private PlayerMovementAbility ability;
@@ -83,6 +85,9 @@ public class PlayerController : MonoBehaviour
         if (health != null && myData != null)
         {
             health.InitStats(myData);
+            // 직업: 최대 체력 배율 (공돌이 -30%, 헬스 중독자 +50%)
+            float hpMul = Jobs.MaxHpMul;
+            if (!Mathf.Approximately(hpMul, 1f)) { health.AddMaxHealth(health.maxHealth * (hpMul - 1f)); health.SetCurrentHealth(health.maxHealth); }
             Debug.Log($"플레이어 스탯 초기화 완료! 최대 체력: {health.maxHealth}");
         }
         else if (myData == null)
@@ -143,7 +148,7 @@ public class PlayerController : MonoBehaviour
         }
 
         // ★ [핵심 방어 코드 1] 이동 벡터에 속도를 곱한 뒤, Y축(위아래)은 따로 계산합니다.
-        float baseSpeed = moveSpeed * PlayerAugments.MoveSpeedMul; // 재능 이동속도 반영 (뿌리 박기 = 0)
+        float baseSpeed = moveSpeed * PlayerAugments.MoveSpeedMul * WaterSpeedMul; // 재능 이동속도 반영 (뿌리 박기 = 0), 물속 감속
         Vector3 horizontal = moveDirection * baseSpeed;
         bool grounded = controller.isGrounded;
 
@@ -195,6 +200,7 @@ public class PlayerController : MonoBehaviour
     // 클릭한 UI 버튼이 '선택됨'으로 남아 있으면 Space(=확인 키)가 그 버튼을 다시 누름 → 매 프레임 선택 해제
     void LateUpdate()
     {
+        if (TalentBrowser.IsOpen) return; // 재능 목록의 검색 칸에 글자를 입력하는 중
         var es = UnityEngine.EventSystems.EventSystem.current;
         if (es != null && es.currentSelectedGameObject != null) es.SetSelectedGameObject(null);
     }

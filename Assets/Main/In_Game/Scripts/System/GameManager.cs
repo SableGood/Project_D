@@ -16,10 +16,13 @@ public class GameManager : MonoBehaviour
     public GameObject pauseMenuUI;   // ESC 키를 눌렀을 때 등장할 일시정지 메뉴 UI 캔버스/패널
     public GameObject gameOverUI;    // 플레이어 사망 시 등장할 게임 오버 UI 캔버스/패널
 
-    [Header("게임 시작 셋업 UI 패널")]
-    public GameObject difficultyPanel; // 난이도 선택 창
-    public GameObject characterPanel;  // 캐릭터 선택 창
-    public GameObject talentPanel;     // 재능 선택 창
+    [Header("게임 시작 셋업")]
+    [Tooltip("켜면 난이도·캐릭터·직업을 한 화면(SetupScreen)에서 고름. 끄면 예전처럼 씬의 창 세 개를 차례로 거침")]
+    public bool useCombinedSetup = true;
+    public GameObject difficultyPanel; // (예전) 난이도 선택 창
+    public GameObject characterPanel;  // (예전) 캐릭터 선택 창
+    [UnityEngine.Serialization.FormerlySerializedAs("talentPanel")]
+    public GameObject jobPanel;        // (예전) 직업 선택 창 (씬 이름은 TalentPanel)
 
     [Header("글로벌 참조 데이터")]
     public Transform playerTransform; // 몬스터들이 참조할 플레이어의 위치
@@ -32,7 +35,10 @@ public class GameManager : MonoBehaviour
     // 플레이어의 선택 데이터를 임시 저장할 변수들
     private int selectedDifficulty = 1; // 0: Easy, 1: Normal, 2: Hard
     private int selectedCharacter = 0;
-    private int selectedTalent = 0;     // 재능 인덱스
+    private int selectedJob = 0;        // 직업 인덱스 (JobData.All)
+    public int SelectedJob => selectedJob;
+    public int SelectedDifficulty => selectedDifficulty;
+    public int SelectedCharacter => selectedCharacter;
 
     void Awake()
     {
@@ -53,10 +59,22 @@ public class GameManager : MonoBehaviour
         if (pauseMenuUI != null) pauseMenuUI.SetActive(false);
         if (gameOverUI != null) gameOverUI.SetActive(false);
 
-        // 2. 셋업 UI 초기화 (난이도 창만 켜고 나머지는 숨김)
-        if (difficultyPanel != null) difficultyPanel.SetActive(true);
-        if (characterPanel != null) characterPanel.SetActive(false);
-        if (talentPanel != null) talentPanel.SetActive(false);
+        // 2. 셋업 UI 초기화
+        if (useCombinedSetup)
+        {
+            // 한 화면에서 난이도·캐릭터·직업 선택 (예전 창 세 개는 숨김)
+            if (difficultyPanel != null) difficultyPanel.SetActive(false);
+            if (characterPanel != null) characterPanel.SetActive(false);
+            if (jobPanel != null) jobPanel.SetActive(false);
+            SetupScreen.Open(this);
+        }
+        else
+        {
+            // 예전 방식: 난이도 창만 켜고 나머지는 숨김
+            if (difficultyPanel != null) difficultyPanel.SetActive(true);
+            if (characterPanel != null) characterPanel.SetActive(false);
+            if (jobPanel != null) jobPanel.SetActive(false);
+        }
 
         // 3. 셋업을 위해 게임 시간을 0으로 정지하고 커서 활성화
         isSetupComplete = false;
@@ -105,17 +123,33 @@ public class GameManager : MonoBehaviour
         Debug.Log("캐릭터 선택 완료: " + charIndex);
 
         if (characterPanel != null) characterPanel.SetActive(false);
-        if (talentPanel != null) talentPanel.SetActive(true);
+        if (jobPanel != null) jobPanel.SetActive(true);
     }
 
-    // --- [시작 셋업 3단계: 재능 선택 및 게임 본격 시작] ---
-    public void SelectTalent(int talentIndex)
-    {
-        selectedTalent = talentIndex;
-        Debug.Log("재능 선택 완료: " + talentIndex);
+    // --- [시작 셋업 3단계: 직업 선택] (씬 버튼 연결 이름이 SelectTalent라 그대로 둠) ---
+    public void SelectTalent(int jobIndex) => SelectJob(jobIndex);
 
-        // 셋업 창을 모두 끄고 게임 시간 및 상태 정상화
-        if (talentPanel != null) talentPanel.SetActive(false);
+    public void SelectJob(int jobIndex)
+    {
+        selectedJob = jobIndex;
+        Debug.Log("직업 선택 완료: " + (JobData.Get(jobIndex) != null ? JobData.Get(jobIndex).name : jobIndex.ToString()));
+        if (jobPanel != null) jobPanel.SetActive(false);
+        FinishSetup();
+    }
+
+    // 한 화면 셋업(SetupScreen)에서 한꺼번에 호출
+    public void BeginRun(int difficultyIndex, int charIndex, int jobIndex)
+    {
+        selectedDifficulty = difficultyIndex;
+        selectedCharacter = charIndex;
+        selectedJob = jobIndex;
+        Debug.Log($"출격: 난이도 {difficultyIndex}, 캐릭터 {charIndex}, 직업 {(JobData.Get(jobIndex) != null ? JobData.Get(jobIndex).name : jobIndex.ToString())}");
+        FinishSetup();
+    }
+
+    // 셋업을 끝내고 게임 시작 (시간 흐름 재개 + 플레이어 스폰)
+    private void FinishSetup()
+    {
 
         isSetupComplete = true; // 셋업 완료 선언
         Time.timeScale = 1f;    // 시간 흐름 재개
@@ -163,7 +197,7 @@ public class GameManager : MonoBehaviour
 
     private void ApplyGameSettings()
     {
-        // 추후 선택된 난이도나 재능을 게임 내 스탯에 반영하는 로직
+        // 추후 선택된 난이도나 직업을 게임 내 스탯에 반영하는 로직
     }
 
     // --- [기존 코어 시스템 (일시정지, 종료, 재시작)] ---

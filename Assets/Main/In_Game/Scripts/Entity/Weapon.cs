@@ -94,9 +94,9 @@ public class Weapon : MonoBehaviour
     public float ReloadTime => playerWepData != null ? playerWepData.reloadTime * PlayerAugments.ReloadTimeMul : 0f;
     public float EffectiveCooldown => playerWepData != null
         ? attackCooldown / (PlayerAugments.FireRateMul * PlayerAugments.WeaponFireRateMul(playerWepData))
-        : IsTurretWeapon ? attackCooldown / PlayerAugments.TurretFireRateMul : attackCooldown;
-    public float EffectiveDamage => playerWepData != null ? attackDamage * PlayerAugments.DamageMul
-        : IsTurretWeapon ? attackDamage * PlayerAugments.TurretDamageMul : attackDamage;
+        : IsTurretWeapon ? attackCooldown / (PlayerAugments.TurretFireRateMul * TalentEffects.TurretRateMul) : attackCooldown;
+    public float EffectiveDamage => playerWepData != null ? attackDamage * PlayerAugments.DamageMul * PlayerAugments.WeaponDamageMul(playerWepData)
+        : IsTurretWeapon ? attackDamage * PlayerAugments.TurretDamageMul * TalentEffects.TurretNearMul(transform) : attackDamage;
 
     private int turretCheck = -1; // -1 = 아직 모름, 0 = 아님, 1 = 포탑 무기
     private bool IsTurretWeapon
@@ -132,7 +132,7 @@ public class Weapon : MonoBehaviour
         {
             if (!isReloading || playerWepData == null || ReloadTime <= 0f) return 0f;
             if (ShellReload) return Mathf.Clamp01((Time.time - shellStartTime) / Mathf.Max(0.01f, shellTime));
-            return Mathf.Clamp01((Time.time - reloadStartTime) / ReloadTime);
+            return Mathf.Clamp01((Time.time - reloadStartTime) / Mathf.Max(0.01f, ReloadDuration));
         }
     }
     private Collider[] hitColliders;
@@ -142,9 +142,16 @@ public class Weapon : MonoBehaviour
     private float spreadAngle = 0f;
     private bool canPierce = false;
     private float projectileSpeedOverride = 0f;
+    // v109: 몹 탄 설정 (MobAI가 몹 코드별로 정함). 그림 탄·속도·범위 폭발
+    [HideInInspector] public Sprite projectileSprite;
+    [HideInInspector] public float projectileSpriteLength = 0.4f;
+    [HideInInspector] public float projectileAoeRadius;      // > 0 이면 착탄 시 범위 폭발
+    [HideInInspector] public string projectileExplosionFx;   // 폭발 도트 이펙트 이름
+    public void SetProjectileSpeed(float s) { projectileSpeedOverride = s; }
     private float moveSpreadAngle = 0f;     // 이동 중 추가 탄퍼짐
     private float knockbackDistance = 0f;   // 명중 시 넉백 거리
     private float armorPenetration = 0f;    // 방어구 무시 (방어력에서 이만큼 빼고 계산)
+    public void SetArmorPenetration(float v) => armorPenetration = Mathf.Max(0f, v); // 포탑(저격) 등
     private bool isOwnerMoving = false;     // PlayerWeaponManager가 매 프레임 알려줌
 
     // 한 번 발사(산탄 포함)에 같은 대상이 여러 번 넉백되지 않도록 기록
@@ -220,7 +227,18 @@ public class Weapon : MonoBehaviour
     }
 
     // 현재 실제로 적용되는 탄퍼짐 (HUD 크로스헤어 등에서 활용 가능)
-    public float CurrentSpread => spreadAngle + (isOwnerMoving ? moveSpreadAngle : 0f);
+    public float CurrentSpread => spreadAngle + (isOwnerMoving ? moveSpreadAngle : 0f) + talentSpread;
+
+    // ===== 재능용 (v98) =====
+    // 플레이어 총으로 맞힌 피해인지 (TakeDamage 이벤트 안에서 읽음: 냉각탄·도탄·번개 등)
+    public static bool PlayerGunHit { get; private set; }
+    // 플레이어 무기가 재장전을 시작할 때 (재장전 폭탄·빈 탄창 투척)
+    public static event System.Action<Weapon> PlayerReloadStarted;
+    public static void MarkPlayerGunHit(bool v) => PlayerGunHit = v;
+    private float shotDamageMul = 1f;   // 이번 발의 피해 배율 (부채꼴 사격·관통 감소)
+    private float talentSpread;         // 이번 발의 추가 탄퍼짐
+    // 재장전에 걸리는 시간 (과열 재능이면 고정 시간)
+    public float ReloadDuration => playerWepData != null && TalentEffects.Overheat ? TalentEffects.OverheatTime : ReloadTime;
 
     // 이동하면서 쏴도 화염·궤적이 쏜 자리에 남지 않고 총구를 따라가게 (매 프레임 마지막에 다시 붙임)
     void LateUpdate()
@@ -294,7 +312,10 @@ public class Weapon : MonoBehaviour
     {
         if (isReloading || playerWepData == null || playerWepData.maxAmmo <= 0) return;
         if (currentAmmo >= playerWepData.maxAmmo) return;
-        reloadRoutine = StartCoroutine(ShellReload ? ShellReloadCoroutine() : ReloadCoroutine());
+        bool overheat = TalentEffects.Overheat;
+        if (overheat && currentAmmo > 0) return; // 과열: 탄을 다 쏴야만 (스스로) 식음
+        reloadRoutine = StartCoroutine(ShellReload && !overheat ? ShellReloadCoroutine() : ReloadCoroutine());
+        PlayerReloadStarted?.Invoke(this);
     }
 
     // 장전 중단 (산탄총: 장전 중 사격). 이미 넣은 탄은 그대로
@@ -335,7 +356,7 @@ public class Weapon : MonoBehaviour
         if (muzzleSmoke && IsGun && shotsSinceReload > 0 && Time.time - lastShotTime < 4f) StartCoroutine(SmokeRoutine());
         shotsSinceReload = 0;
 
-        yield return new WaitForSeconds(ReloadTime);
+        yield return new WaitForSeconds(ReloadDuration);
 
         currentAmmo = playerWepData.maxAmmo;
         isReloading = false;
@@ -386,11 +407,17 @@ public class Weapon : MonoBehaviour
 
         // 투사체 갯수만큼 발사 (산탄총 등). 몹/타워는 1발.
         int count = Mathf.Max(1, pelletCount);
+        // 샷건 교습소 (재능): 한 발 총을 여러 발 부채꼴로
+        if (playerWepData != null && TalentEffects.SpreadShot(playerWepData, out int pellets, out float pelletMul, out float addSpread) && count < pellets)
+        {
+            count = pellets; shotDamageMul = pelletMul; talentSpread = addSpread;
+        }
         for (int i = 0; i < count; i++)
         {
             if (fireMode == FireMode.Hitscan) FireHitscan(targetTransform, manualTargetPosition);
             else FireProjectile(targetTransform, manualTargetPosition);
         }
+        shotDamageMul = 1f; talentSpread = 0f;
         Vector3 aimForFx = targetTransform != null ? targetTransform.position : manualTargetPosition;
         if (muzzleFlash) ShowMuzzleFlash(aimForFx);
         Vector3 fd = aimForFx - GetFireOrigin(fireMode == FireMode.Hitscan);
@@ -458,6 +485,9 @@ public class Weapon : MonoBehaviour
         }
         Vector3 endPoint = rayStart + direction * maxDist;
         bool hitTarget = false;
+        // v105: 조준점이 몹 표면(1인칭) 또는 히트박스 가장자리에 있으면, 몸 중심에서 쏜 레이가 탄퍼짐·계산 오차로
+        // 표면 '직전'에서 끝나 빗나가던 문제 → 몹 판정만 커서 너머로 조금 더 봄 (벽·포탑에 막힌 경우는 그대로)
+        float targetDist = stopAtAim && !blocked ? Mathf.Min(attackRange + muzzleDist, maxDist + AimSlack) : maxDist;
 
         // 시작점이 이미 몹 몸 안이면(몸끼리 겹침) 레이로는 잡히지 않으므로 따로 확인
         int insideCount = Physics.OverlapSphereNonAlloc(rayStart, 0.05f, insideHits, targetLayer, QueryTriggerInteraction.Ignore);
@@ -471,7 +501,7 @@ public class Weapon : MonoBehaviour
                 Health hp = insideHits[i].GetComponentInParent<Health>();
                 if (hp != null && hitThisRay.Add(hp)) ApplyDamage(hp, direction);
             }
-            RaycastHit[] hits = Physics.RaycastAll(rayStart, direction, maxDist, targetLayer, QueryTriggerInteraction.Ignore);
+            RaycastHit[] hits = Physics.RaycastAll(rayStart, direction, targetDist, targetLayer, QueryTriggerInteraction.Ignore);
             foreach (RaycastHit h in hits)
             {
                 Health hp = h.transform.GetComponentInParent<Health>();
@@ -479,13 +509,39 @@ public class Weapon : MonoBehaviour
                 ApplyDamage(hp, direction);
             }
         }
+        else if (playerWepData != null && IsGun && TalentEffects.PierceCount > 0)
+        {
+            // 관통이 미덕 (재능): 가까운 순서로 (1 + 관통 수)명까지, 관통할 때마다 피해 감소
+            int maxTargets = 1 + TalentEffects.PierceCount;
+            float keep = shotDamageMul, mul = 1f;
+            int n = 0;
+            hitThisRay.Clear();
+            for (int i = 0; i < insideCount && n < maxTargets; i++)
+            {
+                Health hp = insideHits[i].GetComponentInParent<Health>();
+                if (hp == null || !hitThisRay.Add(hp)) continue;
+                shotDamageMul = keep * mul; ApplyDamage(hp, direction); mul *= 1f - TalentEffects.PierceFalloff; n++;
+                endPoint = fireOrigin; hitTarget = true;
+            }
+            RaycastHit[] ph = Physics.RaycastAll(rayStart, direction, targetDist, targetLayer, QueryTriggerInteraction.Ignore);
+            System.Array.Sort(ph, (a, b) => a.distance.CompareTo(b.distance));
+            foreach (RaycastHit h in ph)
+            {
+                if (n >= maxTargets) break;
+                Health hp = h.transform.GetComponentInParent<Health>();
+                if (hp == null || !hitThisRay.Add(hp)) continue;
+                shotDamageMul = keep * mul; ApplyDamage(hp, direction); mul *= 1f - TalentEffects.PierceFalloff; n++;
+                endPoint = h.distance > muzzleDist ? h.point : fireOrigin; hitTarget = true;
+            }
+            shotDamageMul = keep;
+        }
         else if (insideCount > 0)
         {
             ApplyDamage(insideHits[0].transform, direction);
             endPoint = fireOrigin;
             hitTarget = true;
         }
-        else if (Physics.Raycast(rayStart, direction, out RaycastHit hit, maxDist, targetLayer, QueryTriggerInteraction.Ignore))
+        else if (Physics.Raycast(rayStart, direction, out RaycastHit hit, targetDist, targetLayer, QueryTriggerInteraction.Ignore))
         {
             ApplyDamage(hit.transform, direction);
             endPoint = hit.distance > muzzleDist ? hit.point : fireOrigin; // 총구 뒤에서 맞았으면 궤적 없이 그 자리 타격
@@ -499,6 +555,8 @@ public class Weapon : MonoBehaviour
         Debug.DrawLine(fireOrigin, endPoint, Color.green, 0.5f);
         if (showTracer && (IsGun || alwaysShowTracer)) ShowTracer(fireOrigin, endPoint); // 근접무기는 탄 궤적 없음 (휘두르기 연출)
     }
+
+    private const float AimSlack = 0.9f;
 
     // 이 무기를 든 플레이어의 몸 (밀착 사격 판정의 기준점)
     private Transform ownerBody;
@@ -553,6 +611,9 @@ public class Weapon : MonoBehaviour
         {
             ConfigureProjectile(projectile);
             if (projectileSpeedOverride > 0f) projectile.speed = projectileSpeedOverride;
+            projectile.SetVisual(projectileSprite, projectileSpriteLength);
+            projectile.ApplyAoe(projectileAoeRadius);
+            projectile.explosionFx = projectileExplosionFx;
             projectile.armorPenetration = armorPenetration;
             projectile.knockbackDistance = knockbackDistance;
 
@@ -577,12 +638,31 @@ public class Weapon : MonoBehaviour
         ApplyDamage(target.GetComponentInParent<Health>(), hitDirection);
     }
 
+    // 플레이어 무기만 치명타 (확률·배율은 PlayerAugments). 포탑·몹 무기는 치명타 없음
+    private float RollDamage(out bool crit)
+    {
+        float d = EffectiveDamage * shotDamageMul;
+        crit = playerWepData != null && Random.value < PlayerAugments.CritChance;
+        // 마지막 한 발 (재능): 탄창의 마지막 탄은 피해 배율 + 반드시 치명타
+        if (playerWepData != null && playerWepData.UsesAmmo && currentAmmo == 0 && TalentEffects.LastShotMul > 1f)
+        {
+            d *= TalentEffects.LastShotMul;
+            crit = true;
+        }
+        if (crit) d *= PlayerAugments.CritMul;
+        return d;
+    }
+
     // 피해(방어력/방어구 무시 반영) + 넉백(한 번 발사에 대상당 1회)
     private void ApplyDamage(Health targetHealth, Vector3 hitDirection)
     {
         if (targetHealth == null || targetHealth.IsDead) return;
 
-        targetHealth.TakeDamage(EffectiveDamage, armorPenetration, AttackerRoot);
+        float dmg = RollDamage(out bool crit);
+        Health.NextHitCrit = crit;
+        PlayerGunHit = playerWepData != null && IsGun;
+        targetHealth.TakeDamage(dmg, armorPenetration, AttackerRoot);
+        PlayerGunHit = false;
         if (hitSlowPercent > 0f) MobAI.TryApplySlow(targetHealth, hitSlowPercent, hitSlowDuration);
 
         if (knockbackDistance > 0f && hitDirection != Vector3.zero && knockedThisShot.Add(targetHealth))
@@ -593,7 +673,9 @@ public class Weapon : MonoBehaviour
 
     private void ConfigureProjectile(Projectile projectile)
     {
-        projectile.attackDamage = Mathf.RoundToInt(EffectiveDamage);
+        projectile.attackDamage = Mathf.RoundToInt(RollDamage(out bool crit));
+        projectile.isCrit = crit;
+        projectile.fromPlayerGun = playerWepData != null && IsGun;
         projectile.attacker = AttackerRoot;
         projectile.targetLayer = this.targetLayer;
         projectile.armorPenetration = 0f;
@@ -665,7 +747,23 @@ public class Weapon : MonoBehaviour
 
         flashRenderer.enabled = true;
         flashHideTime = Time.time + muzzleFlashDuration;
+
+        // v107: 도트 총구 화염 + 총구 연기 (pixelfx). 산탄총·포탄 포탑은 넓은 부채꼴 화염과 짙은 연기
+        if (PixelFx.Has(PixelFx.MuzzleFlash))
+        {
+            flashRenderer.enabled = false; // 예전 화염 그림은 숨김 (총구 빛 위치 기준으로만 씀)
+            bool wide = pelletCount > 1 || fireMode == FireMode.ParabolicShell;
+            Vector3 fdir = aimPos - origin;
+            float mpp = muzzleFlashSize / (wide ? 30f : 22f);
+            PixelFx.Play(wide ? PixelFx.ShotgunFlash : PixelFx.MuzzleFlash, origin, fdir, mpp, muzzle);
+            if (Time.time >= nextMuzzleSmoke)
+            {
+                nextMuzzleSmoke = Time.time + (wide ? 0.35f : 0.18f); // 연사해도 연기가 너무 쌓이지 않게
+                PixelFx.Play(wide ? PixelFx.ShotgunSmoke : PixelFx.MuzzleSmoke, origin, fdir, mpp * (wide ? 0.8f : 0.9f), null, 1f, 0.85f);
+            }
+        }
     }
+    private float nextMuzzleSmoke;
 
     // 16x16 도트 화염 (흰 중심 → 노랑 → 주황 테두리, 십자 + 대각선 불꽃)
     void OnDisable()
@@ -844,8 +942,11 @@ public class Weapon : MonoBehaviour
     // 히트스캔 궤적 (짧게 번쩍이는 선)
     // =========================================================
 
+    // v105: 빛줄기(예광탄) 대신 빠르게 날아가는 총탄 (BulletFx). 예전 궤적 코드는 남겨 둠 (useOldTracer)
+    public static bool useOldTracer = false;
     private void ShowTracer(Vector3 from, Vector3 to)
     {
+        if (!useOldTracer) { BulletFx.Spawn(from, to, tracerWidth / 0.03f); return; }
         LineRenderer lr = GetTracer(tracerIndex++);
         lr.SetPosition(0, from);
         while (tracerStartLocal.Count < tracers.Count) tracerStartLocal.Add(Vector3.zero);

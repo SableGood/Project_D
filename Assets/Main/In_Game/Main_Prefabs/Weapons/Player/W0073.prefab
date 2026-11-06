@@ -80,6 +80,10 @@ MonoBehaviour:
   hitSlowPercent: 0
   hitSlowDuration: 1
   stopAtAimPoint: 1
+  projectileSprite: {fileID: 0}
+  projectileSpriteLength: 0.4
+  projectileAoeRadius: 0
+  projectileExplosionFx: 
 --- !u!1 &2143669438391138426
 GameObject:
   m_ObjectHideFlags: 0

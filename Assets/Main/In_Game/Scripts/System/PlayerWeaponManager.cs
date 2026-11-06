@@ -16,7 +16,9 @@ public class PlayerWeaponManager : MonoBehaviour
     public string[] startWeaponCodes = { "W002" };
     [Tooltip("테스트: 목록의 모든 무기를 휠로 돌려 쓰기 (끄면 보유한 무기만)")]
     public bool testAllWeapons = false;
-    public const int MaxOwned = 2;
+    // 시작 화면(SetupScreen)의 '테스트 모드' 버튼. 켜져 있으면 스폰될 때 testAllWeapons를 켬
+    public static bool TestModeAllWeapons;
+    public static int MaxOwned => Jobs.WeaponSlots; // 기본 2정, 군인 3정
     // 보유한 무기 (weaponPrefabs 안의 번호), 최대 2개
     private readonly List<int> owned = new List<int>();
 
@@ -62,6 +64,7 @@ public class PlayerWeaponManager : MonoBehaviour
     {
         playerController = GetComponent<PlayerController>();
         towerBuilder = GetComponent<TowerBuilder>();
+        if (TestModeAllWeapons) testAllWeapons = true;
 
         if (tpsAimIgnoreLayers.value == 0) tpsAimIgnoreLayers = LayerMask.GetMask("Player");
 
@@ -82,6 +85,9 @@ public class PlayerWeaponManager : MonoBehaviour
             if (owned.Count == 0) owned.Add(0);
             EquipWeapon(owned[0]);
         }
+
+        // 대통령: 경호실장 둘
+        if (Jobs.Is(Jobs.President)) Bodyguard.SpawnFor(this);
     }
 
     // ===== 보유 무기 (엘리트 상점이 사용) =====
@@ -170,6 +176,7 @@ public class PlayerWeaponManager : MonoBehaviour
 
         if (currentWeapon.playerWepData == null) return;
         if (AugmentManager.IsOpen) return; // 재능 선택 중에는 사격·장전 안 함
+        if (!Jobs.CanUseWeapons) return;   // 대통령: 직접 공격 불가 (경호실장이 대신 쏨)
 
         // R키 수동 장전
         if (Input.GetKeyDown(KeyCode.R))
@@ -215,7 +222,10 @@ public class PlayerWeaponManager : MonoBehaviour
                 savedAmmo[currentWeaponIndex] = currentWeapon.currentAmmo;
                 // 재능 '자동재장전': 탄을 다 쓴 무기를 넣어 두면 다음에 꺼낼 때 가득 참 (-1 = 가득)
                 if (PlayerAugments.AutoReload && currentWeapon.currentAmmo <= 0 && currentWeapon.playerWepData != null && currentWeapon.playerWepData.maxAmmo > 0)
+                {
                     savedAmmo[currentWeaponIndex] = -1;
+                    FairyHelper.Show(transform); // v109: 요정이 나타나 대신 재장전
+                }
             }
             Destroy(currentWeaponInstance);
         }
@@ -263,6 +273,8 @@ public class PlayerWeaponManager : MonoBehaviour
         }
 
         currentWeaponIndex = index;
+        // 대통령: 무기를 들지 않음 (경호실장이 대신 쏨)
+        if (!Jobs.CanUseWeapons && currentWeaponInstance != null) currentWeaponInstance.SetActive(false);
     }
 
     // ---- 발사 연출: 반동(무기 밀림 + 크로스헤어 요동) + 탄피 ----
@@ -365,7 +377,16 @@ public class PlayerWeaponManager : MonoBehaviour
         if (playerController != null && playerController.isFirstPerson)
         {
             Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (Physics.Raycast(ray, out RaycastHit hit, 100f, ~tpsAimIgnoreLayers, QueryTriggerInteraction.Ignore)) return hit.point;
+            bool any = Physics.Raycast(ray, out RaycastHit hit, 100f, ~tpsAimIgnoreLayers, QueryTriggerInteraction.Ignore);
+            // v105: 조준선이 몹 '그림' 위에 있으면 그 몹을 조준 (그림이 히트박스보다 넓어서 가장자리를 쏘면 빗나가던 문제)
+            if (currentWeapon != null && currentWeapon.targetLayer.value != 0)
+            {
+                int n = Physics.SphereCastNonAlloc(ray, 1.2f, castHits, any ? hit.distance + 1.5f : 100f, currentWeapon.targetLayer, QueryTriggerInteraction.Ignore);
+                for (int i = 0; i < n; i++) pickHits[i] = castHits[i].collider;
+                Vector2 center = new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+                if (PickFrom(cam, ray, center, Mathf.Min(n, pickHits.Length), out Vector3 mobPoint)) return mobPoint;
+            }
+            if (any) return hit.point;
             return ray.GetPoint(100f);
         }
         else
@@ -390,12 +411,22 @@ public class PlayerWeaponManager : MonoBehaviour
     private readonly Collider[] pickHits = new Collider[32];
     private const float PickSearchRadius = 8f; // 커서 아래 평면 지점에서 이 거리 안의 몹만 검사 (큰 몹의 머리까지 포함)
 
+    private readonly RaycastHit[] castHits = new RaycastHit[32];
+
     private bool PickMobUnderCursor(Camera cam, Ray ray, Vector3 planePoint, out Vector3 aimPoint)
     {
         aimPoint = planePoint;
         if (currentWeapon == null || currentWeapon.targetLayer.value == 0) return false;
-        Vector2 mouse = Input.mousePosition;
         int n = Physics.OverlapSphereNonAlloc(planePoint, PickSearchRadius, pickHits, currentWeapon.targetLayer, QueryTriggerInteraction.Ignore);
+        if (!PickFrom(cam, ray, Input.mousePosition, n, out Vector3 p)) return false;
+        aimPoint = p;
+        return true;
+    }
+
+    // 후보 콜라이더(pickHits[0..n)) 중, 화면의 한 점이 그 몹 그림 위에 있는 가장 앞의 몹 → 그 몹 히트박스 안의 조준점
+    private bool PickFrom(Camera cam, Ray ray, Vector2 mouse, int n, out Vector3 aimPoint)
+    {
+        aimPoint = ray.origin;
         Collider best = null;
         SpriteRenderer bestSprite = null;
         float bestDepth = float.MaxValue;

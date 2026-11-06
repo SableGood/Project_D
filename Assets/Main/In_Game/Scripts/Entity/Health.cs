@@ -26,12 +26,22 @@ public class Health : MonoBehaviour
     public static event System.Action<Health, float> AnyDamaged;
     // 위와 같지만 공격한 쪽(몹·플레이어 루트)도 함께 알림. 공격자를 모르면 null (재능: 흡혈·피해 반사 등)
     public static event System.Action<Health, float, Transform> AnyDamagedBy;
+
+    // 치명타: 공격하는 쪽이 TakeDamage 직전에 true로 두면 이번 피해가 치명타로 표시됨 (자동으로 다시 false)
+    public static bool NextHitCrit;
+    // 방금 들어온 피해가 치명타였는지 (AnyDamaged 등 이벤트 안에서 읽음)
+    public static bool LastHitCrit { get; private set; }
+    // 마지막으로 때린 개체·피해량 (죽는 연출의 날아가는 방향·세기)
+    public Transform LastAttacker { get; private set; }
+    public float LastDamage { get; private set; }
     // 지금 들어가는 피해가 화상·중독 같은 지속 피해인지 (StatusEffects가 피해를 넣는 동안만 true → 피격 연출 생략용)
     public static bool DotTick;
 
     // 재능 등으로 붙는 추가 방어력 / 기본 방어력 무시(부활 페널티)
     [HideInInspector] public float bonusDefense;
     [HideInInspector] public bool ignoreBaseDefense;
+    [HideInInspector] public float damageTakenMul = 1f;   // 받는 피해 배율 (뿌리 박기 등)
+    public const float MinDamageRatio = 0.3f;             // 방어력으로 줄일 수 있는 한계: 공격력의 30%는 들어감
     // 체력이 0이 되는 순간 호출. true를 돌려주면 죽지 않음 (재능 '부활'). 체력 회복은 호출한 쪽에서 처리
     public System.Func<Health, bool> BeforeDeath;
 
@@ -64,7 +74,8 @@ public class Health : MonoBehaviour
     }
 
     // ★ 피해 공식 (Mob_Data.csv 규칙)
-    //    실제 피해 = 공격력 - max(0, 방어력 - 방어구 무시)   (최소 MinDamage)
+    //    실제 피해 = max(공격력 × 30%, 공격력 - max(0, 방어력 - 방어구 무시))   (최소 MinDamage)
+    //    방어력이 아무리 높아도 공격력의 30%는 들어감 (v91)
     public void TakeDamage(float damage, float armorPenetration)
     {
         TakeDamage(damage, armorPenetration, null);
@@ -73,9 +84,15 @@ public class Health : MonoBehaviour
     // attacker: 공격한 개체 (모르면 null)
     public void TakeDamage(float damage, float armorPenetration, Transform attacker)
     {
+        bool crit = NextHitCrit;
+        NextHitCrit = false;
         if (isDead) return;
 
-        float finalDamage = CalculateDamage(damage, Defense, armorPenetration);
+        float finalDamage = CalculateDamage(damage, Defense, armorPenetration) * Mathf.Max(0f, damageTakenMul);
+        LastHitCrit = crit;
+        LastAttacker = attacker;
+        LastDamage = finalDamage;
+        if (crit && !invincible) StatusEffects.MarkCrit(this);
         if (invincible)
         {
             OnDamaged?.Invoke(finalDamage);
@@ -105,7 +122,7 @@ public class Health : MonoBehaviour
     {
         if (damage <= 0f) return 0f; // 공격력 0 (버프/디버프 포탑 등)은 피해 없음
         float effectiveDefense = Mathf.Max(0f, defense - Mathf.Max(0f, armorPenetration));
-        return Mathf.Max(MinDamage, damage - effectiveDefense);
+        return Mathf.Max(MinDamage, Mathf.Max(damage * MinDamageRatio, damage - effectiveDefense));
     }
 
     private IEnumerator ProcessDeathRoutine()

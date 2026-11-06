@@ -15,9 +15,9 @@ MonoBehaviour:
   entityType: 0
   entityCode: ME001
   entityName: 007
-  maxHp: 300
-  defense: 0
+  maxHp: 500
+  defense: 3
   moveSpeed: 5
-  cost: 0
+  cost: 25
   abilityText: ??
   defaultWeapon: {fileID: 11400000, guid: 83d866a74f692b14380b810cac96535d, type: 2}

@@ -15,9 +15,9 @@ MonoBehaviour:
   entityType: 0
   entityCode: MB001
   entityName: 009
-  maxHp: 1000
+  maxHp: 4000
   defense: 5
   moveSpeed: 3
-  cost: 0
+  cost: 150
   abilityText: ??
   defaultWeapon: {fileID: 11400000, guid: 26e6f11ccb786d64c8d4ce14b57d6871, type: 2}

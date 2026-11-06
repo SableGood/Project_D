@@ -17,6 +17,10 @@ using UnityEngine;
 public class HitEffects : MonoBehaviour
 {
     public static bool Enabled = true;
+    public static float MobHitPixel = 1f / 60f;   // v107 도트 피격 이펙트의 도트 한 칸 크기 (m)
+    public static float MobCritPixel = 1f / 66f;
+    public const string PlayerHitFx = "Fx_player_hit";
+    public static float PlayerHitPixel = 1f / 55f;
 
     public enum Kind { Mob, Player, Tower }
     public enum CasingType { Pistol, Rifle, Shotgun }
@@ -29,12 +33,15 @@ public class HitEffects : MonoBehaviour
         public int sparks;        // 튀는 조각 수
         public float sparkSpeed;  // 조각 속도
         public float gravity;
+        public float core;        // 가운데 흰 섬광 크기 (0 = 없음)
+        public float sparkSize;   // 조각 크기 배율 (0 = 1)
     }
 
     private static readonly Style MobStyle = new Style
     {
-        burst = new Color(1f, 1f, 0.9f, 1f), spark = new Color(1f, 0.9f, 0.35f, 1f), spark2 = Color.white,
-        burstSize = 0.55f, sparks = 5, sparkSpeed = 3.2f, gravity = 9f,
+        // v105: 더 크고 진하게 — 주황 섬광 + 가운데 흰 섬광, 조각 수·크기 늘림 (흰색 번쩍임과 겹쳐도 눈에 띄게)
+        burst = new Color(1f, 0.62f, 0.18f, 1f), spark = new Color(1f, 0.82f, 0.25f, 1f), spark2 = new Color(1f, 0.35f, 0.15f, 1f),
+        burstSize = 0.9f, sparks = 9, sparkSpeed = 4.6f, gravity = 9f, core = 0.42f, sparkSize = 1.5f,
     };
     private static readonly Style PlayerStyle = new Style
     {
@@ -132,7 +139,21 @@ public class HitEffects : MonoBehaviour
         Kind kind = Classify(h);
         Vector3 point = HitPoint(h, kind, out float radius);
         Style style = kind == Kind.Mob ? MobStyle : kind == Kind.Player ? PlayerStyle : TowerStyle;
-        Spawn(point, style, radius);
+        // v107: 몹 피격은 도트 이펙트 (pixelfx: 불꽃 십자 + 튀는 불티, 치명타는 큰 별 터짐). 때린 쪽 → 맞은 쪽 방향으로
+        if (kind == Kind.Mob && PixelFx.Has(PixelFx.Hit))
+        {
+            bool crit = Health.LastHitCrit && PixelFx.Has(PixelFx.Crit);
+            Vector3 dir = h.LastAttacker != null ? point - h.LastAttacker.position : Vector3.zero;
+            float k = Mathf.Lerp(0.9f, 1.25f, Mathf.InverseLerp(0.3f, 1f, radius));
+            PixelFx.Play(crit ? PixelFx.Crit : PixelFx.Hit, point, dir, (crit ? MobCritPixel : MobHitPixel) * k);
+        }
+        // v109: 플레이어 피격은 붉은 도트 이펙트 (Fx_player_hit)
+        else if (kind == Kind.Player && PixelFx.Has(PlayerHitFx))
+        {
+            Vector3 dir = h.LastAttacker != null ? point - h.LastAttacker.position : Vector3.zero;
+            PixelFx.Play(PlayerHitFx, point, dir, PlayerHitPixel);
+        }
+        else Spawn(point, style, radius);
 
         if (kind == Kind.Player) PlayerReaction(h);
     }
@@ -288,7 +309,8 @@ public class HitEffects : MonoBehaviour
         float scale = Mathf.Lerp(0.85f, 1.2f, Mathf.InverseLerp(0.3f, 1f, radius));
 
         // 섬광
-        Add(point, Vector3.zero, s.burst, s.burstSize * scale, 0.12f, 0f, true);
+        Add(point, Vector3.zero, s.burst, s.burstSize * scale, s.core > 0f ? 0.15f : 0.12f, 0f, true);
+        if (s.core > 0f) Add(point - (cam != null ? cam.transform.forward * 0.02f : Vector3.zero), Vector3.zero, Color.white, s.core * scale, 0.09f, 0f, true);
 
         // 튀는 픽셀 조각
         Vector3 right = cam != null ? cam.transform.right : Vector3.right;
@@ -298,7 +320,7 @@ public class HitEffects : MonoBehaviour
             float a = Random.Range(0f, Mathf.PI * 2f);
             Vector3 dir = (right * Mathf.Cos(a) + up * (Mathf.Sin(a) * 0.8f + 0.6f)).normalized;
             Color c = Random.value < 0.7f ? s.spark : s.spark2;
-            Add(point, dir * s.sparkSpeed * Random.Range(0.6f, 1.2f), c, Random.Range(0.06f, 0.1f), Random.Range(0.18f, 0.3f), s.gravity, false);
+            Add(point, dir * s.sparkSpeed * Random.Range(0.6f, 1.2f), c, Random.Range(0.06f, 0.1f) * (s.sparkSize > 0f ? s.sparkSize : 1f), Random.Range(0.18f, 0.3f), s.gravity, false);
         }
     }
 

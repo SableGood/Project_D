@@ -108,7 +108,15 @@ public class BossPhases : MonoBehaviour
         transitionRoutine = StartCoroutine(TransitionRoutine());
         OnPhaseChanged?.Invoke(index);
         AnyPhaseChanged?.Invoke(this, index);
+
+        // 어려움: 2페이즈 진입 시 MM003 4마리 소환
+        if (index == 1 && Difficulty.Hard && WaveManager.Instance != null)
+            WaveManager.Instance.SpawnExtra(hardPhase2Summon, hardPhase2SummonCount, transform.position, 3f);
     }
+
+    [Header("어려움 전용")]
+    public string hardPhase2Summon = "MM003";
+    public int hardPhase2SummonCount = 4;
 
     private void ApplyPhase(int index)
     {

@@ -102,7 +102,52 @@ public class TowerBuilder : MonoBehaviour
     public int GetTowerCost(int index)
     {
         EntityData data = GetTowerData(index);
-        return (data != null && data.cost > 0) ? data.cost : defaultTowerCost;
+        int baseCost = (data != null && data.cost > 0) ? data.cost : defaultTowerCost;
+        return Jobs.TurretPrice(baseCost); // 직업 할인 (공돌이 -20%, 학생 -10%)
+    }
+
+    // ===== 포탑 판매 (X: 마우스가 가리키는 포탑, 낸 값의 70% 돌려받음) =====
+    public const float SellRefund = 0.7f;
+    private readonly Dictionary<GameObject, int> paidCost = new Dictionary<GameObject, int>();
+
+    public int BuiltCount
+    {
+        get
+        {
+            var set = new HashSet<GameObject>();
+            foreach (var pair in occupiedCells) if (pair.Value != null && pair.Value.activeInHierarchy) set.Add(pair.Value);
+            return set.Count;
+        }
+    }
+
+    // 이 포탑을 지을 때 낸 골드 (자폭 포탑 재능의 환급 등)
+    public int PaidCostOf(GameObject tower)
+    {
+        if (tower == null) return 0;
+        return paidCost.TryGetValue(tower, out int c) ? c : defaultTowerCost;
+    }
+
+    private void TrySellAimedTower()
+    {
+        Camera cam = Camera.main;
+        if (cam == null) return;
+        GameObject tower = null;
+        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+        int mask = builtTowerLayer >= 0 ? (1 << builtTowerLayer) : obstacleLayer.value;
+        if (Physics.Raycast(ray, out RaycastHit hit, 300f, mask, QueryTriggerInteraction.Ignore))
+            foreach (var pair in occupiedCells)
+                if (pair.Value != null && pair.Value.activeInHierarchy && hit.transform.IsChildOf(pair.Value.transform)) { tower = pair.Value; break; }
+        if (tower == null) { AugmentManager.Toast("판매할 포탑에 마우스를 올리고 X를 누르세요"); return; }
+
+        int paid = paidCost.TryGetValue(tower, out int c) ? c : defaultTowerCost;
+        int refund = Mathf.FloorToInt(paid * SellRefund);
+        var cells = new List<Vector2Int>();
+        foreach (var pair in occupiedCells) if (pair.Value == tower) cells.Add(pair.Key);
+        foreach (Vector2Int cell in cells) occupiedCells.Remove(cell);
+        paidCost.Remove(tower);
+        if (tower.TryGetComponent(out PooledObject po)) po.ReleaseToPool(); else Destroy(tower);
+        if (GoldManager.Instance != null) GoldManager.Instance.Add(refund);
+        AugmentManager.Toast($"포탑 판매 +{refund} G");
     }
 
     // HUD 슬롯 클릭 등 외부에서 선택 (키보드 1~5와 동일)
@@ -141,6 +186,9 @@ public class TowerBuilder : MonoBehaviour
     {
         // 재능 선택창이 열려 있거나 방금 닫혔으면 숫자 키는 선택창 몫
         if (AugmentManager.IsOpen || Time.frameCount <= AugmentManager.ClosedFrame + 1) return;
+
+        // X = 가리킨 포탑 판매 (건설 모드가 아닐 때)
+        if (!isBuildMode && Input.GetKeyDown(KeyCode.X)) TrySellAimedTower();
 
         // 1번(0) ~ 5번(4) 키 입력 감지
         if (Input.GetKeyDown(KeyCode.Alpha1)) SelectTower(0);
@@ -266,7 +314,8 @@ public class TowerBuilder : MonoBehaviour
             bool isOverlapping = Physics.CheckBox(center, halfExtents, Quaternion.identity, obstacleLayer, QueryTriggerInteraction.Ignore);
 
             placementOk = !isOverlapping && !IsCellOccupied(ToCell(checkPos))
-                          && PlayArea.IsInside(checkPos, gridSize * 0.5f); // 플레이 구역(Floor) 밖에는 설치 불가
+                          && PlayArea.IsInside(checkPos, gridSize * 0.5f)   // 플레이 구역(Floor) 밖에는 설치 불가
+                          && IslandMap.IsLandArea(checkPos, gridSize * 0.5f); // 섬 지형: 물·강둑 위에는 설치 불가
             bool affordable = GoldManager.Instance == null || GoldManager.Instance.CanAfford(GetTowerCost(currentTowerIndex));
             canBuild = placementOk && affordable; // 골드가 부족해도 미리보기는 빨간색
 
@@ -291,6 +340,13 @@ public class TowerBuilder : MonoBehaviour
     private bool BuildTower()
     {
         Vector3 pos = currentPreviewObj.transform.position;
+
+        // 직업(헬스 중독자): 포탑 수 제한
+        if (BuiltCount >= Jobs.TurretLimit)
+        {
+            AugmentManager.Toast($"포탑은 {Jobs.TurretLimit}개까지만 지을 수 있어요 · 가리키고 X로 판매");
+            return false;
+        }
 
         // ★ 건설 비용 차감 (부족하면 건설하지 않음)
         int cost = GetTowerCost(currentTowerIndex);
@@ -331,6 +387,7 @@ public class TowerBuilder : MonoBehaviour
         foreach (Vector2Int c in stale) occupiedCells.Remove(c);
 
         occupiedCells[ToCell(pos)] = tower;
+        paidCost[tower] = cost;
         return true;
     }
 

@@ -62,6 +62,8 @@ public class MobAI : MonoBehaviour
     public float hitShakeAmount = 0.07f;
     public float hitShakeDuration = 0.15f;
     public Color aimLineColor = new Color(1f, 0.1f, 0.1f, 0.9f);
+    public Color sniperFireColor = new Color(1f, 0.95f, 0.35f, 1f); // v109: 쏘는 순간 조준선 색 (밝은 노랑)
+    public static float SniperFlashTime = 0.15f;
 
     private enum State { Chase, Attacking }
 
@@ -205,8 +207,20 @@ public class MobAI : MonoBehaviour
     {
         if (myData != null)
         {
-            if (health != null) health.InitStats(myData);
-            if (weapon != null) weapon.InitWeapon(myData.defaultWeapon);
+            if (health != null)
+            {
+                health.InitStats(myData);
+                // 난이도: 몹 체력 배율 (쉬움 0.75 / 보통 1 / 어려움 1.25)
+                float hpMul = Difficulty.MobHpMul;
+                if (!Mathf.Approximately(hpMul, 1f)) { health.AddMaxHealth(health.maxHealth * (hpMul - 1f)); health.SetCurrentHealth(health.maxHealth); }
+            }
+            if (weapon != null)
+            {
+                weapon.InitWeapon(myData.defaultWeapon);
+                // 난이도: 몹 공격력 배율 (쉬움 0.7 / 보통 1 / 어려움 1.3)
+                float dmgMul = Difficulty.MobDamageMul;
+                if (!Mathf.Approximately(dmgMul, 1f)) weapon.attackDamage = Mathf.Max(1, Mathf.RoundToInt(weapon.attackDamage * dmgMul));
+            }
             baseSpeed = myData.moveSpeed > 0 ? myData.moveSpeed : initialAgentSpeed;
         }
         else
@@ -227,7 +241,9 @@ public class MobAI : MonoBehaviour
             // 몹 무기는 플레이어와 타워만 공격 (프리팹 설정과 무관하게 보장)
             int mask = LayerMask.GetMask("Player", "Tower");
             if (mask != 0) weapon.targetLayer = mask;
+            ApplyRangedProfile();
         }
+        rangeAlerted = false;
 
         if (agent != null)
         {
@@ -248,6 +264,8 @@ public class MobAI : MonoBehaviour
         lastAttackTime = Time.time - Random.Range(0f, 0.5f); // 동시에 스폰된 몹들의 공격 타이밍을 조금씩 어긋나게
         SetBodyColor(bodyBaseColor);
         if (spriteSupportsFlash) SetFlash(0f); // 풀에서 재사용될 때 번쩍임 상태 초기화
+        hitPoseUntil = 0f;
+        if (bodyAnim != null) bodyAnim.StopOverride();
         if (aimLine != null) aimLine.enabled = false;
     }
 
@@ -532,14 +550,129 @@ public class MobAI : MonoBehaviour
         return new Vector2(a.x - b.x, a.z - b.z).magnitude;
     }
 
+    // ── 공격 그림 (Resources/Image/Mobs/Anim/{몹코드}/Attack3_01~03) ──
+    private const float AttackSwingTime = 0.12f, AttackRecoverTime = 0.2f;
+    private static readonly System.Collections.Generic.Dictionary<string, Sprite[]> attackFrameCache = new System.Collections.Generic.Dictionary<string, Sprite[]>();
+    private SpriteFrameAnimator bodyAnim;
+    private bool bodyAnimSearched;
+
+    // 몹 코드 (EntityData, 없으면 오브젝트 이름에서 MM001 같은 부분)
+    // v109: 원거리 몹 탄 설정 (몹 코드별)
+    //  MR001: 눈에 보이는 느린 총탄 (피할 수 있게, 초속 10m)   ME002: 같은 총탄 그림 (속도는 그대로)
+    //  MR002: 포탄 그림 + 착탄 시 반경 1.8m 폭발 (도트 폭발 이펙트)
+    public static float MR001BulletSpeed = 10f;
+    public static float MR002BlastRadius = 1.8f;
+    private void ApplyRangedProfile()
+    {
+        if (weapon == null) return;
+        weapon.projectileSprite = null;
+        weapon.projectileAoeRadius = 0f;
+        weapon.projectileExplosionFx = null;
+        switch (MobCode())
+        {
+            case "MR001":
+                weapon.fireMode = Weapon.FireMode.RapidBullet;
+                weapon.SetProjectileSpeed(MR001BulletSpeed);
+                weapon.projectileSprite = FxArt.Bullet;
+                weapon.projectileSpriteLength = 0.38f;
+                break;
+            case "ME002":
+                if (weapon.fireMode != Weapon.FireMode.Hitscan) { weapon.projectileSprite = FxArt.Bullet; weapon.projectileSpriteLength = 0.32f; }
+                break;
+            case "MR002":
+                weapon.fireMode = Weapon.FireMode.ParabolicShell;
+                weapon.projectileSprite = FxArt.Load("Shell", new Vector2(0.5f, 0.5f));
+                weapon.projectileSpriteLength = 0.5f;
+                weapon.projectileAoeRadius = MR002BlastRadius;
+                weapon.projectileExplosionFx = "Fx_shell_explosion";
+                break;
+        }
+    }
+
+    // 머리 위 느낌표: 몸 그림 꼭대기 높이 (발밑 기준)
+    private bool rangeAlerted;
+    private float lastAlertTime = -10f;
+    private void ShowAlert()
+    {
+        if (Time.time < lastAlertTime + 0.8f) return;
+        lastAlertTime = Time.time;
+        float top = bodySprite != null ? bodySprite.bounds.max.y - transform.position.y : 1.6f;
+        AlertMark.Show(transform, top);
+    }
+
+    private string MobCode()
+    {
+        if (myData != null && !string.IsNullOrEmpty(myData.entityCode)) return myData.entityCode.Trim();
+        var m = System.Text.RegularExpressions.Regex.Match(name, "M[A-Z]\\d{3}");
+        return m.Success ? m.Value : null;
+    }
+
+    // 3장이 모두 있으면 그 그림들, 아니면 null (예전처럼 색만 바뀜)
+    private Sprite[] AttackFrames()
+    {
+        if (!bodyAnimSearched)
+        {
+            bodyAnimSearched = true;
+            bodyAnim = bodySprite != null ? bodySprite.GetComponent<SpriteFrameAnimator>() : null;
+        }
+        if (bodyAnim == null) return null;
+        string code = MobCode();
+        if (string.IsNullOrEmpty(code)) return null;
+        if (!attackFrameCache.TryGetValue(code, out Sprite[] frames))
+        {
+            frames = new Sprite[3];
+            for (int i = 0; i < 3; i++)
+            {
+                frames[i] = Resources.Load<Sprite>($"Image/Mobs/Anim/{code}/Attack3_0{i + 1}");
+                if (frames[i] == null) { frames = null; break; }
+            }
+            attackFrameCache[code] = frames;
+        }
+        return frames;
+    }
+
+    // 발사 그림 (2번). Attack3_02_2, Attack3_02_3이 있으면 쏠 때마다 번갈아 (ME002 미니건)
+    private static readonly System.Collections.Generic.Dictionary<string, Sprite[]> fireFrameCache = new System.Collections.Generic.Dictionary<string, Sprite[]>();
+    private int fireFrameIndex;
+    private bool rangedWindupShown;
+    private Sprite FireFrame(Sprite[] atk)
+    {
+        string code = MobCode();
+        if (string.IsNullOrEmpty(code)) return atk[1];
+        if (!fireFrameCache.TryGetValue(code, out Sprite[] list))
+        {
+            var l = new System.Collections.Generic.List<Sprite> { atk[1] };
+            for (int i = 2; i <= 3; i++)
+            {
+                Sprite s = Resources.Load<Sprite>($"Image/Mobs/Anim/{code}/Attack3_02_{i}");
+                if (s != null) l.Add(s);
+            }
+            fireFrameCache[code] = list = l.ToArray();
+        }
+        Sprite f = list[fireFrameIndex % list.Length];
+        fireFrameIndex++;
+        return f;
+    }
+
+    // 원거리 발사 그림: 발사(2) → 마무리(3)
+    private void PlayRangedFire()
+    {
+        Sprite[] atk = AttackFrames();
+        if (atk == null || bodyAnim == null) return;
+        bool rapid = AttackCooldown() < 0.5f; // 연사(미니건)는 마무리 그림을 짧게
+        bodyAnim.PlayOnce(new[] { FireFrame(atk), atk[2] }, new[] { 0.12f, rapid ? 0.15f : 0.25f });
+    }
+
     private IEnumerator MeleeAttackRoutine(float reach)
     {
         state = State.Attacking;
         lastAttackTime = Time.time;
 
-        // 예비동작: 빨갛게 변함 (플레이어가 보고 피할 수 있는 시간)
+        // 예비동작: 빨갛게 변함 (플레이어가 보고 피할 수 있는 시간). 공격 그림이 있으면 1번(들어 올림) 그림
         StateLabel = "예비동작";
         SetBodyColor(windupColor);
+        Sprite[] atk = AttackFrames();
+        if (atk != null && bodyAnim != null) bodyAnim.PlayOnce(new[] { atk[0] }, new[] { meleeWindup + 0.15f });
         float t = 0f;
         while (t < meleeWindup)
         {
@@ -555,8 +688,14 @@ public class MobAI : MonoBehaviour
             Vector3 dir = target.position - transform.position;
             weapon.ApplyDamage(targetHealth != null ? targetHealth.transform : target, dir);
             LastAction = "근접 타격 명중"; HitCount++;
+            // v107: 할퀸 자국 (pixelfx). 맞은 대상 몸 가운데, 카메라 쪽으로 살짝 앞에
+            Camera fxCam = Camera.main;
+            if (fxCam != null && PixelFx.Has(PixelFx.Claw))
+                PixelFx.Play(PixelFx.Claw, target.position + Vector3.up * 0.6f - fxCam.transform.forward * 0.4f, dir, 1f / 70f);
         }
         else { LastAction = "근접 공격 빗나감 (회피됨)"; MissCount++; }
+        // 휘두름(2) → 마무리(3) 그림을 잠깐 보여주고 걷기로
+        if (atk != null && bodyAnim != null) bodyAnim.PlayOnce(new[] { atk[1], atk[2] }, new[] { AttackSwingTime, AttackRecoverTime });
 
         lastAttackTime = Time.time;
         state = State.Chase;
@@ -572,9 +711,17 @@ public class MobAI : MonoBehaviour
 
         if (dist > reach)
         {
+            if (dist > reach * 1.15f) rangeAlerted = false;
             MoveTo(target.position);
             StateLabel = "추적 (사거리 밖)";
             return;
+        }
+
+        // v109: 플레이어가 사거리 안에 들어와 조준을 시작하면 머리 위에 빨간 ! (사거리 밖으로 나가면 다시 뜰 수 있음)
+        if (!rangeAlerted && target != null && target.GetComponent<PlayerController>() != null)
+        {
+            rangeAlerted = true;
+            ShowAlert();
         }
 
         if (retreatWhenTooClose && dist < reach * 0.4f)
@@ -600,7 +747,17 @@ public class MobAI : MonoBehaviour
             StateLabel = "거리 유지 · 사격";
         }
 
-        if (Time.time < lastAttackTime + AttackCooldown()) return;
+        if (Time.time < lastAttackTime + AttackCooldown())
+        {
+            // 쏘기 직전 0.2초: 겨누는 그림(1번). 연사 몹은 생략
+            if (!rangedWindupShown && aimLockTime <= 0f && AttackCooldown() >= 0.5f && Time.time >= lastAttackTime + AttackCooldown() - 0.2f)
+            {
+                rangedWindupShown = true;
+                Sprite[] atk = AttackFrames();
+                if (atk != null && bodyAnim != null) bodyAnim.PlayOnce(new[] { atk[0] }, new[] { 0.3f });
+            }
+            return;
+        }
 
         if (aimLockTime > 0f)
             attackRoutine = StartCoroutine(SniperRoutine(reach));
@@ -613,6 +770,8 @@ public class MobAI : MonoBehaviour
         if (weapon == null) return;
         lastAttackTime = Time.time;
         weapon.ManualAttackCommand(aimPoint);
+        rangedWindupShown = false;
+        PlayRangedFire();
         LastAction = "원거리 발사";
     }
 
@@ -626,6 +785,10 @@ public class MobAI : MonoBehaviour
         LineRenderer line = GetAimLine();
         line.enabled = true;
         StateLabel = "저격 조준 중";
+        if (target != null && target.GetComponent<PlayerController>() != null) ShowAlert();
+        // 조준하는 동안 1번 그림 유지
+        Sprite[] atkFrames = AttackFrames();
+        if (atkFrames != null && bodyAnim != null) bodyAnim.PlayOnce(new[] { atkFrames[0] }, new[] { aimLockTime + 0.1f });
 
         float t = 0f;
         while (t < aimLockTime)
@@ -644,14 +807,30 @@ public class MobAI : MonoBehaviour
             line.startColor = line.endColor = c;
             yield return null;
         }
-        line.enabled = false;
-
-        if (target != null && target.gameObject.activeInHierarchy && weapon != null && t >= aimLockTime && !PlayerSkills.IsCloaked(target))
+        bool fire = target != null && target.gameObject.activeInHierarchy && weapon != null && t >= aimLockTime && !PlayerSkills.IsCloaked(target);
+        if (fire)
         {
             Vector3 dir = target.position - transform.position;
             weapon.ApplyDamage(targetHealth != null ? targetHealth.transform : target, dir); // 확정 타격
             LastAction = "저격 명중"; HitCount++;
+            PlayRangedFire();
+            // v109: 쏘는 순간 조준선이 밝은 노랑으로 번쩍 (굵게) → 0.15초 동안 옅어지며 사라짐
+            Vector3 from = transform.position + Vector3.up * 0.3f, to = TargetCenter();
+            float f = 0f;
+            while (f < SniperFlashTime)
+            {
+                f += Time.deltaTime;
+                float k = 1f - f / SniperFlashTime;
+                line.SetPosition(0, from);
+                line.SetPosition(1, to);
+                line.widthMultiplier = Mathf.Lerp(0.03f, 0.11f, k);
+                Color c = sniperFireColor; c.a = k;
+                line.startColor = line.endColor = c;
+                yield return null;
+            }
         }
+        line.enabled = false;
+        if (!fire && bodyAnim != null) bodyAnim.StopOverride();
 
         lastAttackTime = Time.time;
         state = State.Chase;
@@ -770,10 +949,19 @@ public class MobAI : MonoBehaviour
     private void HandleDied()
     {
         ReleaseSlot();
+        // 죽는 연출: 몹은 바로 풀로 돌아가고, 따로 만든 그림이 날아가거나 쓰러진 뒤 깜빡이며 사라짐
+        string code = MobCode() ?? "";
+        bool heavy = code.StartsWith("ME") || code.StartsWith("MB");
+        MobDeathFx.Play(this, bodySprite, code, health != null ? health.LastAttacker : null,
+                        health != null ? health.LastDamage : 0f, health != null ? health.maxHealth : 1f, spriteFacesRight);
+        Juice.OnMobKilled(health != null ? health.LastAttacker : null, heavy);
+
         GoldManager gm = GoldManager.Instance;
         if (gm == null) return;
-        int reward = gm.GetKillReward(myData);
-        gm.Add(reward);
+        // 난이도(어려움 -15%) × 직업(학생 -10%) 골드 배율. 골드는 바닥에 떨어진 뒤 플레이어에게 빨려 와서 들어옴
+        int reward = Mathf.Max(1, Mathf.RoundToInt(gm.GetKillReward(myData) * Difficulty.KillGoldMul * Jobs.GoldGainMul * TalentEffects.KillGoldMul(heavy)));
+        TalentEffects.OnMobDied(this, heavy); // 현상금 사냥꾼 등
+        Juice.DropGold(transform.position, reward);
         LastAction = $"처치됨 (+{reward} 골드)";
     }
 
@@ -783,8 +971,34 @@ public class MobAI : MonoBehaviour
         if (Health.DotTick) return; // 화상·중독 지속 피해는 번쩍임·흔들림 없음
         if (flashRoutine != null) StopCoroutine(flashRoutine);
         flashRoutine = StartCoroutine(HitFlashRoutine());
+        ShowHitPose();
         if (bodyBoard != null) bodyBoard.Shake(hitShakeAmount, hitShakeDuration); // 타격감: 그림만 흔들림
     }
+
+    // 피격 그림 (v102): 맞는 순간 Death_Hit 그림을 잠깐 보여줌. 공격 동작 중에는 공격 그림을 유지
+    public const float HitPoseTime = 0.12f;
+    private static readonly System.Collections.Generic.Dictionary<string, Sprite> hitPoseCache = new System.Collections.Generic.Dictionary<string, Sprite>();
+    private void ShowHitPose()
+    {
+        if (state == State.Attacking) return;
+        AttackFrames(); // bodyAnim 찾기
+        if (bodyAnim == null) return;
+        if (bodyAnim.IsOverriding && Time.time >= hitPoseUntil) return; // 다른 덮어쓰기(공격 준비 등) 중
+        string code = MobCode();
+        if (string.IsNullOrEmpty(code)) return;
+        if (!hitPoseCache.TryGetValue(code, out Sprite s))
+        {
+            s = Resources.Load<Sprite>($"Image/Mobs/Anim/{code}/Death_Hit");
+            hitPoseCache[code] = s;
+        }
+        if (s == null) return;
+        bodyAnim.PlayOnce(new[] { s }, new[] { HitPoseTime });
+        hitPoseUntil = Time.time + HitPoseTime;
+    }
+    private float hitPoseUntil;
+
+    // 번쩍임 시간 배율 (v97: 2배 빠르게. 프리팹에 저장된 hitFlashDuration은 그대로 두고 여기서 줄임)
+    private const float HitFlashSpeedup = 0.5f;
 
     // 피격: 흰색으로 번쩍 (공격 예비동작의 붉은색과 구분)
     private IEnumerator HitFlashRoutine()
@@ -792,14 +1006,14 @@ public class MobAI : MonoBehaviour
         if (spriteSupportsFlash)
         {
             SetFlash(hitFlashStrength);
-            yield return new WaitForSeconds(hitFlashDuration);
+            yield return new WaitForSeconds(hitFlashDuration * HitFlashSpeedup);
             SetFlash(0f);
         }
         else
         {
             // 이미지가 없는 몹(큐브)은 기존처럼 색으로 표시
             SetBodyColor(hitFlashColor);
-            yield return new WaitForSeconds(hitFlashDuration);
+            yield return new WaitForSeconds(hitFlashDuration * HitFlashSpeedup);
             SetBodyColor(state == State.Attacking && aimLockTime <= 0f ? windupColor : bodyBaseColor);
         }
         flashRoutine = null;

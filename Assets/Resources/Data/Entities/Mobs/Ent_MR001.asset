@@ -15,9 +15,9 @@ MonoBehaviour:
   entityType: 0
   entityCode: MR001
   entityName: 004
-  maxHp: 30
+  maxHp: 25
   defense: 0
   moveSpeed: 4
-  cost: 0
+  cost: 2
   abilityText: 
   defaultWeapon: {fileID: 11400000, guid: c20164c430916d74c8803c519d1b0ccf, type: 2}

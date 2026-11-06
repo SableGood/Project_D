@@ -26,16 +26,20 @@ public class PlayerAugments : MonoBehaviour
         BlockTrap, SemiBoost, PowerUp, Rooted, BoomUp,
         PlayerSkills.Cloak, PlayerSkills.HeGrenade, PlayerSkills.FragGrenade
     };
-    public static bool IsKnownEffect(string effect) => !string.IsNullOrEmpty(effect) && Known.Contains(effect.Trim());
+    public static bool IsKnownEffect(string effect) => !string.IsNullOrEmpty(effect) && (Known.Contains(effect.Trim()) || TalentEffects.IsKnown(effect.Trim()));
 
     // ===== 다른 스크립트가 읽는 값 (재능이 없으면 기본값) =====
-    public static float DamageMul => Instance != null ? 1f + (Instance.dmgPct + Instance.bonusDmgPct + Instance.NoHitPct) / 100f : 1f;
-    public static float FireRateMul => Instance != null ? Mathf.Max(0.1f, 1f + (Instance.ratePct + Instance.NoHitPct) / 100f) : 1f;
+    public static float DamageMul => (Instance != null ? 1f + (Instance.dmgPct + Instance.bonusDmgPct + Instance.NoHitPct) / 100f : 1f) * Jobs.DamageMul * TalentEffects.DamageMul; // 사업가: 보유 골드 비례, 유리 대포·포탑 옆이 명당
+    public static float FireRateMul => (Instance != null ? Mathf.Max(0.1f, 1f + (Instance.ratePct + Instance.NoHitPct) / 100f) : 1f) * TalentEffects.FireRateMul; // 아드레날린
     public static float ReloadTimeMul => Instance != null ? Mathf.Clamp(1f - Instance.reloadPct / 100f, 0.2f, 3f) : 1f;
-    public static float MoveSpeedMul => Instance == null ? 1f : Instance.rooted ? 0f : Mathf.Max(0.2f, 1f + (Instance.movePct + Instance.NoHitPct) / 100f);
+    // 치명타 (플레이어 무기): 기본 5% 확률, 피해 2배. 나중에 재능으로 올릴 수 있게 여기 모아 둠
+    public const float BaseCritChance = 0.05f, BaseCritMul = 2f;
+    public static float CritChance => BaseCritChance + TalentEffects.CritBonus; // 급소 감별사
+    public static float CritMul => BaseCritMul;
+    public static float MoveSpeedMul => Instance == null ? Jobs.MoveSpeedMul : Instance.rooted ? 0f : Mathf.Max(0.2f, 1f + (Instance.movePct + Instance.NoHitPct) / 100f) * Jobs.MoveSpeedMul * TalentEffects.MoveMul; // 군인 +5%, 아드레날린
     public static bool AutoReload => Instance != null && Instance.autoReload;
     // 포탑 (뿌리 박기)
-    public static float TurretDamageMul => Instance != null ? 1f + Instance.turretDmgPct / 100f : 1f;
+    public static float TurretDamageMul => (Instance != null ? 1f + Instance.turretDmgPct / 100f : 1f) * Jobs.DamageMul;
     public static float TurretFireRateMul => Instance != null ? 1f + Instance.turretRatePct / 100f : 1f;
     // 위력증가 배율 (스킬 피해에도 곱함)
     public static float Power => Instance != null ? Instance.power : 1f;
@@ -43,9 +47,10 @@ public class PlayerAugments : MonoBehaviour
     public static float ExplosionMul => Instance != null ? 1f + Instance.boomPct / 100f : 1f;
     public static float ThrowCooldownMul => Instance != null ? Mathf.Clamp(1f - Instance.throwCdPct / 100f, 0.2f, 1f) : 1f;
 
-    // 칼로리 소비: 이 무기만 연사력 증가 + 단발 고정
+    // 칼로리 소비: 이 무기만 한 발 피해 증가 + 단발 고정 (v91: 연사력 대신 피해. 단발은 클릭 속도에 막혀 연사력이 의미 없었음)
     public static bool ForcedSemi(PlayerWeaponData d) => Instance != null && d != null && Instance.semiBoost.ContainsKey(d.weaponID);
-    public static float WeaponFireRateMul(PlayerWeaponData d)
+    public static float WeaponFireRateMul(PlayerWeaponData d) => 1f;
+    public static float WeaponDamageMul(PlayerWeaponData d)
     {
         if (Instance == null || d == null || !Instance.semiBoost.TryGetValue(d.weaponID, out float pct)) return 1f;
         return 1f + pct * Instance.power / 100f;
@@ -65,7 +70,8 @@ public class PlayerAugments : MonoBehaviour
 
     // 합산 값 (위력증가 배율이 곱해진 값)
     private float flatMaxHp, flatDef, dmgPct, ratePct, reloadPct, movePct, regen, lifesteal;
-    private float reflectChance, reflectPct, standDef, standRegen, moveHeal, stopDamage;
+    private float reflectChance, reflectPct, reflectRadius, standDef, standRegen, moveHeal, stopDamage;
+    private float rootedDamageCut;   // 뿌리 박기: 받는 피해 감소 %
     private float explodeChance, explodeRadius, explodeDmgPct, revivePct;
     private float noHitBasePct, noHitStepPct;
     private float blockRate, blockLife, blockDamage;
@@ -104,6 +110,7 @@ public class PlayerAugments : MonoBehaviour
         controller = GetComponent<PlayerController>();
         skills = GetComponent<PlayerSkills>();
         if (skills == null) skills = gameObject.AddComponent<PlayerSkills>();
+        if (GetComponent<TalentEffects>() == null) gameObject.AddComponent<TalentEffects>(); // v98 새 재능들
     }
 
     void OnEnable() { Health.AnyDamagedBy += OnAnyDamaged; if (health != null) health.BeforeDeath = TryRevive; }
@@ -210,7 +217,8 @@ public class PlayerAugments : MonoBehaviour
     private void Recalculate()
     {
         flatMaxHp = flatDef = dmgPct = ratePct = reloadPct = movePct = regen = lifesteal = 0f;
-        reflectChance = reflectPct = standDef = standRegen = moveHeal = stopDamage = 0f;
+        reflectChance = reflectPct = reflectRadius = standDef = standRegen = moveHeal = stopDamage = 0f;
+        rootedDamageCut = 0f;
         explodeChance = explodeRadius = explodeDmgPct = revivePct = 0f;
         noHitBasePct = noHitStepPct = 0f;
         blockRate = blockLife = blockDamage = 0f;
@@ -237,7 +245,7 @@ public class PlayerAugments : MonoBehaviour
                 case MoveSpeedPct: movePct += a.value1 * p; break;
                 case Regen: regen += a.value1 * p; break;
                 case Lifesteal: lifesteal += a.value1 * p; break;
-                case Reflect: reflectChance += a.value1 * p; reflectPct = Mathf.Max(reflectPct, a.value2 * p); break;
+                case Reflect: reflectChance += a.value1 * p; reflectPct = Mathf.Max(reflectPct, a.value2 * p); reflectRadius = Mathf.Max(reflectRadius, a.value3); break;
                 case StandStill: standDef += a.value1 * p; standRegen += a.value2 * p; break;
                 case MoveHeal: moveHeal += a.value1 * p; stopDamage = Mathf.Max(stopDamage, a.value2); break;
                 case NoHitBonus: noHitBasePct += a.value1 * p; noHitStepPct += a.value2 * p; break;
@@ -253,7 +261,7 @@ public class PlayerAugments : MonoBehaviour
                     blockLife = Mathf.Max(blockLife, a.value2);
                     blockDamage = Mathf.Max(blockDamage, a.value3 * p);
                     break;
-                case Rooted: rooted = true; turretDmgPct += a.value1 * p; turretRatePct += a.value2 * p; break;
+                case Rooted: rooted = true; turretDmgPct += a.value1 * p; turretRatePct += a.value2 * p; rootedDamageCut = Mathf.Max(rootedDamageCut, a.value3 * p); break;
                 case BoomUp: boomPct += a.value1 * p; throwCdPct += a.value2 * p; break;
             }
         }
@@ -265,6 +273,7 @@ public class PlayerAugments : MonoBehaviour
             if (Mathf.Abs(delta) > 0.001f) health.AddMaxHealth(delta);
             appliedMaxHp = targetMaxHp;
             health.bonusDefense = flatDef + (stillTime >= StandStillDelay ? standDef : 0f);
+            health.damageTakenMul = Mathf.Clamp01(1f - rootedDamageCut / 100f);
         }
     }
 
@@ -306,13 +315,31 @@ public class PlayerAugments : MonoBehaviour
 
         if (victim == health)
         {
-            // 안 맞으면 되는걸: 맞으면 쌓인 보너스 초기화
-            if (attacker != null) { hitThisWave = true; noHitWaves = 0; }
-            // 피해 반사: 확률적으로 받은 피해의 일부를 공격자에게 (방어력 무시, 연쇄 방지를 위해 공격자 없음으로)
+            // 안 맞으면 되는걸: 웨이브에서 처음 맞으면 쌓인 보너스(무피격 웨이브 수)가 절반으로
+            if (attacker != null)
+            {
+                if (!hitThisWave) noHitWaves /= 2;
+                hitThisWave = true;
+            }
+            // 피해 반사: 확률적으로 받은 피해 × 배율을 주변 적 모두에게 (방어력 무시, 연쇄 방지를 위해 공격자 없음으로)
             if (reflectChance > 0f && attacker != null && attacker != transform && Random.value * 100f < reflectChance)
             {
-                Health enemy = attacker.GetComponent<Health>();
-                if (enemy != null && !enemy.IsDead) enemy.TakeDamage(damage * reflectPct / 100f, 9999f, null);
+                float dmg = damage * reflectPct / 100f;
+                if (reflectRadius > 0f)
+                {
+                    int n = Physics.OverlapSphereNonAlloc(transform.position, reflectRadius, hits, MobMask(), QueryTriggerInteraction.Ignore);
+                    var done = new HashSet<Health>();
+                    for (int i = 0; i < n; i++)
+                    {
+                        Health h = hits[i] != null ? hits[i].GetComponentInParent<Health>() : null;
+                        if (h != null && !h.IsDead && h != health && done.Add(h)) h.TakeDamage(dmg, 9999f, null);
+                    }
+                }
+                else
+                {
+                    Health enemy = attacker.GetComponent<Health>();
+                    if (enemy != null && !enemy.IsDead) enemy.TakeDamage(dmg, 9999f, null);
+                }
             }
             return;
         }
@@ -359,6 +386,26 @@ public class PlayerAugments : MonoBehaviour
     private class Block { public GameObject go; public Vector3 pos; public float until; public Dictionary<Health, float> lastHit = new Dictionary<Health, float>(); }
     private readonly List<Block> blocks = new List<Block>();
     private static Material blockMat;
+    private static Sprite[] blockSprites;
+
+    private static Sprite[] BlockSprites()
+    {
+        if (blockSprites != null) return blockSprites;
+        var list = new List<Sprite>();
+        for (int i = 1; i <= 8; i++)
+        {
+            string path = "Image/Talents/Block_" + i;
+            Sprite sp = Resources.Load<Sprite>(path);
+            if (sp == null)
+            {
+                Texture2D tex = Resources.Load<Texture2D>(path); // 스프라이트로 가져오지 않았을 때
+                if (tex != null) { tex.filterMode = FilterMode.Point; sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0f), 36f); }
+            }
+            if (sp != null) list.Add(sp);
+        }
+        blockSprites = list.ToArray();
+        return blockSprites;
+    }
 
     private void DropBlock()
     {
@@ -366,21 +413,38 @@ public class PlayerAugments : MonoBehaviour
         if (Physics.Raycast(pos + Vector3.up * 0.5f, Vector3.down, out RaycastHit hit, 5f, ~((1 << 2) | MobMask() | LayerMask.GetMask("Player")), QueryTriggerInteraction.Ignore))
             pos = hit.point;
 
-        GameObject go = GameObject.CreatePrimitive(PrimitiveType.Cube);
-        go.name = "TalentBlock";
-        Destroy(go.GetComponent<Collider>());
-        go.transform.position = pos + Vector3.up * 0.08f;
-        go.transform.localScale = new Vector3(0.28f, 0.16f, 0.28f);
-        go.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 90f), 0f);
-        if (blockMat == null)
+        // v103: 블럭 그림 4종(Resources/Image/Talents/Block_1~4) 중 무작위. 그림이 없으면 예전처럼 상자
+        GameObject go;
+        Sprite[] sprites = BlockSprites();
+        if (sprites.Length > 0)
         {
-            Shader s = Shader.Find("Unlit/Color");
-            blockMat = new Material(s != null ? s : Shader.Find("Standard"));
-            blockMat.color = new Color(0.55f, 0.42f, 0.28f);
+            go = new GameObject("TalentBlock");
+            SpriteRenderer sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sprites[Random.Range(0, sprites.Length)];
+            sr.flipX = Random.value < 0.5f;
+            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            go.transform.position = pos + Vector3.up * 0.02f;
+            Camera cam = Camera.main;
+            if (cam != null) go.transform.rotation = cam.transform.rotation;
         }
-        var r = go.GetComponent<MeshRenderer>();
-        r.sharedMaterial = blockMat;
-        r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        else
+        {
+            go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = "TalentBlock";
+            Destroy(go.GetComponent<Collider>());
+            go.transform.position = pos + Vector3.up * 0.08f;
+            go.transform.localScale = new Vector3(0.28f, 0.16f, 0.28f);
+            go.transform.rotation = Quaternion.Euler(0f, Random.Range(0f, 90f), 0f);
+            if (blockMat == null)
+            {
+                Shader s = Shader.Find("Unlit/Color");
+                blockMat = new Material(s != null ? s : Shader.Find("Standard"));
+                blockMat.color = new Color(0.55f, 0.42f, 0.28f);
+            }
+            var r = go.GetComponent<MeshRenderer>();
+            r.sharedMaterial = blockMat;
+            r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+        }
         blocks.Add(new Block { go = go, pos = pos, until = Time.time + Mathf.Max(0.5f, blockLife) });
     }
 
@@ -397,16 +461,18 @@ public class PlayerAugments : MonoBehaviour
                 blocks.RemoveAt(i);
                 continue;
             }
+            // v106: 몹 하나가 밟으면 한 번만 피해·기절을 주고 블럭은 사라짐
             int n = Physics.OverlapSphereNonAlloc(b.pos, BlockRadius, hits, mask, QueryTriggerInteraction.Ignore);
             for (int k = 0; k < n; k++)
             {
                 Health h = hits[k].GetComponentInParent<Health>();
                 if (h == null || h == health || h.IsDead) continue;
-                if (b.lastHit.TryGetValue(h, out float t) && Time.time < t + BlockRehit) continue;
-                b.lastHit[h] = Time.time;
                 if (blockDamage > 0f) h.TakeDamage(blockDamage, 0f, null);
                 MobAI ai = h.GetComponent<MobAI>();
                 if (ai != null) ai.Stun(BlockStun);
+                if (b.go != null) Destroy(b.go);
+                blocks.RemoveAt(i);
+                break;
             }
         }
     }

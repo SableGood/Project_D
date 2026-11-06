@@ -172,6 +172,8 @@ public class WeaponVisual : MonoBehaviour
     [Header("슬라이드 (권총)")]
     [Tooltip("쏠 때 슬라이드가 뒤로 가 있는 시간 (초). 연사 간격의 60%를 넘지 않음")]
     public float slideCycleTime = 0.07f;
+    // 사격 후 노리쇠·슬라이드·펌프가 뒤로 갔다 오는 그림 + 반동 복귀 시간 배율 (작을수록 빠름). 탑뷰·1인칭 공통
+    public const float CycleTimeScale = 0.6f;
     [Tooltip("재장전 진행도 중 슬라이드를 놓아 앞으로 보내는 지점 (탄창은 0.85에 끼워짐)")]
     [Range(0.86f, 0.99f)] public float slideReleaseAt = 0.93f;
 
@@ -203,14 +205,14 @@ public class WeaponVisual : MonoBehaviour
         if (parts.pump)
         {
             // 펌프: 반동이 조금 가라앉은 뒤 당겼다 밂. 연사 간격 안에 끝나게 줄임
-            float delay = Mathf.Max(0f, parts.cycleDelay), time = parts.cycleTime > 0f ? parts.cycleTime : 0.16f;
+            float delay = Mathf.Max(0f, parts.cycleDelay) * CycleTimeScale, time = (parts.cycleTime > 0f ? parts.cycleTime : 0.16f) * CycleTimeScale;
             float k = Mathf.Min(1f, cooldown * 0.85f / Mathf.Max(0.01f, delay + time));
             cycleStart = Time.time + delay * k;
             cycleUntil = cycleStart + time * k;
             return;
         }
         cycleStart = Time.time;
-        cycleUntil = Time.time + Mathf.Min(slideCycleTime, Mathf.Max(0.02f, cooldown * 0.6f));
+        cycleUntil = Time.time + Mathf.Min(slideCycleTime * CycleTimeScale, Mathf.Max(0.02f, cooldown * 0.6f));
     }
 
     public bool HasMagazineParts => parts != null;
@@ -347,7 +349,9 @@ public class WeaponVisual : MonoBehaviour
         {
             slashSpawned = true;
             float len = body != null && body.sprite != null ? body.sprite.bounds.size.x * Mathf.Abs(body.transform.lossyScale.x) : 1f;
-            HitEffects.Slash(transform.position - camT.forward * 0.05f, len * 1.05f, angle, side < 0f, slashColor, swingDur * 0.75f);
+            // v107: 도트 베기 궤적 (pixelfx). 그림이 없으면 예전 반달
+            if (PixelFx.Has(PixelFx.Slash)) PixelFx.PlayAngle(PixelFx.Slash, transform.position - camT.forward * 0.05f, angle, len * 1.05f / 42f, null, Mathf.Clamp(0.75f / Mathf.Max(0.1f, swingDur), 0.8f, 2.5f));
+            else HitEffects.Slash(transform.position - camT.forward * 0.05f, len * 1.05f, angle, side < 0f, slashColor, swingDur * 0.75f);
         }
 
         Vector3 scale = transform.localScale;
@@ -728,7 +732,7 @@ public class WeaponVisual : MonoBehaviour
 
     void LateUpdate()
     {
-        if (kick > 0f) kick = kick < 0.002f ? 0f : kick * Mathf.Exp(-recoilRecover * Time.deltaTime);
+        if (kick > 0f) kick = kick < 0.002f ? 0f : kick * Mathf.Exp(-recoilRecover / CycleTimeScale * Time.deltaTime);   // 반동 복귀도 같은 배율로 빠르게
         UpdateReload();
         Refresh();
         ApplyLighting();

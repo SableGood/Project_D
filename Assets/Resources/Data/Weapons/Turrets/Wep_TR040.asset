@@ -16,5 +16,5 @@ MonoBehaviour:
   attackType: 3
   attackPower: 0
   attackSpeed: 0
-  attackRange: 7
+  attackRange: 10
   projectilePrefab: {fileID: 0}

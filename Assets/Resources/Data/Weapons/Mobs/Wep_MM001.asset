@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::WeaponData
   weaponName: MM001_Weapon
   attackType: 0
-  attackPower: 5
-  attackSpeed: 0.4
+  attackPower: 8
+  attackSpeed: 0.5
   attackRange: 1
   projectilePrefab: {fileID: 0}
