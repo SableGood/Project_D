@@ -51,6 +51,10 @@ public class PlayerWeaponManager : MonoBehaviour
     public LayerMask tpsAimIgnoreLayers;
 
     private int currentWeaponIndex = 0;
+    // v125 무기 교체 딜레이: 이 시각 전까지 사격·장전 불가 (재능 '스왑 패줌'이면 없음)
+    private float swapReadyTime;
+    public float SwapDelayLeft => Mathf.Max(0f, swapReadyTime - Time.time);
+    public float SwapDelayTotal { get; private set; }
 
     // ★ 무기별 남은 탄약 기억 (무기 교체로 탄창이 공짜로 채워지는 버그 방지). -1 = 아직 안 든 무기
     private int[] savedAmmo;
@@ -178,6 +182,9 @@ public class PlayerWeaponManager : MonoBehaviour
         if (AugmentManager.IsOpen) return; // 재능 선택 중에는 사격·장전 안 함
         if (!Jobs.CanUseWeapons) return;   // 대통령: 직접 공격 불가 (경호실장이 대신 쏨)
 
+        // v125 무기 교체 직후: 장전 손잡이·슬라이드를 당기는 동안 사격·장전 불가
+        if (Time.time < swapReadyTime) return;
+
         // R키 수동 장전
         if (Input.GetKeyDown(KeyCode.R))
         {
@@ -214,6 +221,7 @@ public class PlayerWeaponManager : MonoBehaviour
 
         EnsureAmmoSlots();
 
+        bool swapping = currentWeaponInstance != null && index != currentWeaponIndex;
         if (currentWeaponInstance != null)
         {
             // 들고 있던 무기의 남은 탄약 저장 (재장전 도중 교체하면 재장전은 취소됨)
@@ -273,6 +281,14 @@ public class PlayerWeaponManager : MonoBehaviour
         }
 
         currentWeaponIndex = index;
+        // v125 무기 교체 딜레이 + 장전 모션 (처음 드는 무기는 없음)
+        if (swapping)
+        {
+            SwapDelayTotal = TalentExtra.SwapDelay;
+            swapReadyTime = Time.time + SwapDelayTotal;
+            if (currentVisual != null) currentVisual.PlayDraw(Mathf.Max(0.45f, SwapDelayTotal));
+            TalentExtra.OnWeaponSwapped();
+        }
         // 대통령: 무기를 들지 않음 (경호실장이 대신 쏨)
         if (!Jobs.CanUseWeapons && currentWeaponInstance != null) currentWeaponInstance.SetActive(false);
     }

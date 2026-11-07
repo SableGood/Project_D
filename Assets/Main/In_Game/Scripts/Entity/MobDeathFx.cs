@@ -47,6 +47,7 @@ public class MobDeathFx : MonoBehaviour
     private float flashStrength;
     private Color flashColor = Color.white;
     private float flyDist, collideDmg;
+    private float rest;   // v125 누워 있는 시간 (재능 '알뜰살뜰'이면 길게)
     private readonly HashSet<Health> hitDone = new HashSet<Health>();
     private static readonly Collider[] hitBuf = new Collider[16];
     private static int mobMask = -1;
@@ -129,6 +130,7 @@ public class MobDeathFx : MonoBehaviour
             fx.downSprite = fx.fallBack ? fx.set.down2 : has1 ? fx.set.down1 : fx.set.down;
         }
         fx.t0 = Time.time;
+        fx.rest = TalentExtra.CorpseTime > 0f ? TalentExtra.CorpseTime : RestTime;
         fx.sinkHeight = 0f;
         fx.flashStrength = mob.hitFlashStrength;
         fx.flashColor = mob.hitFlashOverlay;
@@ -161,7 +163,7 @@ public class MobDeathFx : MonoBehaviour
             roll = 80f * k * fallbackSide;
             offset = push * 0.4f * k;
             sr.sprite = fallbackSprite;
-            end = 0.3f + RestTime;
+            end = 0.3f + rest;
         }
         else if (fly)
         {
@@ -179,7 +181,7 @@ public class MobDeathFx : MonoBehaviour
                 sr.sprite = set.corpse;
                 offset = push * flyDist;
             }
-            end = hitT + FlyTime + RestTime;
+            end = hitT + FlyTime + rest;
         }
         else
         {
@@ -189,12 +191,15 @@ public class MobDeathFx : MonoBehaviour
             else sr.sprite = downSprite != null ? downSprite : set.down;
             // 앞으로 고꾸라짐(때린 쪽으로) / 뒤로 넘어짐(밀려난 쪽으로)
             offset = (fallBack ? push * 0.25f : -push * 0.15f) * Mathf.Clamp01((t - hitT) / (fallT + 0.1f));
-            end = hitT + fallT + RestTime;
+            end = hitT + fallT + rest;
         }
 
         // 가라앉기: 누워 있는 시간이 끝나면 SinkTime 동안 바닥 아래로 내려감
         float sink = 0f;
         bool sinking = t > end;
+        // v125 알뜰살뜰: 누워 있는 시체를 밟으면 체력 회복 + 시체가 사라짐
+        if (!sinking && t > end - rest + 0.1f && TalentExtra.CorpseHeal > 0f &&
+            TalentExtra.TryPickCorpse(startFeet + new Vector3(offset.x, 0f, offset.z))) { Finish(); return; }
         if (sinking)
         {
             float b = (t - end) / Mathf.Max(0.1f, SinkTime);

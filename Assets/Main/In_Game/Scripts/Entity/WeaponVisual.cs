@@ -334,6 +334,31 @@ public class WeaponVisual : MonoBehaviour
         return Mathf.Lerp(-swingForwardAngle, 0f, r);
     }
 
+    // v125 무기 교체: 무기를 들어 올리며 장전 손잡이·슬라이드·펌프를 한 번 당김 (탄창은 그대로)
+    private float drawStart = -1f, drawDur = 1f;
+    private bool drawCocked;
+    public void PlayDraw(float duration)
+    {
+        drawStart = Time.time; drawDur = Mathf.Max(0.2f, duration); drawCocked = false;
+    }
+    private void UpdateDraw()
+    {
+        if (drawStart < 0f) return;
+        float t = (Time.time - drawStart) / drawDur;
+        if (t >= 1f || weapon == null || weapon.isReloading) { drawStart = -1f; return; }
+        reloadTilt = Mathf.Max(reloadTilt, 0.75f * Mathf.Sin(Mathf.PI * Mathf.Lerp(0.3f, 1f, t)));
+        if (!drawCocked && t >= 0.5f)
+        {
+            drawCocked = true;
+            Kick(0.35f);
+            if (parts != null && parts.slide && !boltOpen)
+            {
+                cycleStart = Time.time;
+                cycleUntil = Time.time + Mathf.Max(0.12f, parts.cycleTime > 0f ? parts.cycleTime : 0.18f);
+            }
+        }
+    }
+
     public void Kick(float strength)
     {
         kick = Mathf.Min(kick + strength, strength * 1.8f); // 연사해도 무한히 쌓이지 않게
@@ -761,6 +786,7 @@ public class WeaponVisual : MonoBehaviour
     {
         if (kick > 0f) kick = kick < 0.002f ? 0f : kick * Mathf.Exp(-recoilRecover / CycleTimeScale * Time.deltaTime);   // 반동 복귀도 같은 배율로 빠르게
         UpdateReload();
+        UpdateDraw();
         Refresh();
         ApplyLighting();
     }

@@ -380,6 +380,8 @@ public class TowerBuilder : MonoBehaviour
         TowerStatusBar.Attach(tower, towerData);
         // ★ 3D 외곽선이 모서리에서 끊기지 않도록 부드러운 노멀 준비 (같은 메쉬는 1회만 계산)
         OutlineNormals.Bake(tower);
+        // ★ v126 TR 시리즈 긴급 전개: 하부 → 링 → 상부 순서로 하늘에서 떨어져 결합 (그동안 무적·작동 정지)
+        TowerDrop.Play(tower);
 
         // (풀에서 재사용된 타워라면 예전 칸 기록은 지움)
         List<Vector2Int> stale = new List<Vector2Int>();

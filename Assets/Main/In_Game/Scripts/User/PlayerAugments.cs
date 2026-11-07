@@ -26,7 +26,7 @@ public class PlayerAugments : MonoBehaviour
         BlockTrap, SemiBoost, PowerUp, Rooted, BoomUp, GiveWeaponFx,
         PlayerSkills.Cloak, PlayerSkills.HeGrenade, PlayerSkills.FragGrenade
     };
-    public static bool IsKnownEffect(string effect) => !string.IsNullOrEmpty(effect) && (Known.Contains(effect.Trim()) || TalentEffects.IsKnown(effect.Trim()));
+    public static bool IsKnownEffect(string effect) => !string.IsNullOrEmpty(effect) && (Known.Contains(effect.Trim()) || TalentEffects.IsKnown(effect.Trim()) || TalentExtra.IsKnown(effect.Trim()));
 
     // ===== 다른 스크립트가 읽는 값 (재능이 없으면 기본값) =====
     public static float DamageMul => (Instance != null ? 1f + (Instance.dmgPct + Instance.bonusDmgPct + Instance.NoHitPct) / 100f : 1f) * Jobs.DamageMul * TalentEffects.DamageMul; // 사업가: 보유 골드 비례, 유리 대포·포탑 옆이 명당
@@ -111,6 +111,7 @@ public class PlayerAugments : MonoBehaviour
         skills = GetComponent<PlayerSkills>();
         if (skills == null) skills = gameObject.AddComponent<PlayerSkills>();
         if (GetComponent<TalentEffects>() == null) gameObject.AddComponent<TalentEffects>(); // v98 새 재능들
+        if (GetComponent<TalentExtra>() == null) gameObject.AddComponent<TalentExtra>();     // v125 새 재능들
     }
 
     void OnEnable() { Health.AnyDamagedBy += OnAnyDamaged; if (health != null) health.BeforeDeath = TryRevive; }

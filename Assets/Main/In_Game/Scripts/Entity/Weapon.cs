@@ -242,6 +242,8 @@ public class Weapon : MonoBehaviour
     public static void MarkPlayerGunHit(bool v) => PlayerGunHit = v;
     private float shotDamageMul = 1f;   // 이번 발의 피해 배율 (부채꼴 사격·관통 감소)
     private float talentSpread;         // 이번 발의 추가 탄퍼짐
+    private bool shotForceCrit;         // v125 이번 발 반드시 치명타 (구른닷)
+    private float shotBonusMul = 1f;    // v125 이번 발 추가 피해 배율 (스왑 패줌 첫 발)
     // 재장전에 걸리는 시간 (과열 재능이면 고정 시간)
     public float ReloadDuration => playerWepData != null && TalentEffects.Overheat ? TalentEffects.OverheatTime : ReloadTime;
 
@@ -409,6 +411,7 @@ public class Weapon : MonoBehaviour
     {
         tracerIndex = 0;
         knockedThisShot.Clear();
+        if (playerWepData != null) shotBonusMul = TalentExtra.ConsumeShot(out shotForceCrit);
 
         // 투사체 갯수만큼 발사 (산탄총 등). 몹/타워는 1발.
         int count = Mathf.Max(1, pelletCount);
@@ -422,7 +425,7 @@ public class Weapon : MonoBehaviour
             if (fireMode == FireMode.Hitscan) FireHitscan(targetTransform, manualTargetPosition);
             else FireProjectile(targetTransform, manualTargetPosition);
         }
-        shotDamageMul = 1f; talentSpread = 0f;
+        shotDamageMul = 1f; talentSpread = 0f; shotForceCrit = false; shotBonusMul = 1f;
         Vector3 aimForFx = targetTransform != null ? targetTransform.position : manualTargetPosition;
         if (muzzleFlash) ShowMuzzleFlash(aimForFx);
         Vector3 fd = aimForFx - GetFireOrigin(fireMode == FireMode.Hitscan);
@@ -666,8 +669,8 @@ public class Weapon : MonoBehaviour
     // 플레이어 무기만 치명타 (확률·배율은 PlayerAugments). 포탑·몹 무기는 치명타 없음
     private float RollDamage(out bool crit)
     {
-        float d = EffectiveDamage * shotDamageMul;
-        crit = playerWepData != null && Random.value < PlayerAugments.CritChance;
+        float d = EffectiveDamage * shotDamageMul * shotBonusMul;
+        crit = playerWepData != null && (shotForceCrit || Random.value < PlayerAugments.CritChance);
         // 마지막 한 발 (재능): 탄창의 마지막 탄은 피해 배율 + 반드시 치명타
         if (playerWepData != null && playerWepData.UsesAmmo && currentAmmo == 0 && TalentEffects.LastShotMul > 1f)
         {
@@ -759,7 +762,7 @@ public class Weapon : MonoBehaviour
 
         Sprite sprite = muzzleFlashSprite != null ? muzzleFlashSprite : GetGeneratedFlash();
         flashRenderer.sprite = sprite;
-        flashRenderer.color = muzzleFlashColor;
+        flashRenderer.color = playerWepData != null && TalentExtra.IncendiaryOn ? muzzleFlashColor * TalentExtra.IncendiaryFlash : muzzleFlashColor; // v125 소이탄: 주황 화염
 
         Transform t = flashRenderer.transform;
         Camera cam = Camera.main;

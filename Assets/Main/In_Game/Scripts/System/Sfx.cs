@@ -272,6 +272,16 @@ public class Sfx : MonoBehaviour
         { "Envy", new[] { new Step(0.03f, "Battle_clipout"), new Step(0.58f, "Battle_clipin") } },   // v121: 실린더 분리 → 새 실린더 결합
     };
     private string reloadOverride;
+    // v125 무기 교체 때 장전 손잡이·슬라이드·펌프 소리 (탄창 소리 없음. 기관총은 장전 손잡이만)
+    private static readonly Dictionary<string, string> SwapCock = new Dictionary<string, string>
+    {
+        { "Colt", "Gun/Colt_Cock" }, { "Thompson", "Gun/Thompson_Reload" }, { "Eugene", "Gun/Eugene_Cock" },
+        { "Battle", "Gun/Battle_boltpull" }, { "Garand", "Gun/Garand_release" }, { "MAG", "Gun/MAG_boltpull" },
+        { "Mossberg", "Gun/Mossberg_Pump" },
+        { "Duty", "Gun/K2_Reload_Pull" }, { "SPA5", "Gun/SPA5_Pump" },   // 무기 이름 우선 (계열보다 먼저 찾음)
+    };
+    private float cockAt = -1f;
+    private string cockClip;
 
     private static string FamilyOf(PlayerWeaponData d)
     {
@@ -320,7 +330,12 @@ public class Sfx : MonoBehaviour
                 if (hadWeapon) PlayClip(Clip(family == "ALA" ? "Gun/ALA_Deploy" : "Gun/draw"), gunReload * 0.8f, 0.03f); // 무기 꺼내기
             }
             pumpAt = -1f;
+            // v125 교체 장전 소리: 교체 딜레이 중간쯤 (WeaponVisual.PlayDraw의 당기는 순간과 맞춤)
+            cockAt = -1f; cockClip = null;
+            if (w != null && hadWeapon && (SwapCock.TryGetValue(bn, out cockClip) || (family != null && SwapCock.TryGetValue(family, out cockClip))))
+                cockAt = Time.time + 0.5f * Mathf.Max(0.45f, pwm != null ? pwm.SwapDelayTotal : 1f);
         }
+        if (cockAt > 0f && Time.time >= cockAt) { cockAt = -1f; if (w != null && !w.isReloading && cockClip != null) PlayClip(Clip(cockClip), gunReload, 0.03f); }
         if (w == null || family == null) return;
 
         // 펌프: 쏘고 잠시 뒤 '철컥' (산탄총)

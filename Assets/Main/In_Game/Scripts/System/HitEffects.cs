@@ -145,7 +145,8 @@ public class HitEffects : MonoBehaviour
             bool crit = Health.LastHitCrit && PixelFx.Has(PixelFx.Crit);
             Vector3 dir = h.LastAttacker != null ? point - h.LastAttacker.position : Vector3.zero;
             float k = Mathf.Lerp(0.9f, 1.25f, Mathf.InverseLerp(0.3f, 1f, radius));
-            PixelFx.Play(crit ? PixelFx.Crit : PixelFx.Hit, point, dir, (crit ? MobCritPixel : MobHitPixel) * k, null, 1f, 1f, crit ? (Color?)CritTint : null);
+            Color? tint = crit ? CritTint : (Weapon.PlayerGunHit && TalentExtra.IncendiaryOn ? TalentExtra.IncendiaryTint : (Color?)null); // v125 소이탄: 주황 불티
+            PixelFx.Play(crit ? PixelFx.Crit : PixelFx.Hit, point, dir, (crit ? MobCritPixel : MobHitPixel) * k, null, 1f, 1f, tint);
         }
         // v109: 플레이어 피격은 붉은 도트 이펙트 (Fx_player_hit)
         else if (kind == Kind.Player && PixelFx.Has(PlayerHitFx))
