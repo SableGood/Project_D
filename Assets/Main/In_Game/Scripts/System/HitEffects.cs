@@ -145,7 +145,7 @@ public class HitEffects : MonoBehaviour
             bool crit = Health.LastHitCrit && PixelFx.Has(PixelFx.Crit);
             Vector3 dir = h.LastAttacker != null ? point - h.LastAttacker.position : Vector3.zero;
             float k = Mathf.Lerp(0.9f, 1.25f, Mathf.InverseLerp(0.3f, 1f, radius));
-            PixelFx.Play(crit ? PixelFx.Crit : PixelFx.Hit, point, dir, (crit ? MobCritPixel : MobHitPixel) * k);
+            PixelFx.Play(crit ? PixelFx.Crit : PixelFx.Hit, point, dir, (crit ? MobCritPixel : MobHitPixel) * k, null, 1f, 1f, crit ? (Color?)CritTint : null);
         }
         // v109: 플레이어 피격은 붉은 도트 이펙트 (Fx_player_hit)
         else if (kind == Kind.Player && PixelFx.Has(PlayerHitFx))
@@ -188,8 +188,37 @@ public class HitEffects : MonoBehaviour
                                            Random.Range(-0.15f, 0.35f) * b.extents.y,
                                            Random.Range(-0.35f, 0.35f) * b.extents.z);
         if (cam == null) cam = Camera.main;
-        if (cam != null) p -= cam.transform.forward * (kind == Kind.Tower ? 0.15f : 0.35f);
+        // v117: 카메라 쪽으로 당김. 몹은 기울어진 그림이 깊이로 가리지 않게 크게 (카메라를 향한 선을 따라 → 화면 위치는 그대로)
+        if (cam != null)
+        {
+            if (kind == Kind.Mob) p = InFrontOfFeetPlane(p, board);
+            else p -= cam.transform.forward * (kind == Kind.Tower ? 0.15f : 0.35f);
+        }
         return p;
+    }
+
+    // v121: 치명타 이펙트 색 (그림 색에 곱함). v122: 빨강은 피처럼 보여서 → 일반 타격보다 조금 진한 주황
+    public static Color CritTint = new Color(1f, 0.62f, 0.22f, 1f);
+
+    // v120: 몹 그림(Project_D/Sprite Shadow)은 화면에선 카메라 쪽으로 기울어 있지만, 깊이는 '발밑에 세운 수직 판' 기준.
+    //  → 그림의 윗부분일수록 실제 깊이가 그림보다 훨씬 앞(카메라 쪽)이라, 그 자리에 그린 이펙트가 가려짐.
+    //    키 큰 몹(엘리트·보스 등)은 차이가 커서 예전의 고정 1.2m 당김으로도 부족했음.
+    //  해결: 카메라→맞은 자리 선이 그 수직 판과 만나는 곳보다 조금 더 앞에 둠 (화면 위치는 그대로)
+    private Vector3 InFrontOfFeetPlane(Vector3 p, Billboard board)
+    {
+        Vector3 camPos = cam.transform.position;
+        Vector3 dir = p - camPos;
+        float t = 1f;
+        Vector3 fwd = cam.transform.forward; fwd.y = 0f;
+        if (board != null && board.HasFeet && fwd.sqrMagnitude > 0.0025f)
+        {
+            fwd.Normalize();
+            float denom = Vector3.Dot(dir, fwd);
+            if (denom > 1e-4f) t = Mathf.Min(1f, Vector3.Dot(board.FeetWorld - camPos, fwd) / denom);
+        }
+        float len = dir.magnitude;
+        float pull = 0.4f / Mathf.Max(0.01f, len);   // 판보다 0.4m 더 앞
+        return camPos + dir * Mathf.Max(0.05f, t - pull);
     }
 
     // ------------------------------------------------------------------

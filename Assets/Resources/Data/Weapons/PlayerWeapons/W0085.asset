@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0085
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0085
+  weaponName: Heavy
+  inGameName: "\uD5E4\uBE44"
+  role: "\uD574\uAE08 \uC804\uD22C\uC18C\uCD1D"
+  category: BR
+  acquire: "\uD574\uAE08"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Auto
+  range: 21
+  damage: 20
+  reloadTime: 2.3
+  maxAmmo: 22
+  fireRate: 8
+  projectileCount: 1
+  spread: 1.5
+  moveSpread: 7
+  knockback: 0
+  canPierce: 0
+  armorPenetration: 5
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Ball
+  aoeRadius: 0
+  spriteName: Pic_Heavy
+  spriteLength: 1.1
+  weaponSprite: {fileID: 21300000, guid: 5a0b167b49c64c668afbb991d3c63613, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
+  description: "\uBB35\uC9C1\uD55C \uC804\uD22C\uC18C\uCD1D. (\uD14C\uC2A4\uD2B8:
+    \uBC30\uD2C0 / \uBAA8\uB358\uACFC \uAC19\uC740 \uC218\uCE58)"

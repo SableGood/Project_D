@@ -292,7 +292,7 @@ public class PlayerWeaponManager : MonoBehaviour
 
         if (currentVisual != null) { currentVisual.Cycle(w.attackCooldown); currentVisual.Kick(strength); } // 권총 슬라이드 + 반동
         PlayerHUD.Recoil(strength);
-        if (ejectCasings) EjectCasing(w, strength);
+        if (ejectCasings && (w.playerWepData == null || w.playerWepData.aoeRadius <= 0f)) EjectCasing(w, strength); // 로켓포는 탄피 없음
     }
 
     // 한 발의 위력(공격력 × 탄 수)이 클수록 반동이 큼. 권총(18) ≈ 1.2, 기관단총 ≈ 0.75, 저격·산탄 ≈ 2

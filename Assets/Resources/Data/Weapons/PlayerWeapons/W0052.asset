@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: MAG_Assault
   inGameName: "\uB9E5 / \uC5B4\uC370\uD2B8"
   role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uAE30\uAD00\uCD1D"
+  category: MG
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 3
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
+  aoeRadius: 0
   spriteName: Pic_MAG_3_Assault
   spriteLength: 1.2
   weaponSprite: {fileID: 21300000, guid: e1909f57b62b5954cbb2253c73138995, type: 3}

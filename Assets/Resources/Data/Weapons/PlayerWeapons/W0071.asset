@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Mossberg_Modern
   inGameName: "\uBAA8\uC2A4\uBC84\uADF8 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uC0B0\uD0C4\uCD1D"
+  category: SG
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 0
   projectileSpeed: 0
   projectilePrefabName: Projectile_Shot
+  aoeRadius: 0
   spriteName: Pic_Mossberg_2_Modern
   spriteLength: 1
   weaponSprite: {fileID: 21300000, guid: 0b257971f86b7614dbc63a0c0a21221a, type: 3}

@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0045
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0045
+  weaponName: Duty
+  inGameName: "\uB4C0\uD2F0"
+  role: "\uD574\uAE08 \uB3CC\uACA9\uC18C\uCD1D"
+  category: AR
+  acquire: "\uD574\uAE08"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Auto
+  range: 19
+  damage: 14
+  reloadTime: 1.9
+  maxAmmo: 30
+  fireRate: 10
+  projectileCount: 1
+  spread: 2.5
+  moveSpread: 6
+  knockback: 0
+  canPierce: 0
+  armorPenetration: 2
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Ball
+  aoeRadius: 0
+  spriteName: Pic_Duty
+  spriteLength: 1
+  weaponSprite: {fileID: 21300000, guid: f351d3e2883c4cc7a37e9b05d4555415, type: 3}
+  projectilePrefab: {fileID: 7895335454324948737, guid: 51be1030c33d1e24b8fb759a1d1be077, type: 3}
+  description: "\uC218\uC9C1 \uC190\uC7A1\uC774\uAC00 \uB2EC\uB9B0 \uD604\uB300\uC2DD
+    \uC18C\uCD1D. (\uD14C\uC2A4\uD2B8: \uC720\uC9C4 / \uBAA8\uB358\uACFC \uAC19\uC740
+    \uC218\uCE58)"

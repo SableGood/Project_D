@@ -1,0 +1,29 @@
+{
+ "magType": "Pump",
+ "semiAuto": true,
+ "ppu": 100,
+ "cycleDelay": 0.0,
+ "cycleTime": 0.28,
+ "side": {
+  "magOffset": [
+   0,
+   0
+  ],
+  "muzzle": [
+   460.0,
+   39.5
+  ],
+  "loadPort": [
+   -211.7,
+   5.3
+  ],
+  "grip": [
+   -390.0,
+   7.5
+  ],
+  "frontGrip": [
+   130.0,
+   -22.5
+  ]
+ }
+}

@@ -520,6 +520,7 @@ public class AugmentManager : MonoBehaviour
         if (!string.IsNullOrEmpty(a.prerequisite) && !HasAnyPrerequisite(pa, a.prerequisite)) return false;
         if (PlayerSkills.IsSkillEffect(a.effect) && (pa.Skills == null || !pa.Skills.HasFreeSlot)) return false; // 빈 스킬 칸이 없으면 안 나옴
         if (a.effect == PlayerAugments.SemiBoost && !pa.CanTakeSemiBoost()) return false; // 들고 있는 무기가 대상일 때만
+        if (a.effect == PlayerAugments.GiveWeaponFx && !pa.CanTakeWeaponTalent(a)) return false; // v113: 그 무기가 없을 때만
         return true;
     }
 

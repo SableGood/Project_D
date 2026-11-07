@@ -24,6 +24,7 @@ public class Health : MonoBehaviour
     public event System.Action OnDied;
     // 누가 맞든 피격될 때마다 알림 (피격 이펙트 등 전역 연출용: HitEffects)
     public static event System.Action<Health, float> AnyDamaged;
+    public static event System.Action<Health> AnyDied;   // v119: 누가 쓰러졌을 때 (쓰러짐 소리)
     // 위와 같지만 공격한 쪽(몹·플레이어 루트)도 함께 알림. 공격자를 모르면 null (재능: 흡혈·피해 반사 등)
     public static event System.Action<Health, float, Transform> AnyDamagedBy;
 
@@ -114,6 +115,7 @@ public class Health : MonoBehaviour
         {
             isDead = true;
             OnDied?.Invoke();
+            AnyDied?.Invoke(this);
             StartCoroutine(ProcessDeathRoutine());
         }
     }

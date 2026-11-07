@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: MAG_Ranger
   inGameName: "\uB9E5 / \uB808\uC778\uC800"
   role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uAE30\uAD00\uCD1D"
+  category: MG
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 6
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
+  aoeRadius: 0
   spriteName: Pic_MAG_3_Ranger
   spriteLength: 1.2
   weaponSprite: {fileID: 21300000, guid: 2a078a48bcef5424e868fa0eea021e74, type: 3}

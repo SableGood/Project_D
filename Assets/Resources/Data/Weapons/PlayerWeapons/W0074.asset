@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Mossberg_Ballista
   inGameName: "\uBAA8\uC2A4\uBC84\uADF8 / \uBC1C\uB9AC\uC2A4\uD0C0"
   role: "3\uD2F0\uC5B4 \uD654\uB825\uD615 \uC0B0\uD0C4\uCD1D"
+  category: SG
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 5
   projectileSpeed: 0
   projectilePrefabName: Projectile_Shot
+  aoeRadius: 0
   spriteName: Pic_Mossberg_3_Ballista
   spriteLength: 1.1
   weaponSprite: {fileID: 21300000, guid: a97e56411926465790ba2d7525849261, type: 3}

@@ -23,6 +23,7 @@ public class Projectile : MonoBehaviour
     // v109: 그림 탄 (몹 총탄·포탄). null이면 프리팹 원래 모양(육면체 등)
     [HideInInspector] public Sprite visualSprite;
     [HideInInspector] public float visualLength = 0.4f;   // 그림 길이 (m)
+    [HideInInspector] public string explosionSfx;         // v121: 폭발 소리 (Sound 폴더 기준). 비우면 Gun/Frag_Explode
     [HideInInspector] public string explosionFx;          // 범위 폭발 때 재생할 도트 이펙트 (PixelFx 이름)
     private SpriteRenderer visualSr;
     private Renderer[] meshRenderers;
@@ -60,7 +61,8 @@ public class Projectile : MonoBehaviour
         lastPos = transform.position;
         if (cam == null) return;
         Transform vt = visualSr.transform;
-        float px = visualLength / Mathf.Max(1f, visualSprite.rect.height);
+        // v115: 그림의 PPU와 상관없이 visualLength(m)가 되게 (예전: 픽셀 수 기준 → PPU 100 그림은 100배 작아 안 보였음)
+        float px = visualLength / Mathf.Max(1e-4f, visualSprite.bounds.size.y);
         // 부모(프리팹) 크기를 상쇄
         Vector3 ps = transform.lossyScale;
         vt.localScale = new Vector3(px / Mathf.Max(1e-4f, ps.x), px / Mathf.Max(1e-4f, ps.y), px / Mathf.Max(1e-4f, ps.z));
@@ -73,7 +75,22 @@ public class Projectile : MonoBehaviour
         }
         else ang = lastAng;
         vt.rotation = cam.transform.rotation * Quaternion.Euler(0f, 0f, ang);
+
+        // v115 로켓 연기 꼬리: 꽁무니에서 뒤쪽으로 퍼지는 연기를 짧은 간격으로
+        if (!string.IsNullOrEmpty(trailFx) && v.sqrMagnitude > 1e-8f && Time.time >= nextTrail && PixelFx.Has(trailFx))
+        {
+            nextTrail = Time.time + trailInterval;
+            Vector3 back = -v.normalized;
+            PixelFx.Play(trailFx, transform.position + back * visualLength * 0.5f, back, trailMetersPerPixel, null, 1.6f, 0.7f);
+        }
     }
+    [HideInInspector] public string trailFx;              // 날아가며 남기는 연기 (PixelFx 이름). null = 없음
+    [HideInInspector] public float trailInterval = 0.035f;
+    [HideInInspector] public float trailMetersPerPixel = 0.012f;   // v116: 2배 (잘 보이게)
+    // v116 로켓 가속: 처음 launchDelay초는 launchMul배, 그 뒤로 boostMul배 속도
+    [HideInInspector] public float launchMul = 1f, boostMul = 1f, launchDelay = 0f;
+    private float flyTime;
+    private float nextTrail;
     private float lastAng;
 
     // 범위 폭발 설정: radius > 0 이면 그 반경으로 폭발, 아니면 프리팹 원래 설정으로 되돌림 (풀 재사용 대비)
@@ -102,7 +119,7 @@ public class Projectile : MonoBehaviour
             straightDir = (targetPos - transform.position).normalized;
         }
         startPos = transform.position;
-        journeyTime = 0f;
+        journeyTime = 0f; flyTime = 0f;
     }
 
     // 수동 에임(좌표 발사) 초기화
@@ -112,7 +129,7 @@ public class Projectile : MonoBehaviour
         targetPos = aimPosition;
         straightDir = (targetPos - transform.position).normalized;
         startPos = transform.position;
-        journeyTime = 0f;
+        journeyTime = 0f; flyTime = 0f;
     }
 
     void Update()
@@ -170,7 +187,9 @@ public class Projectile : MonoBehaviour
 
     private void FlyStraight()
     {
-        transform.position += straightDir * speed * Time.deltaTime;
+        float mul = launchDelay > 0f ? (flyTime < launchDelay ? launchMul : boostMul) : 1f;
+        flyTime += Time.deltaTime;
+        transform.position += straightDir * speed * mul * Time.deltaTime;
 
         if (straightDir != Vector3.zero) transform.rotation = Quaternion.LookRotation(straightDir);
 
@@ -187,13 +206,16 @@ public class Projectile : MonoBehaviour
         if (stopDistance > 0f && target == null && Vector3.Distance(startPos, transform.position) >= stopDistance)
         {
             transform.position = startPos + straightDir * stopDistance;
+            if (isAreaOfEffect) { HitTarget(null); return; } // v113 로켓: 조준점에서 폭발
             HitEffects.Impact(transform.position, false);
+            if (fromPlayerGun) Sfx.BulletImpact(transform.position, null);
             ReturnToPool();
             return;
         }
 
         if (Vector3.Distance(startPos, transform.position) > 30f)
         {
+            if (isAreaOfEffect) { HitTarget(null); return; }
             ReturnToPool();
         }
     }
@@ -250,7 +272,7 @@ public class Projectile : MonoBehaviour
                 Camera cam = Camera.main;
                 Vector3 p = transform.position + (cam != null ? -cam.transform.forward * 0.3f : Vector3.zero);
                 PixelFx.Play(explosionFx, p, Vector3.zero, explosionRadius * 2f / 56f);
-                Sfx.Play("Gun/Frag_Explode", 0.55f);
+                Sfx.Play(string.IsNullOrEmpty(explosionSfx) ? "Gun/Frag_Explode" : explosionSfx, 0.55f);
             }
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, targetLayer);
             HashSet<Health> damaged = new HashSet<Health>();
@@ -273,6 +295,9 @@ public class Projectile : MonoBehaviour
 
     private void ReturnToPool()
     {
+        explosionSfx = null;
+        trailFx = null;   // 풀에서 다른 무기(포탑·몹)가 재사용할 때 연기가 따라가지 않게
+        launchMul = boostMul = 1f; launchDelay = 0f;
         isCrit = false;
         fromPlayerGun = false;
         if (TryGetComponent(out PooledObject pooledObj))

@@ -81,6 +81,8 @@ public class WeaponDataImporter
             string alias = header.Get(row, "인게임 별칭 (임시)", "인게임 별칭");
             data.inGameName = string.IsNullOrEmpty(alias) ? data.weaponName : alias;
             data.role = header.Get(row, "역할");
+            data.category = header.Get(row, "Tag");                 // v113: 분류 (엘리트 상점 해금 조건)
+            data.acquire = header.Get(row, "획득 방식");             // v113: 비움/상점 · 해금 · 재능
 
             data.aimType = header.Get(row, "Aim Type");
             data.fireMode = header.Get(row, "Fire Mode");
@@ -99,6 +101,7 @@ public class WeaponDataImporter
             data.armorPenetration = header.GetFloat(row, "방어구 무시");
             data.projectileSpeed = header.GetFloat(row, "투사체 속도");
             data.projectilePrefabName = CleanName(header.Get(row, "Projectile Prefab"));
+            data.aoeRadius = header.GetFloat(row, "폭발 범위");      // v113: 로켓 등 (0 = 없음)
             data.description = header.Get(row, "장비 설명");
 
             data.spriteName = CleanName(header.Get(row, "Sprite"));
@@ -148,6 +151,9 @@ public class WeaponDataImporter
 
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
+
+        // v113: 새 무기가 생기면 캐릭터 무기 목록(상점·재능이 찾는 목록)에도 자동으로 넣음
+        PlayerPrefabTools.AssignAllWeaponsForTest();
 
         foreach (string w in warnings) Debug.LogWarning("[무기 임포트] " + w);
         Debug.Log($"무기 데이터 임포트 완료! 프리팹 새로 생성 {created}개 / 갱신 {updated}개 → {WeaponPrefabFolder}");

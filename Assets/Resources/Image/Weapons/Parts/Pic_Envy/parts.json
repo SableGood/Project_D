@@ -1,0 +1,17 @@
+{
+ "magType": "Box",
+ "ppu": 100,
+ "side": {
+  "magOffset": [
+   50.0,
+   2.5
+  ],
+  "muzzle": [
+   460.0,
+   55.0
+  ]
+ },
+ "projectileLength": 0.24,
+ "explosionSound": "Gun/GL40_Explode",
+ "explosionFx": "Fx_shell_explosion_soft"
+}

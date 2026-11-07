@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Garand_Ranger
   inGameName: "\uAC1C\uB7F0\uB4DC / \uB808\uC778\uC800"
   role: "3\uD2F0\uC5B4 \uAE30\uBCF8\uD615 \uC800\uACA9\uCD1D"
+  category: RF
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 18
   projectileSpeed: 0
   projectilePrefabName: Projectile_Pene
+  aoeRadius: 0
   spriteName: Pic_Garand_3_Ranger
   spriteLength: 1.2
   weaponSprite: {fileID: 21300000, guid: 1c80170f3821c7946bd43f98e2818907, type: 3}

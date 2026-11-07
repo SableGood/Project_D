@@ -31,7 +31,7 @@ public class PixelFx : MonoBehaviour
     public static bool Has(string name) => Enabled && Load(name) != null;
 
     // worldDir: 이펙트가 향할 월드 방향 (화면 평면으로 투영해서 각도를 구함). zero면 오른쪽
-    public static void Play(string name, Vector3 pos, Vector3 worldDir, float metersPerPixel, Transform follow = null, float speed = 1f, float alpha = 1f)
+    public static void Play(string name, Vector3 pos, Vector3 worldDir, float metersPerPixel, Transform follow = null, float speed = 1f, float alpha = 1f, Color? tint = null)
     {
         Camera c = Cam();
         float ang = 0f;
@@ -40,11 +40,12 @@ public class PixelFx : MonoBehaviour
             float x = Vector3.Dot(worldDir, c.transform.right), y = Vector3.Dot(worldDir, c.transform.up);
             if (Mathf.Abs(x) + Mathf.Abs(y) > 1e-5f) ang = Mathf.Atan2(y, x) * Mathf.Rad2Deg;
         }
-        PlayAngle(name, pos, ang, metersPerPixel, follow, speed, alpha);
+        PlayAngle(name, pos, ang, metersPerPixel, follow, speed, alpha, tint);
     }
 
     // angleDeg: 화면에서의 각도 (0 = 오른쪽, 90 = 위)
-    public static void PlayAngle(string name, Vector3 pos, float angleDeg, float metersPerPixel, Transform follow = null, float speed = 1f, float alpha = 1f)
+    // tint: 그림 색에 곱하는 색 (v121: 치명타를 붉게)
+    public static void PlayAngle(string name, Vector3 pos, float angleDeg, float metersPerPixel, Transform follow = null, float speed = 1f, float alpha = 1f, Color? tint = null)
     {
         if (!Enabled) return;
         Clip clip = Load(name);
@@ -58,7 +59,8 @@ public class PixelFx : MonoBehaviour
         SpriteRenderer sr = instance.pool.Count > 0 ? instance.pool.Pop() : instance.Create();
         sr.sprite = clip.frames[0];
         sr.flipX = flip;
-        sr.color = new Color(1f, 1f, 1f, alpha);
+        Color tc = tint ?? Color.white;
+        sr.color = new Color(tc.r, tc.g, tc.b, alpha);
         sr.transform.position = pos;
         sr.transform.localScale = Vector3.one * Mathf.Max(0.0005f, metersPerPixel);
         sr.gameObject.SetActive(true);

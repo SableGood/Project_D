@@ -340,6 +340,9 @@ MonoBehaviour:
   maxHealth: 100
   logDamage: 0
   invincible: 0
+  bonusDefense: 0
+  ignoreBaseDefense: 0
+  damageTakenMul: 1
 --- !u!114 &6890608507050302991
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -360,6 +363,8 @@ MonoBehaviour:
   fitColliderToSprite: 1
   bodyRadius: 0.35
   myData: {fileID: 11400000, guid: fbda74f0d7dac6b42b39d731d82020ab, type: 2}
+  WaterSpeedMul: 1
+  fallGravity: 22
 --- !u!114 &1405852690561151177
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -389,11 +394,14 @@ MonoBehaviour:
   - {fileID: 2079378379227733791, guid: b6eb5e42b7d959b4b957074c96278cc9, type: 3}
   - {fileID: 4160995037779992869, guid: 40c74e646845a8b468e1c3ecf039fb34, type: 3}
   - {fileID: 1600926640947647372, guid: ddeabc390ca3e504fa5ed5d03cd0161a, type: 3}
+  - {fileID: 1294658163151470722, guid: 388c08a243eb645499badcc7e355db1c, type: 3}
   - {fileID: 5419286621071877762, guid: 41aff0a5e8bad5342b6d42fc454fdf8d, type: 3}
   - {fileID: 4853469191703184183, guid: c783ea03e73371f41800ea86996b0183, type: 3}
   - {fileID: 8141971320144281235, guid: 20aa39f6861bb19419cc186ff843e07d, type: 3}
   - {fileID: 6294456158753437762, guid: de20d6e5631d0cc4bbe57a3f1f5e268d, type: 3}
   - {fileID: 6987795193984303176, guid: 092ae98af419d4b4dbbbdfb445c6a81c, type: 3}
+  - {fileID: 7399425806230391655, guid: 49db93d8cb31aec489d350480e3a7b79, type: 3}
+  - {fileID: 6727077050930035154, guid: 872d7f8bdba8edb4fab43599ebb9c373, type: 3}
   - {fileID: 6537492260004234244, guid: ac3a64b514a71e747b21c4aa698dbc64, type: 3}
   - {fileID: 4607061936263214688, guid: 7d9277bc735d0044097b880a7068255b, type: 3}
   - {fileID: 7228667389978524453, guid: 55b96bc09e0d0a84181cf814bcd41303, type: 3}
@@ -409,11 +417,18 @@ MonoBehaviour:
   - {fileID: 2479354816080838615, guid: 01a3f6a89247bd74599c515f4ef54390, type: 3}
   - {fileID: 1918997906363752799, guid: 3d05b6d827399a348b8a20921d2db327, type: 3}
   - {fileID: 422322835565576389, guid: f6863a80a860b064db14ce4d808ef9e7, type: 3}
+  - {fileID: 8662113792861700349, guid: 9a37afc364370b047abb4c599bd9894c, type: 3}
   - {fileID: 6741124322842404286, guid: b5a847a300fbb124cbdca7bb7d6fc0de, type: 3}
   - {fileID: 1670137112615979641, guid: c5fa34bb89474d9459f6f93e4a915bf7, type: 3}
   - {fileID: 8367635697152360028, guid: 7db688c524bc4e2428b890e23194e6a0, type: 3}
   - {fileID: 3665098050208100746, guid: b70825e91585dbd4f8027bd9fd6359fb, type: 3}
   - {fileID: 1385618014095525979, guid: ce38771d94b265b48ad74b180f3de248, type: 3}
+  - {fileID: 7668030999434202483, guid: 74e3e81a4e246324c8295ed9af21aae8, type: 3}
+  - {fileID: 2893149258025032261, guid: 355cac54600ca7848abce7252ba4d690, type: 3}
+  - {fileID: 3314068117296149685, guid: 2566c99b80777144c9be60b64facee86, type: 3}
+  startWeaponCodes:
+  - W002
+  testAllWeapons: 0
   fpsHoldOffset: {x: 0.16, y: -0.2, z: 0.42}
   fpsHoldRotation: {x: 0, y: -108, z: -4}
   fpsHoldScale: 0.4
@@ -505,3 +520,20 @@ MonoBehaviour:
   upperJoinTexels: 3
   lowerJoinTexels: 2
   fpsWeaponShadow: 1
+  armRigTest: 0
+  armRigToggleKey: 286
+  armRigFolder: Image/Players/Chimp_Arm
+  gripCenter: {x: -0.02, y: 0.31}
+  gripRadius: {x: 0.25, y: 0.17}
+  idleArmAngle: -35
+  frontGripRatio: 0.33
+  gunBehindAboveSin: 2
+  handDepthBias: 0.02
+  shoulderY: 0.4
+  rearShoulderX: 0.125
+  frontShoulderX: 0
+  upperArmLength: 0.2167
+  forearmLength: 0.2167
+  maxArmStretch: 1.15
+  oneHandReach: 0.38
+  armDepthBias: 0.04

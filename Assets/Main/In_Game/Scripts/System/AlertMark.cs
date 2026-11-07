@@ -10,11 +10,12 @@ public class AlertMark : MonoBehaviour
 
     private SpriteRenderer sr;
     private Transform follow;
+    private SpriteRenderer body;   // v117: 몸 그림 (있으면 그림의 머리 꼭대기 위, 화면 위쪽으로)
     private float offsetY, t0;
     private static readonly Stack<AlertMark> pool = new Stack<AlertMark>();
 
     // mob: 따라갈 몹, topY: 몹 발밑에서 머리 꼭대기까지의 높이
-    public static void Show(Transform mob, float topY)
+    public static void Show(Transform mob, float topY, SpriteRenderer body = null)
     {
         if (mob == null) return;
         AlertMark a = null;
@@ -29,6 +30,7 @@ public class AlertMark : MonoBehaviour
             a.sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
         a.follow = mob;
+        a.body = body;
         a.offsetY = topY + 0.15f;
         a.t0 = Time.time;
         a.gameObject.SetActive(true);
@@ -49,8 +51,17 @@ public class AlertMark : MonoBehaviour
         float end = Mathf.Clamp01((Life - t) / 0.15f);
         float px = Height / 13f; // 그림 높이 13픽셀
         transform.localScale = Vector3.one * px * pop * Mathf.Lerp(0.6f, 1f, end);
-        transform.position = follow.position + Vector3.up * (offsetY + Mathf.Sin(t * 14f) * 0.03f);
         Camera cam = Camera.main;
+        float bob = Mathf.Sin(t * 14f) * 0.03f;
+        if (body != null && body.sprite != null && body.enabled && cam != null)
+        {
+            // 그림이 카메라 쪽으로 기울어 서 있어서 월드 위(Y)로 올리면 화면에서 머리와 어긋남
+            // → 그림 평면의 위쪽 가장자리 가운데 + 화면 위쪽으로 조금
+            Bounds lb = body.sprite.bounds;
+            Vector3 head = body.transform.TransformPoint(new Vector3(lb.center.x, lb.max.y, 0f));
+            transform.position = head + cam.transform.up * (0.18f + bob) - cam.transform.forward * 0.1f;
+        }
+        else transform.position = follow.position + Vector3.up * (offsetY + bob);
         if (cam != null) transform.rotation = cam.transform.rotation;
         sr.color = new Color(1f, 1f, 1f, end);
     }

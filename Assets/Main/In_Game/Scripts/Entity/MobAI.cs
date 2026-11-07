@@ -597,9 +597,10 @@ public class MobAI : MonoBehaviour
         if (Time.time < lastAlertTime + 0.8f) return;
         lastAlertTime = Time.time;
         float top = bodySprite != null ? bodySprite.bounds.max.y - transform.position.y : 1.6f;
-        AlertMark.Show(transform, top);
+        AlertMark.Show(transform, top, bodySprite);
     }
 
+    public string Code => MobCode();   // v121: 몹 코드 (MM002 등)
     private string MobCode()
     {
         if (myData != null && !string.IsNullOrEmpty(myData.entityCode)) return myData.entityCode.Trim();
@@ -999,13 +1000,16 @@ public class MobAI : MonoBehaviour
 
     // 번쩍임 시간 배율 (v97: 2배 빠르게. 프리팹에 저장된 hitFlashDuration은 그대로 두고 여기서 줄임)
     private const float HitFlashSpeedup = 0.5f;
+    // v117: 피격 번쩍임을 연한 노란색으로 (프리팹에 저장된 흰색·세기 대신). 세기 배율이 낮을수록 더 투명
+    public static Color HitFlashTint = new Color(1f, 0.86f, 0.35f, 1f);
+    public static float HitFlashAmountMul = 0.55f;
 
     // 피격: 흰색으로 번쩍 (공격 예비동작의 붉은색과 구분)
     private IEnumerator HitFlashRoutine()
     {
         if (spriteSupportsFlash)
         {
-            SetFlash(hitFlashStrength);
+            SetFlash(hitFlashStrength * HitFlashAmountMul, HitFlashTint);
             yield return new WaitForSeconds(hitFlashDuration * HitFlashSpeedup);
             SetFlash(0f);
         }
@@ -1019,14 +1023,15 @@ public class MobAI : MonoBehaviour
         flashRoutine = null;
     }
 
-    private void SetFlash(float amount)
+    private void SetFlash(float amount) => SetFlash(amount, hitFlashOverlay);
+    private void SetFlash(float amount, Color color)
     {
         if (bodySprite == null) return;
         if (flashBlock == null) flashBlock = new MaterialPropertyBlock();
         // 기존 값(Billboard가 넣는 발 위치 등)은 유지하고 번쩍임 값만 바꿈
         bodySprite.GetPropertyBlock(flashBlock);
         flashBlock.SetFloat(FlashAmountId, Mathf.Max(0f, amount));
-        flashBlock.SetColor(FlashColorId, hitFlashOverlay);
+        flashBlock.SetColor(FlashColorId, color);
         bodySprite.SetPropertyBlock(flashBlock);
     }
 

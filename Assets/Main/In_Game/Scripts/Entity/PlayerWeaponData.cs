@@ -10,6 +10,8 @@ public class PlayerWeaponData : ScriptableObject
     public string weaponName;         // Knife (CSV '이름')
     public string inGameName;         // 코알라 대검 (CSV '인게임 별칭')
     public string role;               // 기본 근접무장
+    public string category;           // 분류 (CSV 'Tag': HG/SMG/AR/MG/RF/SG/BR/Melee/RL)
+    public string acquire;            // 얻는 방법 (CSV '획득 방식'): 비움/상점 = 상점에서 기본형 판매, 해금 = 같은 분류 무기를 상점에서 얻으면 상점에 등장, 재능 = 재능으로만
 
     [Header("발사 방식")]
     public string aimType;            // Multi
@@ -31,6 +33,7 @@ public class PlayerWeaponData : ScriptableObject
     public float armorPenetration;    // 방어구 무시
     public float projectileSpeed;     // 투사체 속도 (0 = 기본값)
     public string projectilePrefabName; // Projectile Prefab 이름
+    public float aoeRadius;           // 폭발 범위 (m, CSV '폭발 범위'). 0 = 폭발 없음 (투사체 무기만)
 
     [Header("외형")]
     public string spriteName;         // 무기 이미지 이름 (Resources/Image/Weapons)
@@ -46,4 +49,9 @@ public class PlayerWeaponData : ScriptableObject
     public bool IsProjectile => !string.IsNullOrEmpty(fireMode) && fireMode.Trim().ToLower() == "projectile";
     public bool IsAuto => !string.IsNullOrEmpty(fireMechanism) && fireMechanism.Trim().ToLower() == "auto";
     public bool UsesAmmo => maxAmmo > 0;
+    // 얻는 방법 (v113)
+    public bool ShopUnlock => (acquire ?? "").Trim() == "해금";
+    public bool TalentOnly => (acquire ?? "").Trim() == "재능";
+    public bool SoldInShop => !ShopUnlock && !TalentOnly;
+    public string Category => (category ?? "").Trim();
 }

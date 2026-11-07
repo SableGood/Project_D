@@ -94,12 +94,17 @@ public class WeaponVisual : MonoBehaviour
         public Vector2 sideMagOffset, fpsMagOffset, fpsMuzzle; // 그림 기준 (유닛)
         // 기관총(탄통) 전용
         public bool belt;               // 재장전: 덮개 열기 → 탄통 교체 → 덮개 닫기
+        public bool semiAuto;           // v121 반자동 산탄총(SPA5): 쏠 때 펌프 안 함, 재장전 끝에만 펌프
+        public float projectileLength;  // v121 날아가는 탄 그림 길이 (m). 0 = 기본
+        public string explosionSound, explosionFx;   // v121 착탄 폭발 소리·이펙트 (비우면 기본)
+        public bool rocket;             // v113 로켓포: 탄창 = 앞에 꽂힌 로켓. 쏘면 사라지고, 재장전 때 앞쪽에서 밀어 넣음 (빠지는 탄창 없음)
         public bool magInFront;         // 탄창(탄통)을 무기 그림 앞에 그림
         public Sprite sideFull;         // 덮개까지 닫힌 옆모습 (HUD용)
         public Sprite sideCover;        // 상부 덮개
         public Vector2 coverHinge, coverCenter; // 옆모습 그림 기준 (유닛)
         public float coverOpenAngle;    // 열렸을 때 각도 (도, 반시계 +)
         public bool hasSideMuzzle; public Vector2 sideMuzzle;
+        public bool hasGrip, hasFrontGrip; public Vector2 grip, frontGrip; // v113: 손잡이(뒷손 = 회전축) · 앞손 위치 (그림 기준)
         // 기관총 1인칭: 덮개가 열린 그림(탄통 있음/없음) + 덮개 그림 (경첩을 축으로 회전)
         public Sprite fpsOpen, fpsOpenNoMag, fpsCover;
         public Sprite fpsClipEmpty;     // 개런드 1인칭: 튕겨 나가는 빈 클립 (FPS_Mag = 탄이 든 클립)
@@ -125,7 +130,7 @@ public class WeaponVisual : MonoBehaviour
         public bool hasFpsLoadPort; public Vector2 fpsLoadPort; public float fpsShellLength;
     }
     [System.Serializable] private class PartsCoverJson { public float[] hinge; public float[] center; public float openAngle; }
-    [System.Serializable] private class PartsSideJson { public float[] magOffset; public bool magInFront; public float[] muzzle; public float[] magDir; public float[] loadPort; public PartsCoverJson cover; }
+    [System.Serializable] private class PartsSideJson { public float[] grip; public float[] frontGrip; public float[] magOffset; public bool magInFront; public float[] muzzle; public float[] magDir; public float[] loadPort; public PartsCoverJson cover; }
     [System.Serializable] private class PartsFpsJson
     {
         public float[] magOffset; public float[] muzzle; public PartsCoverJson cover;
@@ -133,7 +138,7 @@ public class WeaponVisual : MonoBehaviour
         public bool customPlacement; public float screenHeight, centerHeight, rightOverhang, reloadRoll;
         public float[] loadPort; public float shellLength;
     }
-    [System.Serializable] private class PartsJson { public string magType; public float ppu = 100f; public bool hudOriginal; public float cycleDelay; public float cycleTime = -1f; public PartsSideJson side; public PartsFpsJson fps; }
+    [System.Serializable] private class PartsJson { public string magType; public bool semiAuto; public float projectileLength; public string explosionSound; public string explosionFx; public float ppu = 100f; public bool hudOriginal; public float cycleDelay; public float cycleTime = -1f; public PartsSideJson side; public PartsFpsJson fps; }
     private static readonly Dictionary<string, Parts> partsCache = new Dictionary<string, Parts>();
 
     private Weapon weapon;
@@ -202,6 +207,7 @@ public class WeaponVisual : MonoBehaviour
     public void Cycle(float cooldown)
     {
         if (parts == null || !parts.slide) return;
+        if (parts.semiAuto) return;   // v121 반자동 산탄총: 쏠 때 펌프 없음
         if (parts.pump)
         {
             // 펌프: 반동이 조금 가라앉은 뒤 당겼다 밂. 연사 간격 안에 끝나게 줄임
@@ -216,6 +222,27 @@ public class WeaponVisual : MonoBehaviour
     }
 
     public bool HasMagazineParts => parts != null;
+    // v121: 로켓포인지 (연기 꼬리·가속), 날아가는 탄 길이, 폭발 소리·이펙트 (parts.json)
+    public bool IsRocket => parts != null && parts.rocket;
+    public float ProjectileLength => parts != null ? parts.projectileLength : 0f;
+    public string ExplosionSound => parts != null ? parts.explosionSound : null;
+    public string ExplosionFx => parts != null ? parts.explosionFx : null;
+
+    // v119: 탑뷰에서 보이는 탄창(로켓) 그림의 실제 길이 (m). 없으면 0 → 발사된 로켓을 같은 크기로
+    public float SideMagWorldLength()
+    {
+        if (parts == null || parts.sideMag == null || body == null || isFirstPerson) return 0f;
+        return parts.sideMag.bounds.size.x * Mathf.Abs(body.transform.lossyScale.x);
+    }
+
+    // 앞손 위치 (월드). parts.json side.frontGrip 이 있을 때만 (없으면 기존 비율 사용)
+    public bool TryFrontGripWorld(out Vector3 p)
+    {
+        p = Vector3.zero;
+        if (parts == null || !parts.hasFrontGrip || body == null || isFirstPerson) return false;
+        p = body.transform.TransformPoint(parts.frontGrip);
+        return true;
+    }
     // HUD 무기 칸용: 옆모습 본체·탄창 그림과 탄창 위치(픽셀), 현재 재장전 상태
     public Sprite SideNoMagSprite => parts != null ? (parts.sideFull != null ? parts.sideFull : parts.sideNoMag) : null;
     public bool MagInFront => parts != null && parts.magInFront;
@@ -588,7 +615,7 @@ public class WeaponVisual : MonoBehaviour
         if (mag == null) return;
         mag.sprite = sprite;
         mag.enabled = body.enabled && !magHidden && sprite != null;
-        float len = sprite != null ? sprite.bounds.size.y : 0f;
+        float len = sprite != null ? (parts != null && parts.rocket ? sprite.bounds.size.x * 0.6f : sprite.bounds.size.y) : 0f; // 로켓은 길이 방향으로 움직임
         magGravity = ScreenDownLocal();
         MagPose(len, tactical, out Vector2 off, out float rot);
         mag.transform.localPosition = new Vector3(offset.x + off.x, offset.y + off.y, localZ);
@@ -827,10 +854,17 @@ public class WeaponVisual : MonoBehaviour
             magDrop = 0f; magHidden = false; coverOpen = 0f; magInsert = -1f;
             wasReloading = false; magDetached = false; shellPhase = -1f;
             if (parts != null && parts.clip) UpdateClipIdle();
+            else if (parts != null && parts.rocket) magHidden = weapon.IsGun && weapon.currentAmmo <= 0; // 쏜 로켓은 없음
             else if (parts != null && parts.slide)
             {
                 bool open = weapon.IsGun && weapon.currentAmmo <= 0; // 탄이 떨어지면 슬라이드·펌프 후퇴 고정
                 if (parts.pump && justEnded && boltOpen && !open) Kick(0.35f); // 샷건: 장전을 마치거나 멈추면 펌프를 앞으로 '철컥'
+                if (parts.semiAuto)
+                {
+                    // 반자동 산탄총: 재장전을 마치면 펌프를 한 번 당겼다 놓음 (Side_Open 그림)
+                    if (justEnded) { cycleStart = Time.time; cycleUntil = Time.time + Mathf.Max(0.1f, parts.cycleTime > 0f ? parts.cycleTime : 0.28f); Kick(0.3f); }
+                    open = false;
+                }
                 boltOpen = open;
             }
             return;
@@ -854,6 +888,18 @@ public class WeaponVisual : MonoBehaviour
         if (parts.belt) { UpdateBeltReload(r); return; }
         if (parts.clip) { UpdateClipReload(r); return; }
         if (parts.pump) { UpdatePumpReload(r); return; }
+        if (parts.rocket)
+        {
+            // 로켓포: 빈 발사관 → 새 로켓을 앞에서 밀어 넣음
+            if (r < 0.55f) { magHidden = true; magDrop = 0f; }
+            else if (r < 0.85f) SetInsert((r - 0.55f) / 0.3f);
+            else
+            {
+                magDrop = 0f; magHidden = false;
+                if (!seatedThisReload) { seatedThisReload = true; magDetached = false; slapStartTime = Time.time; if (!isFirstPerson) Kick(0.35f); }
+            }
+            return;
+        }
         if (parts.slide)
         {
             // 권총: 재장전 내내 슬라이드 후퇴 → 탄창을 끼운 뒤 슬라이드를 놓으면 '철컥' 앞으로
@@ -1007,7 +1053,7 @@ public class WeaponVisual : MonoBehaviour
     // ------------------------------------------------------------------
     private void UpdatePumpReload(float r)
     {
-        boltOpen = pumpStartedEmpty;
+        boltOpen = pumpStartedEmpty && !parts.semiAuto;   // 반자동은 재장전 중 펌프를 당기지 않음
         magHidden = true; magDrop = 0f;
         reloadTilt = 0.45f * Mathf.Sin(Mathf.PI * Mathf.Clamp01(r));   // 한 발마다 살짝 기울였다 돌아옴
         if (weapon.currentAmmo > lastAmmoSeen) Kick(0.12f);
@@ -1149,6 +1195,9 @@ public class WeaponVisual : MonoBehaviour
         body.sprite = parts.sideNoMag;
         TopDownSprite = parts.sideNoMag;
         body.transform.localScale = new Vector3(s, s, 1f);
+        // 손잡이 위치가 그림에 지정돼 있으면 그 자리를 회전축(손)에 맞춤 (로켓포: 방아쇠 손잡이가 그림 가운데보다 앞쪽)
+        if (parts.hasGrip)
+            body.transform.localPosition = new Vector3(-parts.grip.x * s, -parts.grip.y * s, body.transform.localPosition.z);
         bodySideLocalPos = body.transform.localPosition;
         bodySideLocalScale = body.transform.localScale;
         // 총구 위치가 그림에 지정돼 있으면 그 자리로 (기관총: 양각대 때문에 그림 높이가 달라짐)
@@ -1247,6 +1296,8 @@ public class WeaponVisual : MonoBehaviour
                 if (d.side.magDir != null && d.side.magDir.Length >= 2 && V2(d.side.magDir).sqrMagnitude > 0.01f)
                 { p.hasMagDir = true; p.magDir = V2(d.side.magDir).normalized; }
                 if (d.side.muzzle != null && d.side.muzzle.Length >= 2) { p.hasSideMuzzle = true; p.sideMuzzle = V2(d.side.muzzle) / ppu; }
+                if (d.side.grip != null && d.side.grip.Length >= 2) { p.hasGrip = true; p.grip = V2(d.side.grip) / ppu; }
+                if (d.side.frontGrip != null && d.side.frontGrip.Length >= 2) { p.hasFrontGrip = true; p.frontGrip = V2(d.side.frontGrip) / ppu; }
                 p.sideFull = Resources.Load<Sprite>(root + "Side_Full");
                 p.sideCover = Resources.Load<Sprite>(root + "Side_Cover");
                 if (p.sideCover != null && d.side.cover != null)
@@ -1257,6 +1308,8 @@ public class WeaponVisual : MonoBehaviour
                 }
             }
             p.belt = d != null && d.magType == "Belt";
+            p.rocket = d != null && d.magType == "Rocket";
+            if (d != null) { p.semiAuto = d.semiAuto; p.projectileLength = d.projectileLength; p.explosionSound = d.explosionSound; p.explosionFx = d.explosionFx; }
             p.hudOriginal = d != null && d.hudOriginal;
             if (d != null && d.fps != null)
             {

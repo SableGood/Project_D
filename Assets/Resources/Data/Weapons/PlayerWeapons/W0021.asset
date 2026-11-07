@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Colt_Modern
   inGameName: "\uCF5C\uD2B8 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uAD8C\uCD1D"
+  category: HG
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Semi
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 0
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
+  aoeRadius: 0
   spriteName: Pic_Colt_2_Modern
   spriteLength: 0.38
   weaponSprite: {fileID: 21300000, guid: cb99aa094cd7ad144b94d2c0f330d6fc, type: 3}

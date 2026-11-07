@@ -13,6 +13,7 @@ public static class RunProgress
     private static readonly HashSet<string> turrets = new HashSet<string>();
     private static readonly HashSet<string> lockedBranches = new HashSet<string>();
     private static readonly HashSet<string> passedTalents = new HashSet<string>();
+    private static readonly HashSet<string> shopCategories = new HashSet<string>(); // v113: 엘리트 상점에서 얻은 무기 분류 (SMG, AR …)
 
     // 바뀔 때마다 올라감 (HUD가 다시 그릴지 판단)
     public static int Version { get; private set; }
@@ -36,6 +37,7 @@ public static class RunProgress
         foreach (string c in StartTurrets) turrets.Add(c);
         lockedBranches.Clear();
         passedTalents.Clear();
+        shopCategories.Clear();
         Version++;
     }
 
@@ -48,4 +50,8 @@ public static class RunProgress
     // ── 재능 ──
     public static bool IsTalentPassed(string code) => passedTalents.Contains(code);
     public static void PassTalent(string code) { if (!string.IsNullOrEmpty(code)) passedTalents.Add(code); }
+
+    // ── 엘리트 상점 무기 분류 (v113) ── 이 분류의 무기를 상점에서 사거나 강화하면, 같은 분류의 '해금' 무기가 상점에 나옴
+    public static bool HasShopCategory(string cat) => !string.IsNullOrEmpty(cat) && shopCategories.Contains(cat.Trim());
+    public static void AddShopCategory(string cat) { if (!string.IsNullOrEmpty(cat) && shopCategories.Add(cat.Trim())) Version++; }
 }

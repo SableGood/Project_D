@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: MAG_Modern
   inGameName: "\uB9E5 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uAE30\uAD00\uCD1D"
+  category: MG
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 3
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
+  aoeRadius: 0
   spriteName: Pic_MAG_2_Modern
   spriteLength: 1.2
   weaponSprite: {fileID: 21300000, guid: cf8308b77c19fda43bab36e54fd27ff0, type: 3}

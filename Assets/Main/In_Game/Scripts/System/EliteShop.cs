@@ -190,7 +190,7 @@ public class EliteShop : MonoBehaviour
 
     private static string WName(PlayerWeaponData d) => d != null ? (d.weaponName ?? "").Trim() : "";
     private static string Family(string n) { int i = n.IndexOf('_'); return i < 0 ? n : n.Substring(0, i); }
-    private static int Tier(string n) => n.IndexOf('_') < 0 ? 1 : (n.EndsWith("_Modern") ? 2 : 3);
+    private static int Tier(string n) => n.IndexOf('_') < 0 ? 1 : (n.EndsWith("_Modern") || n.EndsWith("_Upgrade") ? 2 : 3);   // v121: Duty_Upgrade = 2단계
     private static string Display(PlayerWeaponData d)
     {
         if (d == null) return "?";
@@ -261,9 +261,11 @@ public class EliteShop : MonoBehaviour
                 PlayerWeaponData d = pw.DataAt(i);
                 string n = WName(d);
                 if (n.Length == 0 || Tier(n) != 1 || ownedFamilies.Contains(Family(n))) continue;
-                var it = new Item { kind = Kind.NewWeapon, category = "새 무기", verb = "사기", title = Display(d), icon = d.weaponSprite };
+                if (d.TalentOnly) continue;                                            // v113: 재능으로만 얻는 무기 (로켓포)
+                if (d.ShopUnlock && !RunProgress.HasShopCategory(d.Category)) continue; // v113: 같은 분류 무기를 상점에서 얻어야 등장
+                var it = new Item { kind = Kind.NewWeapon, category = d.ShopUnlock ? "새 무기 · 해금" : "새 무기", verb = "사기", title = Display(d), icon = d.weaponSprite };
                 it.desc = !string.IsNullOrEmpty(d.role) ? d.role.Trim() : n;
-                it.price = Jobs.ShopPrice(Family(n) == "Battle" ? priceNewWeaponPremium : priceNewWeapon);
+                it.price = Jobs.ShopPrice(Family(n) == "Battle" || d.ShopUnlock ? priceNewWeaponPremium : priceNewWeapon);
                 it.weapons.Add(i);
                 pool.Add(it);
             }
@@ -394,6 +396,13 @@ public class EliteShop : MonoBehaviour
     private void Sold(Item it, string message)
     {
         it.sold = true;
+        // v113: 상점에서 얻은 무기의 분류를 기록 → 같은 분류의 해금 무기가 이후 상점에 나옴
+        if (it.kind != Kind.NewTurret && it.weapons.Count > 0)
+        {
+            PlayerWeaponManager pw = Weapons();
+            PlayerWeaponData got = pw != null ? pw.DataAt(it.weapons[0]) : null;
+            if (got != null) RunProgress.AddShopCategory(got.Category);
+        }
         Notice(message);
         for (int i = 0; i < items.Count; i++) StyleCrate(items[i], i == selected);
     }

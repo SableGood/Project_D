@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f8abd705ab4fdff44a25022d1ab3579d, type: 3}
+  m_Name: W0075
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponData
+  weaponID: W0075
+  weaponName: SPA5
+  inGameName: "\uC2A4\uD30C\uC2A4"
+  role: "\uD574\uAE08 \uBC18\uC790\uB3D9 \uC0B0\uD0C4\uCD1D"
+  category: SG
+  acquire: "\uD574\uAE08"
+  aimType: Multi
+  fireMode: Hitscan
+  fireMechanism: Semi
+  range: 10
+  damage: 10
+  reloadTime: 2.7
+  maxAmmo: 7
+  fireRate: 4
+  projectileCount: 6
+  spread: 16
+  moveSpread: 4
+  knockback: 0
+  canPierce: 0
+  armorPenetration: 0
+  projectileSpeed: 0
+  projectilePrefabName: Projectile_Shot
+  aoeRadius: 0
+  spriteName: Pic_SPA5
+  spriteLength: 0.95
+  weaponSprite: {fileID: 21300000, guid: 9e630d4906e24e7fb2c4dbcad3a40951, type: 3}
+  projectilePrefab: {fileID: 0}
+  description: "\uD38C\uD504 \uC5C6\uC774 \uC5F0\uB2EC\uC544 \uC3D8\uB294 \uBC18\uC790\uB3D9
+    \uC0B0\uD0C4\uCD1D. (\uD14C\uC2A4\uD2B8: \uBAA8\uC2A4\uBC84\uADF8 / \uBAA8\uB358
+    \uC218\uCE58, \uACF5\uACA9\uC18D\uB3C4\uB9CC 4)"

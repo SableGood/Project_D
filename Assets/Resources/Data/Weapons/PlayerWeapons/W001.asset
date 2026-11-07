@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Knife
   inGameName: "\uCF54\uC54C\uB77C \uB300\uAC80"
   role: "\uAE30\uBCF8 \uADFC\uC811\uBB34\uC7A5"
+  category: Melee
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 10
   projectileSpeed: 0
   projectilePrefabName: 
+  aoeRadius: 0
   spriteName: 
   spriteLength: 0.5
   weaponSprite: {fileID: 0}

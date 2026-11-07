@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Thompson_Assault
   inGameName: "\uD1B0\uC2A8 / \uC5B4\uC370\uD2B8"
   role: "3\uD2F0\uC5B4 \uB3CC\uACA9\uD615 \uAE30\uAD00\uB2E8\uCD1D"
+  category: SMG
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 0
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
+  aoeRadius: 0
   spriteName: Pic_Thompson_3_Assault
   spriteLength: 0.9
   weaponSprite: {fileID: 21300000, guid: c57a7a4e3ea5f454b8ca6c6763333086, type: 3}

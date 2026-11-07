@@ -213,6 +213,11 @@ public class Weapon : MonoBehaviour
             if (data.projectilePrefab != null) this.projectilePrefab = data.projectilePrefab;
             if (this.projectilePrefab == null)
                 Debug.LogWarning($"[{data.weaponID}] Fire Mode가 Projectile인데 투사체 프리팹이 없습니다.");
+            // v113 로켓: 폭발 범위(CSV '폭발 범위') + 날아가는 그림(Parts/{그림}/Projectile.png, 머리가 위)
+            this.projectileAoeRadius = Mathf.Max(0f, data.aoeRadius);
+            this.projectileExplosionFx = data.aoeRadius > 0f ? "Fx_shell_explosion" : null;
+            this.projectileSprite = string.IsNullOrEmpty(data.spriteName) ? null : Resources.Load<Sprite>($"Image/Weapons/Parts/{data.spriteName}/Projectile");
+            this.projectileSpriteLength = 0.6f;
         }
         else
         {
@@ -470,6 +475,7 @@ public class Weapon : MonoBehaviour
         bool stopAtAim = stopAtAimPoint && IsGun && targetTransform == null;
         float maxDist = attackRange + muzzleDist;
         bool blocked = false;
+        Collider blockedBy = null;   // v114: 막은 물체 (포탑이면 금속 소리)
         if (stopAtAim)
         {
             maxDist = Mathf.Min(attackRange + muzzleDist, Vector3.Distance(rayStart, aimPos));
@@ -481,6 +487,7 @@ public class Weapon : MonoBehaviour
                 if (o.distance >= maxDist) continue;
                 maxDist = o.distance;
                 blocked = true;
+                blockedBy = o.collider;
             }
         }
         Vector3 endPoint = rayStart + direction * maxDist;
@@ -550,7 +557,11 @@ public class Weapon : MonoBehaviour
         if (!hitTarget && maxDist <= muzzleDist) endPoint = fireOrigin; // 총구에 닿기 전(몸과 총구 사이)에 막힘 → 궤적 없음
 
         // 몹에 맞지 않은 탄: 멈춘 자리(커서·포탑·바닥)에 작은 회색 착탄
-        if (stopAtAim && !hitTarget) HitEffects.Impact(endPoint, blocked);
+        if (stopAtAim && !hitTarget)
+        {
+            HitEffects.Impact(endPoint, blocked);
+            if (playerWepData != null) Sfx.BulletImpact(endPoint, blockedBy); // v114: 포탑=금속, 물가=물, 그 밖=바닥
+        }
 
         Debug.DrawLine(fireOrigin, endPoint, Color.green, 0.5f);
         if (showTracer && (IsGun || alwaysShowTracer)) ShowTracer(fireOrigin, endPoint); // 근접무기는 탄 궤적 없음 (휘두르기 연출)
@@ -611,9 +622,23 @@ public class Weapon : MonoBehaviour
         {
             ConfigureProjectile(projectile);
             if (projectileSpeedOverride > 0f) projectile.speed = projectileSpeedOverride;
-            projectile.SetVisual(projectileSprite, projectileSpriteLength);
-            projectile.ApplyAoe(projectileAoeRadius);
-            projectile.explosionFx = projectileExplosionFx;
+            float visLen = projectileSpriteLength;
+            WeaponVisual wv = projectileSprite != null ? GetComponentInChildren<WeaponVisual>() : null;
+            bool rocket = projectileAoeRadius > 0f && projectileSprite != null && wv != null && wv.IsRocket;   // v121: 로켓포만 (유탄은 연기·가속 없음)
+            if (rocket)
+            {
+                // v119: 로켓은 총에 꽂혀 있던 크기 그대로 날아감
+                float l = wv.SideMagWorldLength();
+                if (l > 0.05f) visLen = l;
+            }
+            else if (wv != null && wv.ProjectileLength > 0f) visLen = wv.ProjectileLength;   // v121: parts.json projectileLength (유탄 0.24m)
+            projectile.SetVisual(projectileSprite, visLen);
+            projectile.ApplyAoe(projectileAoeRadius * (playerWepData != null ? PlayerAugments.ExplosionMul : 1f)); // 예술은 폭발이다
+            projectile.explosionFx = wv != null && !string.IsNullOrEmpty(wv.ExplosionFx) ? wv.ExplosionFx : projectileExplosionFx;
+            projectile.explosionSfx = wv != null && !string.IsNullOrEmpty(wv.ExplosionSound) ? wv.ExplosionSound : null;   // v121: 유탄 GL40_Explode
+            projectile.trailFx = rocket ? PixelFx.MuzzleSmoke : null; // v115: 로켓 연기 꼬리
+            // v116 로켓 연출: 발사 직후 0.5초는 절반 속도로 밀려 나가다가, 점화 후 2배 속도로
+            projectile.launchMul = rocket ? 0.5f : 1f; projectile.boostMul = rocket ? 2f : 1f; projectile.launchDelay = rocket ? 0.5f : 0f;
             projectile.armorPenetration = armorPenetration;
             projectile.knockbackDistance = knockbackDistance;
 

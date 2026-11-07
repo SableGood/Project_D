@@ -16,14 +16,14 @@ public class PlayerAugments : MonoBehaviour
         StandStill = "정지보너스", MoveHeal = "이동회복", NoHitBonus = "무피격보너스", AutoReloadFx = "자동재장전",
         Revive = "부활", Explosive = "폭발탄", Normalize = "정상화", RandomFx = "무작위",
         BlockTrap = "블럭함정", SemiBoost = "단발강화", PowerUp = "위력증가", Rooted = "뿌리박기",
-        BoomUp = "폭발강화";
+        BoomUp = "폭발강화", GiveWeaponFx = "무기지급"; // 무기지급(v113): 수치1 = 무기 코드 번호 (9 → W009). 비우면 '재능' 무기 중 첫 번째
     // 스킬을 주는 효과(은신 / 고폭수류탄 / 파편수류탄)는 PlayerSkills 참고
 
     private static readonly HashSet<string> Known = new HashSet<string>
     {
         MaxHp, DefenseFx, DamagePct, FireRatePct, ReloadPct, MoveSpeedPct, Regen, Lifesteal, Reflect,
         StandStill, MoveHeal, NoHitBonus, AutoReloadFx, Revive, Explosive, Normalize, RandomFx,
-        BlockTrap, SemiBoost, PowerUp, Rooted, BoomUp,
+        BlockTrap, SemiBoost, PowerUp, Rooted, BoomUp, GiveWeaponFx,
         PlayerSkills.Cloak, PlayerSkills.HeGrenade, PlayerSkills.FragGrenade
     };
     public static bool IsKnownEffect(string effect) => !string.IsNullOrEmpty(effect) && (Known.Contains(effect.Trim()) || TalentEffects.IsKnown(effect.Trim()));
@@ -175,6 +175,22 @@ public class PlayerAugments : MonoBehaviour
                 note = slot >= 0 ? $"{PlayerSkills.SlotKeyNames[slot]} 키로 사용" : "빈 스킬 칸이 없어 사용할 수 없습니다";
                 break;
             }
+            case GiveWeaponFx:
+            {
+                PlayerWeaponManager pwm = GetComponent<PlayerWeaponManager>();
+                int idx = TalentWeaponIndex(pwm, a);
+                if (idx >= 0)
+                {
+                    bool replaced = !pwm.HasFreeSlot;
+                    int slot = -1;
+                    if (replaced) for (int i = 0; i < pwm.Owned.Count; i++) if (pwm.Owned[i] == pwm.CurrentCatalogIndex) slot = i;
+                    pwm.GiveWeapon(idx, replaced ? Mathf.Max(0, slot) : -1);
+                    PlayerWeaponData d = pwm.DataAt(idx);
+                    string nm = d != null ? d.inGameName : "무기";
+                    note = replaced ? $"들고 있던 무기 대신 '{nm}'을(를) 얻었습니다" : $"'{nm}' 획득!";
+                }
+                break;
+            }
             case NoHitBonus:
                 hitThisWave = false;
                 note = "맞지 않고 웨이브를 클리어할 때마다 더 강해집니다";
@@ -183,6 +199,22 @@ public class PlayerAugments : MonoBehaviour
         acquired.Add(a);
         Recalculate();
         return note;
+    }
+
+    // 무기지급 재능 (v113): 줄 무기 (무기 목록 번호, 없으면 -1)
+    public static int TalentWeaponIndex(PlayerWeaponManager pwm, AugmentData a)
+    {
+        if (pwm == null || a == null) return -1;
+        if (a.value1 > 0f) return pwm.FindCatalogIndex("W" + Mathf.RoundToInt(a.value1).ToString("000"));
+        for (int i = 0; i < pwm.CatalogCount; i++) { PlayerWeaponData d = pwm.DataAt(i); if (d != null && d.TalentOnly) return i; }
+        return -1;
+    }
+    // 무기지급 재능을 지금 고를 수 있는지 (무기를 쓸 수 있고, 그 무기가 있고, 아직 없을 때)
+    public bool CanTakeWeaponTalent(AugmentData a)
+    {
+        PlayerWeaponManager pwm = GetComponent<PlayerWeaponManager>();
+        int idx = TalentWeaponIndex(pwm, a);
+        return Jobs.CanUseWeapons && idx >= 0 && !pwm.Owns(idx);
     }
 
     // 칼로리 소비를 지금 고를 수 있는지 (들고 있는 무기가 대상이고 아직 안 받았을 때)

@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Battle
   inGameName: "\uBC30\uD2C0"
   role: "\uAE30\uBCF8 \uC804\uD22C\uC18C\uCD1D"
+  category: BR
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 5
   projectileSpeed: 0
   projectilePrefabName: Projectile_Ball
+  aoeRadius: 0
   spriteName: Pic_Battle
   spriteLength: 1.1
   weaponSprite: {fileID: 21300000, guid: f617f5a71c677a040b465ad2f66aec6a, type: 3}

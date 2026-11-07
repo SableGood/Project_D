@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Bbadda_Modern
   inGameName: "\uBE60\uB530 / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uADFC\uC811\uBB34\uC7A5"
+  category: Melee
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 0
   projectileSpeed: 0
   projectilePrefabName: 
+  aoeRadius: 0
   spriteName: Pic_Bbadda_2
   spriteLength: 0.9
   weaponSprite: {fileID: 21300000, guid: d44a7e89844e72a4eb7b0f3a9f55bbe7, type: 3}

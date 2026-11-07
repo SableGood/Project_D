@@ -325,7 +325,9 @@ public class PlayerBodyAnimator : MonoBehaviour
         {
             Transform visual = w.transform.parent != null ? w.transform.parent : w.transform;
             float len = w.sprite.bounds.size.x * Mathf.Abs(w.transform.lossyScale.x);
-            handFront.transform.position = mount.position + visual.right * len * frontGripRatio;
+            WeaponVisual wv = visual.GetComponent<WeaponVisual>();
+            if (wv != null && wv.TryFrontGripWorld(out Vector3 fg)) handFront.transform.position = fg; // v113: 그림에 지정된 앞손 자리
+            else handFront.transform.position = mount.position + visual.right * len * frontGripRatio;
         }
         handRear.flipX = handFront.flipX = aimLeft;
 

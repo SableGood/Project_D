@@ -16,6 +16,8 @@ MonoBehaviour:
   weaponName: Axe_Modern
   inGameName: "\uB3C4\uB07C / \uBAA8\uB358"
   role: "2\uD2F0\uC5B4 \uADFC\uC811\uBB34\uC7A5"
+  category: Melee
+  acquire: 
   aimType: Multi
   fireMode: Hitscan
   fireMechanism: Auto
@@ -32,6 +34,7 @@ MonoBehaviour:
   armorPenetration: 5
   projectileSpeed: 0
   projectilePrefabName: 
+  aoeRadius: 0
   spriteName: Pic_Axe_2
   spriteLength: 0.7
   weaponSprite: {fileID: 21300000, guid: 288c4e8193d3aa14c8e7f15acf97c778, type: 3}
