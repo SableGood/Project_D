@@ -91,7 +91,7 @@ public class Weapon : MonoBehaviour
     public float ShellLoadTime => playerWepData != null ? Mathf.Max(0.1f, ReloadTime / Mathf.Max(1, playerWepData.maxAmmo)) : 0.5f;
 
     // 재능이 반영된 실제 값 (플레이어 무기 + '뿌리 박기'의 포탑 무기. 몹 무기는 그대로)
-    public float ReloadTime => playerWepData != null ? playerWepData.reloadTime * PlayerAugments.ReloadTimeMul : 0f;
+    public float ReloadTime => playerWepData != null ? playerWepData.reloadTime * PlayerAugments.ReloadTimeMul * Jobs.ReloadTimeMul : 0f; // v135 졷 윅 -20%
     public float EffectiveCooldown => playerWepData != null
         ? attackCooldown / (PlayerAugments.FireRateMul * PlayerAugments.WeaponFireRateMul(playerWepData))
         : IsTurretWeapon ? attackCooldown / (PlayerAugments.TurretFireRateMul * TalentEffects.TurretRateMul) : attackCooldown;

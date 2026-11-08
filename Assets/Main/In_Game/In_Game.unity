@@ -5728,7 +5728,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1183560220
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7798,6 +7798,20 @@ MonoBehaviour:
   currentWaveNumber: 1
   waveText: {fileID: 493081012}
   waveStartButton: {fileID: 1183560220}
+  waveDurations:
+  - 20
+  - 25
+  - 30
+  - 35
+  - 40
+  - 45
+  - 65
+  spawnWindowRatio: 0.8
+  groupInterval: {x: 2, y: 3}
+  groupSize: {x: 3, y: 6}
+  maxAlive: 60
+  earlyStartGoldPerSec: 3
+  waveClearBonusStep: 15
   showMobTestPanel: 1
   spawnScatterRadius: 1.5
 --- !u!4 &1746132281
@@ -7855,9 +7869,10 @@ MonoBehaviour:
   spawnPoint: {fileID: 1746910063}
   pauseMenuUI: {fileID: 286258798}
   gameOverUI: {fileID: 1205960917}
+  useCombinedSetup: 1
   difficultyPanel: {fileID: 1930790856}
   characterPanel: {fileID: 268923088}
-  talentPanel: {fileID: 287521495}
+  jobPanel: {fileID: 287521495}
   playerTransform: {fileID: 0}
 --- !u!4 &1746910063
 Transform:

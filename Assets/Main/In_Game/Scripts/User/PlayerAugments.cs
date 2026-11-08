@@ -36,7 +36,7 @@ public class PlayerAugments : MonoBehaviour
     public const float BaseCritChance = 0.05f, BaseCritMul = 2f;
     public static float CritChance => BaseCritChance + TalentEffects.CritBonus; // 급소 감별사
     public static float CritMul => BaseCritMul;
-    public static float MoveSpeedMul => Instance == null ? Jobs.MoveSpeedMul : Instance.rooted ? 0f : Mathf.Max(0.2f, 1f + (Instance.movePct + Instance.NoHitPct) / 100f) * Jobs.MoveSpeedMul * TalentEffects.MoveMul; // 군인 +5%, 아드레날린
+    public static float MoveSpeedMul => Instance == null ? Jobs.MoveSpeedMul : Instance.rooted ? 0f : Mathf.Max(0.2f, 1f + (Instance.movePct + Instance.NoHitPct) / 100f) * Jobs.MoveSpeedMul * TalentEffects.MoveMul; // 아드레날린
     public static bool AutoReload => Instance != null && Instance.autoReload;
     // 포탑 (뿌리 박기)
     public static float TurretDamageMul => (Instance != null ? 1f + Instance.turretDmgPct / 100f : 1f) * Jobs.DamageMul;

@@ -190,12 +190,30 @@ public class Sfx : MonoBehaviour
         }
     }
 
-    // ===== UI 선택음 =====
+    // ===== UI 소리 (v129) =====
+    //  마우스를 올림: UI_Hover (예전 클릭음 UI_Select_1을 크게 다듬은 것) / 누름: UI_Click / 팝업 열림: UI_Open (Sfx.UIOpen())
+    //  UISoundMute가 붙은 버튼은 누름 소리를 내지 않음 (메인 메뉴 버저처럼 따로 소리를 내는 버튼)
+    [Range(0f, 1f)] public float uiHover = 0.7f;    // v135: 잘 안 들려서 소리 파일을 키운 UI_Hover로 바꾸고 0.35 → 0.7
+    [Range(0f, 1f)] public float uiOpen = 0.6f;
+    public static string HoverOverride; // v136: 메인 메뉴에서는 UI_Main_On (MainMenuSkin이 설정·해제)
+    public const string UIHoverSound = "UI/UI_Hover", UIClickSound = "UI/UI_Click", UIOpenSound = "UI/UI_Open";
     private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
     private PointerEventData ped;
-    private void CheckUIClick()
+    private GameObject lastHover;
+    private Vector3 lastMouse;
+    private float lastOpen = -999f;
+
+    public static void UIOpen()
     {
-        if (!Input.GetMouseButtonDown(0) || EventSystem.current == null) return;
+        if (Instance == null || Time.unscaledTime - Instance.lastOpen < 0.08f) return;
+        Instance.lastOpen = Time.unscaledTime;
+        Instance.PlayClip(Instance.Clip(UIOpenSound), Instance.uiOpen, 0.02f, 40);
+    }
+
+    // 지금 마우스 아래에 있는, 누를 수 있는 UI (없으면 null)
+    private GameObject UIUnderMouse()
+    {
+        if (EventSystem.current == null) return null;
         if (ped == null || ped.selectedObject != null) ped = new PointerEventData(EventSystem.current);
         ped.position = Input.mousePosition;
         uiHits.Clear();
@@ -203,9 +221,27 @@ public class Sfx : MonoBehaviour
         foreach (RaycastResult r in uiHits)
         {
             Selectable s = r.gameObject.GetComponentInParent<Selectable>();
-            if (s != null && s.interactable && s.isActiveAndEnabled) { PlayClip(Clip("UI/UI_Select_1"), ui, 0.02f); return; }
-            if (r.gameObject.GetComponentInParent<IPointerClickHandler>() != null) { PlayClip(Clip("UI/UI_Select_1"), ui, 0.02f); return; }
+            if (s != null && s.interactable && s.isActiveAndEnabled) return s.gameObject;
+            Component c = r.gameObject.GetComponentInParent<IPointerClickHandler>() as Component;
+            if (c != null) return c.gameObject;
         }
+        return null;
+    }
+
+    private void CheckUIClick()
+    {
+        bool down = Input.GetMouseButtonDown(0);
+        bool moved = (Input.mousePosition - lastMouse).sqrMagnitude > 0.5f;
+        if (!down && !moved) return;
+        lastMouse = Input.mousePosition;
+        GameObject hit = UIUnderMouse();
+        if (moved && hit != lastHover)
+        {
+            if (hit != null) PlayClip(Clip(string.IsNullOrEmpty(HoverOverride) ? UIHoverSound : HoverOverride), uiHover, 0.03f, 40);
+            lastHover = hit;
+        }
+        if (down && hit != null && hit.GetComponentInParent<UISoundMute>() == null)
+            PlayClip(Clip(UIClickSound), ui, 0.02f, 40);
     }
 
     // ===== 총 =====

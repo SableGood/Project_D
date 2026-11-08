@@ -72,6 +72,7 @@ public class TalentBrowser : MonoBehaviour
         if (root == null) Build();
         open = true;
         root.SetActive(true);
+        Sfx.UIOpen(); // v129
         prevTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
         Time.timeScale = 0f;
         prevLock = Cursor.lockState; prevCursor = Cursor.visible;

@@ -103,7 +103,7 @@ public class TowerBuilder : MonoBehaviour
     {
         EntityData data = GetTowerData(index);
         int baseCost = (data != null && data.cost > 0) ? data.cost : defaultTowerCost;
-        return Jobs.TurretPrice(baseCost); // 직업 할인 (공돌이 -20%, 학생 -10%)
+        return Jobs.TurretPrice(baseCost); // 직업 할인 (공돌이 -30%, 학생 -10%)
     }
 
     // ===== 포탑 판매 (X: 마우스가 가리키는 포탑, 낸 값의 70% 돌려받음) =====

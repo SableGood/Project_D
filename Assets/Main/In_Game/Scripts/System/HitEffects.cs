@@ -205,6 +205,7 @@ public class HitEffects : MonoBehaviour
     //  → 그림의 윗부분일수록 실제 깊이가 그림보다 훨씬 앞(카메라 쪽)이라, 그 자리에 그린 이펙트가 가려짐.
     //    키 큰 몹(엘리트·보스 등)은 차이가 커서 예전의 고정 1.2m 당김으로도 부족했음.
     //  해결: 카메라→맞은 자리 선이 그 수직 판과 만나는 곳보다 조금 더 앞에 둠 (화면 위치는 그대로)
+    public static float MaxPull = 3f, MinCamDist = 4f;
     private Vector3 InFrontOfFeetPlane(Vector3 p, Billboard board)
     {
         Vector3 camPos = cam.transform.position;
@@ -219,7 +220,11 @@ public class HitEffects : MonoBehaviour
         }
         float len = dir.magnitude;
         float pull = 0.4f / Mathf.Max(0.01f, len);   // 판보다 0.4m 더 앞
-        return camPos + dir * Mathf.Max(0.05f, t - pull);
+        // v128: 발 위치가 이상하게 잡히면(같은 프레임 여러 번 맞음·관통·도탄·번개 등) 이펙트가 카메라 바로 앞까지 당겨져 화면을 가리던 문제
+        //  → 맞은 자리에서 최대 MaxPull m까지만 당기고, 카메라에서 MinCamDist m 안으로는 들어오지 않게
+        float k = Mathf.Max(t - pull, 1f - MaxPull / Mathf.Max(0.01f, len), MinCamDist / Mathf.Max(0.01f, len));
+        if (float.IsNaN(k)) k = 1f;
+        return camPos + dir * Mathf.Min(1f, k);
     }
 
     // ------------------------------------------------------------------

@@ -10,12 +10,15 @@ public class GoldManager : MonoBehaviour
 {
     private static GoldManager instance;
     private static bool quitting;
+    private static int destroyedFrame = -1;
 
     public static GoldManager Instance
     {
         get
         {
-            if (instance == null && !quitting)
+            // v131: 씬이 닫히면서 GoldManager가 지워진 그 프레임에는 다시 만들지 않음
+            //  (다른 스크립트가 OnDisable/OnDestroy에서 골드를 읽으면 'Some objects were not cleaned up' 경고가 남)
+            if (instance == null && !quitting && Time.frameCount != destroyedFrame)
             {
                 instance = FindFirstObjectByType<GoldManager>();
                 if (instance == null) instance = new GameObject("GoldManager").AddComponent<GoldManager>();
@@ -27,7 +30,7 @@ public class GoldManager : MonoBehaviour
 
     // 플레이 시작마다 초기화 (에디터 설정에 따라 static 값이 남아 있을 수 있음)
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void ResetStatics() { instance = null; quitting = false; }
+    private static void ResetStatics() { instance = null; quitting = false; destroyedFrame = -1; }
 
     [Header("골드")]
     public int startGold = 250;
@@ -57,7 +60,7 @@ public class GoldManager : MonoBehaviour
 
     void OnDestroy()
     {
-        if (instance == this) instance = null;
+        if (instance == this) { instance = null; destroyedFrame = Time.frameCount; }
     }
 
     void OnApplicationQuit() { quitting = true; }

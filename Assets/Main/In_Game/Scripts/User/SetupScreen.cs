@@ -134,7 +134,7 @@ public class SetupScreen : MonoBehaviour
         detailPros.horizontalOverflow = HorizontalWrapMode.Wrap;
         detailCons = Txt(detail, "Cons", "", 24, false, ConsColor, TextAnchor.UpperLeft, 168f, 146f, 640f, 64f);
         detailCons.horizontalOverflow = HorizontalWrapMode.Wrap;
-        Txt(detail, "Note", "※ 공무원은 아직 효과 없음 (관련 재능 기획 예정)", 12, false, Muted, TextAnchor.LowerRight, 0f, 200f, 4f * cw + 3f * gap - 20f, 24f);
+        Txt(detail, "Note", "※ 사이보그 자동 조준은 아직 효과 없음 (다음 작업)", 12, false, Muted, TextAnchor.LowerRight, 0f, 200f, 4f * cw + 3f * gap - 20f, 24f);
 
         // ── 테스트 모드 (모든 무기를 휠로 바꿔 가며 사용) ──
         RectTransform test = Box(root, "TestMode", 96f, 1080f - 72f - 64f, 520f, 64f, out testFrame);

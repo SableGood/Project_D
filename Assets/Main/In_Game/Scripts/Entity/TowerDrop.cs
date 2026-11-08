@@ -10,9 +10,11 @@ using UnityEngine;
 public class TowerDrop : MonoBehaviour
 {
     public static float DropHeight = 9f;      // 떨어지기 시작하는 높이 (m)
-    public static float FallTime = 0.32f;     // 한 부품이 떨어지는 시간
-    public static float Gap = 0.2f;           // 다음 부품이 떨어지기 시작하는 간격 (앞 부품이 닿은 뒤)
-    public static float BounceTime = 0.12f;   // 닿은 뒤 살짝 튀는 시간
+    public static float FallTime = 0.16f;     // 한 부품이 떨어지는 시간 (v128: 2배 빠르게)
+    public static float Gap = 0.1f;           // 다음 부품이 떨어지기 시작하는 간격 (앞 부품이 닿은 뒤)
+    public static float BounceTime = 0.07f;   // 닿은 뒤 살짝 튀는 시간
+    public const string DeploySound = "Tower/Turret_Deploy", AssembleSound = "Tower/Turret_Assemble";
+    public static float AssembleDelay = 0.05f; // 상부가 닿고 나서 결합 소리까지
     public static float BounceHeight = 0.06f;
     private const float Parked = 80f;         // 차례가 오기 전 부품은 화면 밖 높이에 숨겨 둠
 
@@ -24,8 +26,8 @@ public class TowerDrop : MonoBehaviour
         public Vector3 rest;         // 결합된 위치 (월드)
         public float start;          // 떨어지기 시작하는 시각
         public bool landed;
-        public string sound;
         public float shake;
+        public bool last;
     }
     private readonly List<Part> parts = new List<Part>();
     private GameObject baseCopy;
@@ -63,7 +65,7 @@ public class TowerDrop : MonoBehaviour
             r.shadowCastingMode = baseRenderer.shadowCastingMode;
             r.receiveShadows = baseRenderer.receiveShadows;
             baseRenderer.enabled = false;
-            parts.Add(new Part { t = baseCopy.transform, rest = transform.position, start = t0, sound = "Gun/MAG_boxin", shake = 0.08f });
+            parts.Add(new Part { t = baseCopy.transform, rest = transform.position, start = t0, shake = 0.08f });
         }
 
         // 2) 포탑링, 3) 상부 (직속 자식 중에서)
@@ -78,9 +80,10 @@ public class TowerDrop : MonoBehaviour
         }
         float step = FallTime + Gap;
         float next = t0 + (parts.Count > 0 ? step : 0f);
-        if (ring != null) { parts.Add(new Part { t = ring, rest = ring.position, start = next, sound = "Gun/MAG_coverdown", shake = 0.05f }); next += step; }
-        if (top != null) parts.Add(new Part { t = top, rest = top.position, start = next, sound = "Gun/Battle_boltBack", shake = 0.1f });
+        if (ring != null) { parts.Add(new Part { t = ring, rest = ring.position, start = next, shake = 0.05f }); next += step; }
+        if (top != null) parts.Add(new Part { t = top, rest = top.position, start = next, shake = 0.1f });
         if (parts.Count == 0) return;
+        parts[parts.Count - 1].last = true;
 
         // 무적 + 작동 멈춤
         health = GetComponent<Health>();
@@ -115,7 +118,7 @@ public class TowerDrop : MonoBehaviour
                 if (b < 1f) { y = BounceHeight * Mathf.Sin(b * Mathf.PI); allDone = false; }
                 else y = 0f;
             }
-            p.t.position = p.rest + Vector3.up * y;
+            if (p.t != null) p.t.position = p.rest + Vector3.up * y; // v137: 하부 복사본은 닿는 순간 지워져 p.t가 비게 됨
         }
         if (allDone) Finish(true);
     }
@@ -128,7 +131,8 @@ public class TowerDrop : MonoBehaviour
             baseRenderer.enabled = true; // 복사본 → 진짜 그림
             Destroy(baseCopy); baseCopy = null; p.t = null;
         }
-        if (!string.IsNullOrEmpty(p.sound)) Sfx.Play(p.sound, 0.8f);
+        Sfx.Play(DeploySound, 0.8f, 0.06f);   // v128: 착지·부품 결합 = Deploy
+        if (p.last) Invoke(nameof(PlayAssemble), AssembleDelay); // 상부까지 결합 = Assemble
         CameraController.Shake(p.shake, 0.12f);
         // 먼지: 바닥에 둥글게 퍼지는 연기
         Vector3 c = transform.position + Vector3.up * 0.1f;
@@ -140,6 +144,8 @@ public class TowerDrop : MonoBehaviour
             HitEffects.Smoke(c + dir * 0.5f, dir * Random.Range(1.2f, 2f) + Vector3.up * 0.3f, Random.Range(0.18f, 0.28f), Random.Range(0.5f, 0.8f), 0.55f, 1f);
         }
     }
+
+    private void PlayAssemble() { Sfx.Play(AssembleSound, 0.85f, 0.02f); }
 
     // land: 정상 종료 (작동 시작). false = 중간에 정리 (판매·풀 반납 등) → 그냥 제자리로
     private void Finish(bool land)
@@ -154,5 +160,5 @@ public class TowerDrop : MonoBehaviour
         Deploying = false;
     }
 
-    void OnDisable() { Finish(false); }
+    void OnDisable() { CancelInvoke(); Finish(false); }
 }

@@ -108,6 +108,7 @@ public class EliteShop : MonoBehaviour
         if (open) return;
         open = true;
         closing = false;
+        Sfx.UIOpen(); // v129 팝업 열림 소리
         prevTimeScale = Time.timeScale > 0f ? Time.timeScale : 1f;
         Time.timeScale = 0f;
         prevLock = Cursor.lockState; prevCursorVisible = Cursor.visible;
@@ -675,6 +676,7 @@ public class EliteShop : MonoBehaviour
     private void ShowDialog(string title, string message, List<string> options, System.Action<int> onPick)
     {
         CloseDialog();
+        Sfx.UIOpen();
         dialog = NewRect("Dialog", root);
         Stretch(dialog);
         dialog.gameObject.AddComponent<Image>().color = new Color(0.05f, 0.05f, 0.05f, 0.6f);
@@ -721,6 +723,7 @@ public class EliteShop : MonoBehaviour
     private void ShowWeaponChoice(string title, string message, PlayerWeaponData from, List<PlayerWeaponData> options, System.Action<int> onPick)
     {
         CloseDialog();
+        Sfx.UIOpen();
         dialog = NewRect("Dialog", root);
         Stretch(dialog);
         dialog.gameObject.AddComponent<Image>().color = new Color(0.05f, 0.05f, 0.05f, 0.7f);

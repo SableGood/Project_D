@@ -210,6 +210,7 @@ public class AugmentManager : MonoBehaviour
         if (open) return;
         player = FindPlayer();
         if (player == null) { Debug.LogWarning("[재능] 플레이어를 찾을 수 없어 재능 선택을 건너뜁니다."); return; }
+        Sfx.UIOpen(); // v129 팝업 열림 소리
 
         List<AugmentData> choices = Roll(player, ChoiceCount, null, minTier);
         if (choices.Count == 0)

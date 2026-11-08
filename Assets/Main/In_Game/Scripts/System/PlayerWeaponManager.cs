@@ -18,7 +18,7 @@ public class PlayerWeaponManager : MonoBehaviour
     public bool testAllWeapons = false;
     // 시작 화면(SetupScreen)의 '테스트 모드' 버튼. 켜져 있으면 스폰될 때 testAllWeapons를 켬
     public static bool TestModeAllWeapons;
-    public static int MaxOwned => Jobs.WeaponSlots; // 기본 2정, 군인 3정
+    public static int MaxOwned => Jobs.WeaponSlots; // 기본 2정, 졷 윅 3정
     // 보유한 무기 (weaponPrefabs 안의 번호), 최대 2개
     private readonly List<int> owned = new List<int>();
 
@@ -180,7 +180,7 @@ public class PlayerWeaponManager : MonoBehaviour
 
         if (currentWeapon.playerWepData == null) return;
         if (AugmentManager.IsOpen) return; // 재능 선택 중에는 사격·장전 안 함
-        if (!Jobs.CanUseWeapons) return;   // 대통령: 직접 공격 불가 (경호실장이 대신 쏨)
+        if (!Jobs.CanUseWeapons) return;   // 대통령(경호실장이 대신 쏨)·공돌이: 직접 공격 불가
 
         // v125 무기 교체 직후: 장전 손잡이·슬라이드를 당기는 동안 사격·장전 불가
         if (Time.time < swapReadyTime) return;
