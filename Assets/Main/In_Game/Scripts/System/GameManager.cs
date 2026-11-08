@@ -66,7 +66,7 @@ public class GameManager : MonoBehaviour
             if (difficultyPanel != null) difficultyPanel.SetActive(false);
             if (characterPanel != null) characterPanel.SetActive(false);
             if (jobPanel != null) jobPanel.SetActive(false);
-            SetupScreen.Open(this);
+            InGameIntro.Begin(this); // v149: 시작 연출(카메라 선회 → 위쪽 패널로 난이도·직업 → 착지). 예전 전체 화면 SetupScreen은 안 씀
         }
         else
         {

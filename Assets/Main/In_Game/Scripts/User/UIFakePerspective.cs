@@ -57,17 +57,40 @@ public class UIFakePerspective : BaseMeshEffect
         for (int i = 0; i < src.Count; i++)
         {
             UIVertex v = src[i];
-            Vector3 p = other ? rt.InverseTransformPoint(self.TransformPoint(v.position)) : v.position;
+            Vector3 p = other ? ToRef(self, rt, v.position) : v.position;
             float nx = (p.x - r.center.x) / half;
             float z = nx * half * Mathf.Sin(ang);
             float f = D / Mathf.Max(1f, D + z);
             p.x = r.center.x + nx * half * Mathf.Cos(ang) * f;
             p.y = r.center.y + (p.y - r.center.y) * f;
-            v.position = other ? self.InverseTransformPoint(rt.TransformPoint(p)) : p;
+            v.position = other ? FromRef(self, rt, p) : p;
             src[i] = v;
         }
         vh.Clear();
         vh.AddUIVertexTriangleStream(src);
+    }
+
+    // v148: 자기 → 기준 좌표 변환을 부모 사슬의 '로컬' 값으로 계산
+    //  (예전: 월드 좌표를 거쳤는데, 홀로그램이 크기 0에서 펼쳐지는 순간 변환이 깨져 글자가 사라졌음)
+    private static Vector3 ToRef(Transform self, Transform reference, Vector3 p)
+    {
+        for (Transform t = self; t != null && t != reference; t = t.parent)
+            p = t.localRotation * Vector3.Scale(t.localScale, p) + t.localPosition;
+        return p;
+    }
+    private static Vector3 FromRef(Transform self, Transform reference, Vector3 p)
+    {
+        // 기준에서 자기까지 내려가며 거꾸로
+        var chain = new List<Transform>();
+        for (Transform t = self; t != null && t != reference; t = t.parent) chain.Add(t);
+        for (int i = chain.Count - 1; i >= 0; i--)
+        {
+            Transform t = chain[i];
+            Vector3 s = t.localScale;
+            p = Quaternion.Inverse(t.localRotation) * (p - t.localPosition);
+            p = new Vector3(s.x != 0f ? p.x / s.x : 0f, s.y != 0f ? p.y / s.y : 0f, s.z != 0f ? p.z / s.z : 0f);
+        }
+        return p;
     }
 
     private static UIVertex Lerp(UIVertex a, UIVertex b, float t)

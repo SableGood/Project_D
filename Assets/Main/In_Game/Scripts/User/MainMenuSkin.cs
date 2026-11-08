@@ -136,7 +136,7 @@ public class MainMenuSkin : MonoBehaviour
     private readonly System.Collections.Generic.List<Rig> rigs = new System.Collections.Generic.List<Rig>();
     private CanvasGroup buzzerGroup;
     private float stageBase = 1.03f;
-    private bool introDone;
+    public bool IntroDone { get; private set; }   // v146 메뉴 등장 연출이 끝났는지 (경고 CS0414 해결)
     private Sprite beamSprite;
 
     private void EnsureFxSprites()
@@ -240,7 +240,7 @@ public class MainMenuSkin : MonoBehaviour
             yield return null;
         }
         if (buzzerGroup != null) { buzzerGroup.alpha = 1f; buzzerGroup.interactable = true; buzzerGroup.blocksRaycasts = true; }
-        introDone = true;
+        IntroDone = true;
     }
 
     // 기계가 덜컹거리며 올라옴 → 연기 → 홀로그램 튀어나옴

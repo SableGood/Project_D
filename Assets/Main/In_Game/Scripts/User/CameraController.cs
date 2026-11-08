@@ -109,8 +109,32 @@ public class CameraController : MonoBehaviour
         topDownNearClip = cam.nearClipPlane;
     }
 
+    // v149 시작 연출(InGameIntro)이 카메라를 잠시 직접 움직임
+    public static bool OverrideActive;
+    public static Vector3 OverridePos;
+    public static Quaternion OverrideRot = Quaternion.identity;
+    public static float OverrideFov = 60f;
+    public static CameraController Main => instance;
+
+    // 탑뷰 게임 화면에서 이 바닥 위치를 볼 때의 카메라 자리 (시작 연출의 마지막 자리)
+    public void GetTopDownPose(Vector3 groundPos, out Vector3 pos, out Quaternion rot, out float fov)
+    {
+        pos = groundPos + topDownOffset;
+        rot = Quaternion.Euler(topDownRotation);
+        fov = topDownFOV;
+    }
+
     void LateUpdate()
     {
+        if (OverrideActive)
+        {
+            transform.position = OverridePos;
+            transform.rotation = OverrideRot;
+            if (cam != null) { cam.fieldOfView = OverrideFov; cam.nearClipPlane = topDownNearClip; }
+            ApplyShake();
+            UpdateFlash();
+            return;
+        }
         // player 변수(PlayerController)가 비어있다면 스스로 찾아 연결합니다.
         if (player == null)
         {

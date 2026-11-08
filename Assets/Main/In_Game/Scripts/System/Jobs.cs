@@ -35,7 +35,8 @@ public static class Jobs
     public static float MoveSpeedMul => 1f;
     public static int WeaponSlots => Is(Wick) ? 3 : 2;
     public static float ReloadTimeMul => Is(Wick) ? 0.8f : 1f;
-    public static bool CanUseWeapons => !Is(President) && !Is(Engineer);
+    // v147: 테스트 모드에서는 직업과 상관없이 무기 사용 가능 (공돌이·대통령으로 무기 테스트할 때 막히지 않게)
+    public static bool CanUseWeapons => PlayerWeaponManager.TestModeAllWeapons || (!Is(President) && !Is(Engineer));
     public static bool AutoAim => Is(Cyborg);
 
     // 사업가: 보유 골드 1당 +0.01% (100골드당 +1%), 최대 +100%
