@@ -706,10 +706,11 @@ public class GameHUD : MonoBehaviour
         // 장탄수는 재장전 바와 안내 글자 사이 간격만큼 바 위로 띄움 (바가 장탄수와 '재장전' 글자 딱 중간에 오게)
         // (글자 칸보다 글꼴 줄 높이가 커서 실제 글자는 칸 아래로 조금 내려옴 → 그만큼 더 올림)
         float ammoLeft = CardPad + CardIconW;
-        ammoText = AddText(Band(NewRect("Ammo", weaponCard), ammoLeft, 0f, h - CardPad - 28f - 34f, 50f), "", 50, TextAnchor.MiddleCenter, Color.white);
+        // v157 남은 탄 / 장탄수 사이를 벌림 (남은 탄 +8 위로, 장탄수 -6 아래로)
+        ammoText = AddText(Band(NewRect("Ammo", weaponCard), ammoLeft, 0f, h - CardPad - 28f - 34f + 8f, 50f), "", 50, TextAnchor.MiddleCenter, Color.white);
         ammoText.fontStyle = FontStyle.Bold;
         AddShadow(ammoText);
-        ammoMaxText = AddText(Band(NewRect("AmmoMax", weaponCard), ammoLeft, 0f, CardPad + 54f, 26f), "", 24, TextAnchor.MiddleCenter, Color.white);
+        ammoMaxText = AddText(Band(NewRect("AmmoMax", weaponCard), ammoLeft, 0f, CardPad + 48f, 26f), "", 24, TextAnchor.MiddleCenter, Color.white);
         ammoMaxText.fontStyle = FontStyle.Bold;
         AddShadow(ammoMaxText);
         weaponHintText = AddText(Band(NewRect("Hint", weaponCard), textLeft, CardPad, CardPad, 22f), "", 16, TextAnchor.MiddleRight, Warn);

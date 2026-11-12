@@ -113,8 +113,8 @@ public class PlayerController : MonoBehaviour
 
         if (isFirstPerson)
         {
-            float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-            float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+            float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * GameVolume.MouseSens;   // v157 옵션 감도 배율
+            float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * GameVolume.MouseSens;
 
             transform.Rotate(Vector3.up * mouseX);
 

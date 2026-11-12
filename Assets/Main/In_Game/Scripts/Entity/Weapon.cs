@@ -18,6 +18,11 @@ public class Weapon : MonoBehaviour
     [Header("발사 위치 (총구)")]
     [Tooltip("탄이 나가는 위치. 비어 있으면 무기 위치 기준 기본 오프셋에서 발사합니다. (몹/타워 무기 호환용)")]
     public Transform muzzle;
+    // v154 1인칭 3D 총(Viewmodel3D): 총구 화염을 모델 총구에서 총열 방향으로, 모델 크기에 맞춰 작게
+    [System.NonSerialized] public Transform fxMuzzle;
+    [System.NonSerialized] public Vector3 fxForward;
+    [System.NonSerialized] public float fxScale = 1f;
+    private bool FxVM => fxMuzzle != null && fxMuzzle.gameObject.activeInHierarchy;
 
     [Header("타겟팅 최적화 설정")]
     public int maxTargetCapacity = 20;
@@ -254,7 +259,7 @@ public class Weapon : MonoBehaviour
         if (muzzle == null) return;
         if (flashRenderer != null && flashRenderer.enabled)
         {
-            flashRenderer.transform.position = muzzle.TransformPoint(flashLocal);
+            flashRenderer.transform.position = (FxVM ? fxMuzzle : muzzle).TransformPoint(flashLocal);
             Camera c = Camera.main;
             if (c != null)
             {
@@ -487,6 +492,7 @@ public class Weapon : MonoBehaviour
             foreach (RaycastHit o in obstacles)
             {
                 if (owner != null && o.collider.transform.IsChildOf(owner)) continue;
+                if (FortWall.IsWall(o.collider)) continue;   // v154 아군 탄은 벽 통과
                 if (o.distance >= maxDist) continue;
                 maxDist = o.distance;
                 blocked = true;
@@ -498,6 +504,14 @@ public class Weapon : MonoBehaviour
         // v105: 조준점이 몹 표면(1인칭) 또는 히트박스 가장자리에 있으면, 몸 중심에서 쏜 레이가 탄퍼짐·계산 오차로
         // 표면 '직전'에서 끝나 빗나가던 문제 → 몹 판정만 커서 너머로 조금 더 봄 (벽·포탑에 막힌 경우는 그대로)
         float targetDist = stopAtAim && !blocked ? Mathf.Min(attackRange + muzzleDist, maxDist + AimSlack) : maxDist;
+
+        // v154 적 즉발 사격: 요새 벽에 막힘
+        if (IsMobWeapon && FortWall.BlocksSegment(rayStart, rayStart + direction * targetDist, out Vector3 wallHit))
+        {
+            HitEffects.Impact(wallHit, true);
+            if (showTracer && (IsGun || alwaysShowTracer)) ShowTracer(fireOrigin, wallHit);
+            return;
+        }
 
         // 시작점이 이미 몹 몸 안이면(몸끼리 겹침) 레이로는 잡히지 않으므로 따로 확인
         int insideCount = Physics.OverlapSphereNonAlloc(rayStart, 0.05f, insideHits, targetLayer, QueryTriggerInteraction.Ignore);
@@ -571,6 +585,8 @@ public class Weapon : MonoBehaviour
     }
 
     private const float AimSlack = 0.9f;
+    private int isMobWeapon = -1;
+    private bool IsMobWeapon { get { if (isMobWeapon < 0) isMobWeapon = GetComponentInParent<MobAI>() != null ? 1 : 0; return isMobWeapon == 1; } }
 
     // 이 무기를 든 플레이어의 몸 (밀착 사격 판정의 기준점)
     private Transform ownerBody;
@@ -704,6 +720,7 @@ public class Weapon : MonoBehaviour
         projectile.attackDamage = Mathf.RoundToInt(RollDamage(out bool crit));
         projectile.isCrit = crit;
         projectile.fromPlayerGun = playerWepData != null && IsGun;
+        projectile.blockByWall = IsMobWeapon;
         projectile.attacker = AttackerRoot;
         projectile.targetLayer = this.targetLayer;
         projectile.armorPenetration = 0f;
@@ -745,7 +762,9 @@ public class Weapon : MonoBehaviour
     {
         Vector3 origin = GetFireOrigin(fireMode == FireMode.Hitscan);
         Vector3 dir = aimPos - origin; dir.y = 0f;
-        if (dir.sqrMagnitude > 0.0001f) origin += dir.normalized * 0.08f; // 총구 바로 앞
+        bool vm = FxVM;
+        if (vm) origin = fxMuzzle.position + fxForward * (0.012f * fxScale);   // v154 1인칭: 모델 총구 끝
+        else if (dir.sqrMagnitude > 0.0001f) origin += dir.normalized * 0.08f; // 총구 바로 앞
 
         if (flashRenderer == null)
         {
@@ -767,24 +786,24 @@ public class Weapon : MonoBehaviour
         Transform t = flashRenderer.transform;
         Camera cam = Camera.main;
         t.position = origin;
-        if (muzzle != null) flashLocal = muzzle.InverseTransformPoint(origin);
+        if (muzzle != null) flashLocal = (vm ? fxMuzzle : muzzle).InverseTransformPoint(origin);
         float roll = Random.Range(0, 4) * 90f + (Random.value < 0.5f ? 0f : 45f); // 도트가 깨지지 않게 45도 단위
         t.rotation = (cam != null ? cam.transform.rotation : Quaternion.identity) * Quaternion.Euler(0f, 0f, roll);
         float spriteSize = Mathf.Max(sprite.bounds.size.x, sprite.bounds.size.y);
-        t.localScale = Vector3.one * (muzzleFlashSize * Random.Range(0.85f, 1.15f) / Mathf.Max(0.0001f, spriteSize));
+        t.localScale = Vector3.one * ((vm ? fxScale : 1f) * muzzleFlashSize * Random.Range(0.85f, 1.15f) / Mathf.Max(0.0001f, spriteSize));
 
         flashRenderer.enabled = true;
-        flashHideTime = Time.time + muzzleFlashDuration;
+        flashHideTime = Time.time + muzzleFlashDuration * (vm ? 0.6f : 1f);
 
         // v107: 도트 총구 화염 + 총구 연기 (pixelfx). 산탄총·포탄 포탑은 넓은 부채꼴 화염과 짙은 연기
         if (PixelFx.Has(PixelFx.MuzzleFlash))
         {
             flashRenderer.enabled = false; // 예전 화염 그림은 숨김 (총구 빛 위치 기준으로만 씀)
             bool wide = pelletCount > 1 || fireMode == FireMode.ParabolicShell;
-            Vector3 fdir = aimPos - origin;
-            float mpp = muzzleFlashSize / (wide ? 30f : 22f);
-            PixelFx.Play(wide ? PixelFx.ShotgunFlash : PixelFx.MuzzleFlash, origin, fdir, mpp, muzzle);
-            if (Time.time >= nextMuzzleSmoke)
+            Vector3 fdir = vm ? fxForward : aimPos - origin;
+            float mpp = muzzleFlashSize / (wide ? 30f : 22f) * (vm ? fxScale : 1f);
+            PixelFx.Play(wide ? PixelFx.ShotgunFlash : PixelFx.MuzzleFlash, origin, fdir, mpp, vm ? fxMuzzle : muzzle, vm ? FpsFlashSpeed : 1f);
+            if (!vm && Time.time >= nextMuzzleSmoke)   // v158 1인칭 3D 총은 총구 연기 없음 (어색해서)
             {
                 nextMuzzleSmoke = Time.time + (wide ? 0.35f : 0.18f); // 연사해도 연기가 너무 쌓이지 않게
                 PixelFx.Play(wide ? PixelFx.ShotgunSmoke : PixelFx.MuzzleSmoke, origin, fdir, mpp * (wide ? 0.8f : 0.9f), null, 1f, 0.85f);
@@ -792,6 +811,7 @@ public class Weapon : MonoBehaviour
         }
     }
     private float nextMuzzleSmoke;
+    public static float FpsFlashSpeed = 1.7f;   // v158 1인칭 3D 총 화염 재생 속도 (클수록 짧게 번쩍)
 
     // 16x16 도트 화염 (흰 중심 → 노랑 → 주황 테두리, 십자 + 대각선 불꽃)
     void OnDisable()
@@ -974,7 +994,7 @@ public class Weapon : MonoBehaviour
     public static bool useOldTracer = false;
     private void ShowTracer(Vector3 from, Vector3 to)
     {
-        if (!useOldTracer) { BulletFx.Spawn(from, to, tracerWidth / 0.03f); return; }
+        if (!useOldTracer) { BulletFx.Spawn(from, to, tracerWidth / 0.03f, playerWepData != null); return; }
         LineRenderer lr = GetTracer(tracerIndex++);
         lr.SetPosition(0, from);
         while (tracerStartLocal.Count < tracers.Count) tracerStartLocal.Add(Vector3.zero);

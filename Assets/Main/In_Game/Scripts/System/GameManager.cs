@@ -39,6 +39,7 @@ public class GameManager : MonoBehaviour
     public int SelectedJob => selectedJob;
     public int SelectedDifficulty => selectedDifficulty;
     public int SelectedCharacter => selectedCharacter;
+    public bool IsRunning => isSetupComplete && !isGameOver;   // v151 생존 시간 재는 중
 
     void Awake()
     {
@@ -86,7 +87,9 @@ public class GameManager : MonoBehaviour
     void Update()
     {
         // 게임 셋업이 완료되었고, 게임 오버 상태가 아닐 때만 ESC 일시정지 가능
-        if (Input.GetKeyDown(KeyCode.Escape) && !isGameOver && isSetupComplete && !AugmentManager.IsOpen && Time.frameCount > AugmentManager.ClosedFrame + 1)
+        bool escOptions = Input.GetKeyDown(KeyCode.Escape) && OptionsPanel.IsOpen;   // v154 ESC = 옵션 창만 닫기
+        if (escOptions) OptionsPanel.Close();
+        if (Input.GetKeyDown(KeyCode.Escape) && !escOptions && !isGameOver && isSetupComplete && !AugmentManager.IsOpen && Time.frameCount > AugmentManager.ClosedFrame + 1)
         {
             if (isPaused)
             {
@@ -215,6 +218,7 @@ public class GameManager : MonoBehaviour
     {
         isPaused = false;
         Time.timeScale = 1f;
+        OptionsPanel.Close();
         if (pauseMenuUI != null) pauseMenuUI.SetActive(false);
     }
 
@@ -225,6 +229,7 @@ public class GameManager : MonoBehaviour
         isGameOver = true;
         Time.timeScale = 0f;
         if (gameOverUI != null) gameOverUI.SetActive(true);
+        WaveManager.ShowSurvivalRecord();   // v151 생존 시간 + 최고 기록
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;

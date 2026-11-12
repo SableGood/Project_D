@@ -21,7 +21,7 @@ public class AugmentManager : MonoBehaviour
 {
     public static AugmentManager Instance { get; private set; }
     // 재능 선택창 또는 엘리트 상점이 열려 있으면 true (사격·이동·포탑 선택 등을 막는 데 씀)
-    public static bool IsOpen => (Instance != null && Instance.open) || EliteShop.IsOpen || TalentBrowser.IsOpen;
+    public static bool IsOpen => (Instance != null && Instance.open) || EliteShop.IsOpen || TalentBrowser.IsOpen || WeaponBrowser.IsOpen;
     // 선택 창이 닫힌 프레임 (창에서 누른 키가 바로 스킬·포탑 선택으로 쓰이지 않게)
     public static int ClosedFrame { get; private set; } = -10;
     public static void MarkClosed() => ClosedFrame = Time.frameCount;

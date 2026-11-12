@@ -149,6 +149,12 @@ public class WeaponVisual : MonoBehaviour
     private Transform coverPivot;
     private float coverOpen;           // 0 = 닫힘, 1 = 열림 (기관총 상부 덮개)
     private Transform muzzleT;
+    private Viewmodel3D vm3d;   // v152
+    public bool ViewmodelEject(out Vector3 pos, out Vector3 right, out Vector3 up, out float scale)
+    {
+        if (vm3d != null) return vm3d.EjectInfo(out pos, out right, out up, out scale);
+        pos = right = up = Vector3.zero; scale = 1f; return false;
+    }
     private Vector3 bodySideLocalPos, bodySideLocalScale, muzzleSideLocal;
 
     // 재장전 상태 (LateUpdate에서 한 번 계산 → Refresh에서 사용)
@@ -206,6 +212,7 @@ public class WeaponVisual : MonoBehaviour
     // 한 발 쏠 때마다 (PlayerWeaponManager): 권총 슬라이드가 잠깐 뒤로
     public void Cycle(float cooldown)
     {
+        if (vm3d != null) vm3d.OnShot(cooldown);
         if (parts == null || !parts.slide) return;
         if (parts.semiAuto) return;   // v121 반자동 산탄총: 쏠 때 펌프 없음
         if (parts.pump)
@@ -340,6 +347,7 @@ public class WeaponVisual : MonoBehaviour
     public void PlayDraw(float duration)
     {
         drawStart = Time.time; drawDur = Mathf.Max(0.2f, duration); drawCocked = false;
+        if (vm3d != null) vm3d.OnDraw(duration);
     }
     private void UpdateDraw()
     {
@@ -361,6 +369,7 @@ public class WeaponVisual : MonoBehaviour
 
     public void Kick(float strength)
     {
+        if (vm3d != null) vm3d.OnKick(strength);
         kick = Mathf.Min(kick + strength, strength * 1.8f); // 연사해도 무한히 쌓이지 않게
     }
 
@@ -372,10 +381,11 @@ public class WeaponVisual : MonoBehaviour
 
         if (isFirstPerson)
         {
+            if (vm3d != null) { vm3d.Show(cam); return; }   // v152 3D 무기가 있으면 2D 1인칭 그림 대신
             if (parts != null && parts.fpsNoMag != null) RefreshFirstPersonImage();
             else RefreshFirstPerson();
         }
-        else RefreshTopDown();
+        else { if (vm3d != null) vm3d.Hide(); RefreshTopDown(); }
     }
 
     private void RefreshTopDown()
@@ -1203,6 +1213,7 @@ public class WeaponVisual : MonoBehaviour
         if (body != null) TopDownSprite = body.sprite;
         PlayerWeaponData data = weapon != null ? weapon.playerWepData : null;
         if (data == null || body == null) return;
+        vm3d = Viewmodel3D.TryCreate(gameObject, weapon);   // v152 1인칭 3D 무기 (있는 무기만)
         parts = LoadParts(data.spriteName);
         if (parts == null)
         {

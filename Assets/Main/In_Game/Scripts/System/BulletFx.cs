@@ -13,14 +13,21 @@ public class BulletFx : MonoBehaviour
     public static Color Head = new Color(1f, 0.96f, 0.78f, 1f);
     public static Color Tail = new Color(1f, 0.72f, 0.3f, 0f);
 
-    private class Shot { public LineRenderer lr; public Vector3 from, dir; public float dist, travel; }
+    // v158 플레이어 총탄은 더 잘 보이게: 더 길고 굵고 조금 느리게 + 바깥 빛(넓고 옅은 줄) 한 겹
+    public static float PlayerLength = 1.1f, PlayerWidthMul = 1.8f, PlayerWidthMulFps = 1.2f, PlayerSpeed = 115f;
+    public static float GlowWidthMul = 3.2f, GlowAlpha = 0.35f;
+    public static Color PlayerHead = new Color(1f, 1f, 0.9f, 1f);
+    public static Color PlayerTail = new Color(1f, 0.8f, 0.35f, 0f);
+    public static Color GlowColor = new Color(1f, 0.78f, 0.35f, 1f);
+
+    private class Shot { public LineRenderer lr, glow; public Vector3 from, dir; public float dist, travel, speed, length; }
 
     private static BulletFx instance;
     private static Material mat;
     private readonly List<Shot> active = new List<Shot>();
     private readonly Stack<LineRenderer> pool = new Stack<LineRenderer>();
 
-    public static void Spawn(Vector3 from, Vector3 to, float widthMul = 1f)
+    public static void Spawn(Vector3 from, Vector3 to, float widthMul = 1f, bool player = false)
     {
         Vector3 d = to - from;
         float dist = d.magnitude;
@@ -31,19 +38,42 @@ public class BulletFx : MonoBehaviour
             DontDestroyOnLoad(go);
             instance = go.AddComponent<BulletFx>();
         }
-        instance.Add(from, d / dist, dist, widthMul);
+        instance.Add(from, d / dist, dist, widthMul, player);
     }
 
-    private void Add(Vector3 from, Vector3 dir, float dist, float widthMul)
+    private void Add(Vector3 from, Vector3 dir, float dist, float widthMul, bool player)
     {
         if (active.Count > 120) return;
+        float len = player ? PlayerLength : Length;
+        float w = Width * Mathf.Clamp(widthMul, 0.3f, 2.5f);
+        if (player) w *= CameraController.FirstPersonView ? PlayerWidthMulFps : PlayerWidthMul;
+        LineRenderer lr = Take(player ? PlayerTail : Tail, player ? PlayerHead : Head, w, 1);
+        LineRenderer glow = null;
+        if (player)
+        {
+            Color g0 = GlowColor; g0.a = 0f;
+            Color g1 = GlowColor; g1.a = GlowAlpha;
+            glow = Take(g0, g1, w * GlowWidthMul, 0);
+        }
+        float first = Mathf.Min(dist, len * 0.5f);   // 첫 프레임: 총구 화염 바로 앞에 보임
+        foreach (LineRenderer l in new[] { lr, glow })
+        {
+            if (l == null) continue;
+            l.SetPosition(0, from);
+            l.SetPosition(1, from + dir * first);
+            l.enabled = true;
+        }
+        active.Add(new Shot { lr = lr, glow = glow, from = from, dir = dir, dist = dist, travel = first, speed = player ? PlayerSpeed : Speed, length = len });
+    }
+
+    private LineRenderer Take(Color tail, Color head, float width, int order)
+    {
         LineRenderer lr = pool.Count > 0 ? pool.Pop() : Create();
-        lr.widthMultiplier = Width * Mathf.Clamp(widthMul, 0.3f, 2.5f);
-        Vector3 head = from + dir * Mathf.Min(dist, Length * 0.5f); // 첫 프레임: 총구 화염 바로 앞에 보임
-        lr.SetPosition(0, from);
-        lr.SetPosition(1, head);
-        lr.enabled = true;
-        active.Add(new Shot { lr = lr, from = from, dir = dir, dist = dist, travel = Mathf.Min(dist, Length * 0.5f) });
+        lr.sortingOrder = order;   // 바깥 빛(0) 위에 탄 심(1)
+        lr.startColor = tail;   // 0 = 꼬리
+        lr.endColor = head;     // 1 = 머리
+        lr.widthMultiplier = width;
+        return lr;
     }
 
     private LineRenderer Create()
@@ -72,18 +102,24 @@ public class BulletFx : MonoBehaviour
         for (int i = active.Count - 1; i >= 0; i--)
         {
             Shot s = active[i];
-            s.travel += Speed * dt;
+            s.travel += s.speed * dt;
             float head = Mathf.Min(s.travel, s.dist);
-            float tail = Mathf.Max(0f, s.travel - Length);
+            float tail = Mathf.Max(0f, s.travel - s.length);
             if (tail >= s.dist)
             {
                 s.lr.enabled = false;
                 pool.Push(s.lr);
+                if (s.glow != null) { s.glow.enabled = false; pool.Push(s.glow); }
                 active.RemoveAt(i);
                 continue;
             }
             s.lr.SetPosition(0, s.from + s.dir * tail);
             s.lr.SetPosition(1, s.from + s.dir * head);
+            if (s.glow != null)
+            {
+                s.glow.SetPosition(0, s.from + s.dir * tail);
+                s.glow.SetPosition(1, s.from + s.dir * head);
+            }
         }
     }
 }

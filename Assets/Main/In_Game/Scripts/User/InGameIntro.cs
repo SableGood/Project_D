@@ -7,6 +7,7 @@ using UnityEngine.UI;
 //  2) 바닥을 가까이 보여 주는 동안, 화면 위쪽을 덮는 출동 준비 판이 덜컹거리며 내려옴 (v150: 재능·상점 창과 같은 양식)
 //       난이도 · 테스트 모드 · 직업 8개(아이콘+이름 한 줄) · 고른 직업 설명. 아래 가운데에 [출동] 버튼
 //       위쪽 HUD(웨이브 타이머 등)는 이 판에 가려짐
+//     v156: 판 아래(출동 버튼 위)에 조작키 안내 (KeyGuide: 키보드 모양 + 마우스 + 분류별 설명)
 //  3) 출동 → 판이 위로 들어가고, 카메라가 게임 화면 높이로 줌 아웃 → 캐릭터가 공중에서 떨어져 착지 (먼지 + 쿵)
 //  캐릭터는 고르지 않음 (항상 0번 = 침팬지)
 //  키보드: ← → 또는 A D = 직업, 1 2 3 = 난이도, T = 테스트 모드, Enter = 출동
@@ -15,9 +16,14 @@ public class InGameIntro : MonoBehaviour
     private static readonly string[] DifficultyNames = { "쉬움", "보통", "어려움" };
 
     // ===== 카메라 =====
-    public static float SwirlTime = 3.4f;          // 빙글 돌며 내려오는 시간
-    public static float SwirlTurns = 0.85f;        // 몇 바퀴
-    public static float StartHeight = 48f, StartRadius = 34f;
+    // v157 멀미 줄이기: 매번 같은 길 (시작 각도 고정) + 회전 적게 + 천천히 출발·천천히 멈춤 + 고르는 동안 흔들림 없음
+    public static float SwirlTime = 3.0f;          // 내려오는 시간
+    public static float SwirlTurns = 0.12f;        // 몇 바퀴 (0.12 = 약 43도만 돎)
+    public static float StartAngle = 137f;         // 시작 방향 (180 = 남쪽, 게임 화면과 같은 방향에서 끝나게)
+    public static float StartHeight = 30f, StartRadius = 16f;
+    public static float FovExtra = 6f;             // 시작 화각 추가 (작을수록 덜 어지러움)
+    public static float StartTalentDelay = 0.35f;  // 착지 후 시작 재능 창까지
+    public static float GoalShowTime = 3.2f;       // 목표 안내가 떠 있는 시간
     public static Vector3 CloseOffset = new Vector3(0f, 4.2f, -3.0f);   // 고르는 동안 바닥을 가까이 보는 자리 (시작 지점 기준)
     public static float ZoomOutTime = 1.1f;
     public static float DropHeight = 14f, DropTime = 0.45f;
@@ -36,7 +42,9 @@ public class InGameIntro : MonoBehaviour
     private bool skip, confirmed, panelsReady;
 
     private RectTransform root, band, goBtn;
-    private CanvasGroup bandGroup, goGroup;
+    private CanvasGroup bandGroup, goGroup, guideGroup;
+    private KeyGuide guide;
+    public static float GuideGap = 20f;   // 출동 버튼과 조작키 안내 사이
     private class Choice { public Image frame, inner; public Text label; public bool hover; }
     private Choice[] diffs, jobs;
     private Choice test;
@@ -91,17 +99,17 @@ public class InGameIntro : MonoBehaviour
 
         // 1) 빙글 돌며 내려옴
         float t0 = Time.unscaledTime;
-        float startAng = Random.Range(0f, 360f);
+        float startAng = StartAngle;
         while (!skip)
         {
             float u = Mathf.Clamp01((Time.unscaledTime - t0) / SwirlTime);
-            float e = 1f - Mathf.Pow(1f - u, 3f);                 // 빠르게 시작해서 천천히 멈춤
+            float e = u < 0.5f ? 4f * u * u * u : 1f - Mathf.Pow(-2f * u + 2f, 3f) / 2f;   // 천천히 출발 · 천천히 멈춤
             float ang = (startAng + SwirlTurns * 360f * e) * Mathf.Deg2Rad;
             float r = Mathf.Lerp(StartRadius, 0f, e);
             Vector3 orbit = center + new Vector3(Mathf.Sin(ang) * r, Mathf.Lerp(StartHeight, CloseOffset.y, e), Mathf.Cos(ang) * r);
             Vector3 pos = Vector3.Lerp(orbit, closePos, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.55f, 1f, u)));
             Quaternion rot = Quaternion.LookRotation(look - pos);
-            SetCam(pos, rot, Mathf.Lerp(fov + 15f, fov, e));
+            SetCam(pos, rot, Mathf.Lerp(fov + FovExtra, fov, e));
             if (u >= 1f) break;
             yield return null;
         }
@@ -110,15 +118,7 @@ public class InGameIntro : MonoBehaviour
         // 2) 출동 준비 판이 위에서 내려옴
         yield return StartCoroutine(PanelsIn());
         panelsReady = true;
-        float idle0 = Time.unscaledTime;
-        while (!confirmed)
-        {
-            // 고르는 동안 카메라가 아주 천천히 맴돔
-            float a = (Time.unscaledTime - idle0) * 3f * Mathf.Deg2Rad;
-            Vector3 p = center + Quaternion.Euler(0f, Mathf.Sin(a) * 6f, 0f) * CloseOffset;
-            SetCam(p, Quaternion.LookRotation(look - p), fov);
-            yield return null;
-        }
+        while (!confirmed) yield return null;   // v157 고르는 동안 카메라는 가만히
 
         // 3) 출동: 판 들어감 → 게임 시작(플레이어 생성) → 줌 아웃 → 착지
         Sfx.Play("UI/UI_Click", 0.6f, 0f);
@@ -158,7 +158,46 @@ public class InGameIntro : MonoBehaviour
             yield return null;
         }
         CameraController.OverrideActive = false;
+
+        // v157 착지하면 바로 시작 재능 하나 고르기 → 목표 안내
+        yield return new WaitForSecondsRealtime(StartTalentDelay);
+        AugmentManager am = AugmentManager.EnsureExists();
+        am.Open("시작 재능", "출동! 시작 재능을 하나 고르세요", 0);
+        while (AugmentManager.IsOpen) yield return null;
+        yield return StartCoroutine(ShowGoal());
         Destroy(gameObject);
+    }
+
+    // v157 목표 안내 · v158 화면 가운데 + "왼쪽 카운트가 끝나면 몹이 몰려옴" (잠깐 떴다가 사라짐)
+    public static float GoalY = 60f;
+    private IEnumerator ShowGoal()
+    {
+        RectTransform box = NewRect("Goal", root);
+        box.anchorMin = box.anchorMax = box.pivot = new Vector2(0.5f, 0.5f);
+        box.sizeDelta = new Vector2(1100f, 160f);
+        box.anchoredPosition = new Vector2(0f, GoalY);
+        CanvasGroup g = box.gameObject.AddComponent<CanvasGroup>();
+        g.blocksRaycasts = false;
+        Image bg = box.gameObject.AddComponent<Image>(); bg.color = new Color(0.14f, 0.14f, 0.13f, 0.82f);
+        RectTransform edge = NewRect("Edge", box);
+        edge.anchorMin = new Vector2(0f, 0f); edge.anchorMax = new Vector2(1f, 0f); edge.pivot = new Vector2(0.5f, 0f);
+        edge.sizeDelta = new Vector2(0f, 3f); edge.anchoredPosition = Vector2.zero;
+        edge.gameObject.AddComponent<Image>().color = Accent;
+        string head = PlayerWeaponManager.TestModeAllWeapons ? "테스트 모드: F1을 누르면 몹들이 몰려옵니다!" : "왼쪽의 카운트가 끝나면 몹들이 몰려옵니다!";
+        Text t = NewText(box, "Text", $"{head}\n<size=24><color=#C6E7A7>목표</color>  입구 벽을 지키며 최대한 오래 버티세요</size>\n<size=18><color=#A8A8A0>1~5 포탑 설치 · 우클릭 포탑·벽 선택 · Esc 일시정지에서 조작키 보기</color></size>", 36, TextMain, TextAnchor.MiddleCenter);
+        Stretch(t.rectTransform);
+        t.lineSpacing = 1.05f;
+        float t0 = Time.unscaledTime;
+        while (true)
+        {
+            float u = Time.unscaledTime - t0;
+            if (u >= GoalShowTime + 0.5f) break;
+            float a = u < 0.25f ? u / 0.25f : u > GoalShowTime ? 1f - (u - GoalShowTime) / 0.5f : 1f;
+            g.alpha = Mathf.Clamp01(a);
+            box.anchoredPosition = new Vector2(0f, GoalY + (1f - Mathf.Clamp01(u / 0.25f)) * 14f);
+            yield return null;
+        }
+        Destroy(box.gameObject);
     }
 
     private void Land(Transform pl, Vector3 rest, CharacterController cc, PlayerController pc)
@@ -233,7 +272,7 @@ public class InGameIntro : MonoBehaviour
         }
         TL(NewText(c, "TestLabel", "테스트 모드  <size=18>T</size>", 24, TextSub, TextAnchor.MiddleLeft).rectTransform, 0f, 224f, leftW, 32f);
         test = MakeChoice(c, "Test", 0f, 264f, leftW, 64f, "", 24, ToggleTest);
-        Text testNote = NewText(c, "TestNote", "모든 무기: 마우스 휠 · 재능 목록: F3", 18, TextSub, TextAnchor.MiddleLeft);
+        Text testNote = NewText(c, "TestNote", "무기 목록: F6 · 재능 목록: F3 · 무기 넘기기: X", 18, TextSub, TextAnchor.MiddleLeft);
         TL(testNote.rectTransform, 0f, 336f, leftW, 28f);
 
         // ── 오른쪽: 직업 8개 한 줄 + 설명 ──
@@ -293,10 +332,17 @@ public class InGameIntro : MonoBehaviour
         goBtn.gameObject.AddComponent<UIHoverScale>().hoverScale = 1.06f;
         goGroup = goBtn.gameObject.AddComponent<CanvasGroup>();
 
+        // ── 출동 버튼 위: 조작키 안내 ──
+        guide = KeyGuide.Build(root, new Vector2(1700f, 336f));
+        RectTransform grt = (RectTransform)guide.transform;
+        grt.anchorMin = grt.anchorMax = new Vector2(0.5f, 0f); grt.pivot = new Vector2(0.5f, 0f);
+        guideGroup = guide.gameObject.AddComponent<CanvasGroup>();
+        guideGroup.blocksRaycasts = false;
+
         UIFont.FixBold(this);
         Refresh();
         SetShown(0f);
-        bandGroup.alpha = goGroup.alpha = 0f;
+        bandGroup.alpha = goGroup.alpha = guideGroup.alpha = 0f;
         bandGroup.blocksRaycasts = goGroup.blocksRaycasts = false;
     }
 
@@ -332,13 +378,14 @@ public class InGameIntro : MonoBehaviour
     {
         band.anchoredPosition = new Vector2(0f, Mathf.LerpUnclamped(BandHeight + 20f, 0f, k));
         goBtn.anchoredPosition = new Vector2(0f, Mathf.LerpUnclamped(-120f, GoBottom, k));
+        if (guide != null) ((RectTransform)guide.transform).anchoredPosition = new Vector2(0f, Mathf.LerpUnclamped(-480f, GoBottom + 88f + GuideGap, k));
     }
 
     // 위에서 덜컹거리며 내려옴 (한 번 걸렸다가 쿵)
     private IEnumerator PanelsIn()
     {
         Sfx.UIOpen();
-        bandGroup.alpha = goGroup.alpha = 1f;
+        bandGroup.alpha = goGroup.alpha = guideGroup.alpha = 1f;
         float t0 = Time.unscaledTime; const float dur = 0.6f;
         bool clunk = false;
         while (true)
@@ -368,10 +415,10 @@ public class InGameIntro : MonoBehaviour
         {
             float u = (Time.unscaledTime - t0) / 0.3f;
             SetShown(1f - u * u);
-            bandGroup.alpha = goGroup.alpha = 1f - u;
+            bandGroup.alpha = goGroup.alpha = guideGroup.alpha = 1f - u;
             yield return null;
         }
-        bandGroup.alpha = goGroup.alpha = 0f;
+        bandGroup.alpha = goGroup.alpha = guideGroup.alpha = 0f;
     }
 
     // ================= 선택 =================
@@ -388,6 +435,7 @@ public class InGameIntro : MonoBehaviour
         bool on = PlayerWeaponManager.TestModeAllWeapons;
         Style(test, on);
         test.label.text = on ? "켜짐" : "꺼짐";
+        if (guide != null) guide.SetTest(on);
 
         JobData.Job j = JobData.Get(job);
         if (j == null) return;

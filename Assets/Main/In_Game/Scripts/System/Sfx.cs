@@ -28,6 +28,7 @@ public class Sfx : MonoBehaviour
     private readonly Dictionary<string, AudioClip> clips = new Dictionary<string, AudioClip>();
     private readonly Dictionary<string, AudioClip[]> variants = new Dictionary<string, AudioClip[]>();
     private float lastMobHit = -999f;
+    private readonly HashSet<AudioClip> uiClips = new HashSet<AudioClip>();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void Init()
@@ -66,6 +67,7 @@ public class Sfx : MonoBehaviour
         if (clips.TryGetValue(path, out AudioClip c)) return c;
         c = Resources.Load<AudioClip>("Sound/" + path);
         clips[path] = c;
+        if (c != null && path.StartsWith("UI/")) uiClips.Add(c);   // v154 UI 효과음 음량 따로
         return c;
     }
 
@@ -108,7 +110,7 @@ public class Sfx : MonoBehaviour
             }
         }
         free.clip = clip;
-        free.volume = Mathf.Clamp01(volume * master);
+        free.volume = Mathf.Clamp01(volume * master * (uiClips.Contains(clip) ? GameVolume.Ui : GameVolume.Sfx));
         free.pitch = 1f + Random.Range(-pitchJitter, pitchJitter);
         free.priority = priority;
         free.Play();
@@ -402,6 +404,17 @@ public class Sfx : MonoBehaviour
         lastAmmo = w.currentAmmo;
     }
 
+    // v161 총소리: 기본 15% 작게 + 콜트(Colt_Fire) 크기에 맞춰 무기마다 고르게 (Tools/gun_loudness.py로 잰 값, dB)
+    //  소리 크기 = K-가중 400ms·100ms 최대 음량의 평균. 소음기 소리는 원래 작게 들려야 하므로 그대로
+    public static float FireBase = 0.85f;
+    private static readonly Dictionary<string, float> FireGainDb = new Dictionary<string, float>
+    {
+        { "Colt_Fire", 0f }, { "ALA_Fire", 1.7f }, { "Battle_fire", 1.8f }, { "Eugene_Fire_1", 1.4f }, { "Eugene_Fire_2", 1.4f },
+        { "GL40_Fire", 8.8f }, { "Garand_Fire_1", 1.3f }, { "K2_Fire", 0.4f }, { "MAG_Fire_1", 2.6f }, { "MAG_Fire_2", 2.6f },
+        { "Mossberg_Fire_1", 1.0f }, { "Mossberg_Fire_2", 2.3f }, { "Thompson_Fire_2", 5.2f },
+    };
+    private static float FireGain(AudioClip c) => FireBase * (c != null && FireGainDb.TryGetValue(c.name, out float db) ? Mathf.Pow(10f, db / 20f) : 1f);
+
     private void OnFired(Weapon w)
     {
         if (family == null) return;
@@ -414,7 +427,11 @@ public class Sfx : MonoBehaviour
         // v120: 연발 소음기는 새 발을 쏠 때 앞 발 소리를 끊고 다시 시작 → 발마다 시작음이 또렷하게 (꼬리가 겹쳐 뭉개지지 않게)
         bool choke = fire == "Gun/Suppress_Light_Auto";
         if (choke && lastFireSource != null && lastFireSource.isPlaying && lastFireSource.clip != null && lastFireSource.clip.name.StartsWith("Suppress_Light_Auto")) lastFireSource.Stop();
-        if (v.Length > 0) lastFireSource = PlayClip(v[Random.Range(0, v.Length)], Mathf.Clamp01(gunFire * fv), 0.05f, 16); // v117: 발사음은 다른 소리에 밀려 꺼지지 않게
+        if (v.Length > 0)
+        {
+            AudioClip fc = v[Random.Range(0, v.Length)];
+            lastFireSource = PlayClip(fc, Mathf.Clamp01(gunFire * fv * FireGain(fc)), 0.05f, 16); // v117: 발사음은 다른 소리에 밀려 꺼지지 않게
+        }
         if (family == "Mossberg" && endPumpClip == null) pumpAt = Time.time + 0.3f;   // 반자동(SPA5)은 쏠 때 펌프 없음
         if (family == "Garand" && w.currentAmmo <= 0) PlayClip(Clip("Gun/Garand_Ping"), gunReload, 0.02f); // 마지막 탄: 빈 클립 '핑'
     }

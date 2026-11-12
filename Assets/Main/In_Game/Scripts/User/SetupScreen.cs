@@ -166,7 +166,7 @@ public class SetupScreen : MonoBehaviour
         bool test = PlayerWeaponManager.TestModeAllWeapons;
         testFrame.color = test ? Accent : Line;
         testText.color = test ? Accent : Muted;
-        testText.text = "테스트 모드 " + (test ? "켜짐" : "꺼짐") + "  <size=18>(모든 무기: 마우스 휠 · 재능 목록: F3)</size>";
+        testText.text = "테스트 모드 " + (test ? "켜짐" : "꺼짐") + "  <size=18>(무기 목록: F6 · 재능 목록: F3)</size>";
 
         JobData.Job j = JobData.Get(job);
         if (j == null) return;

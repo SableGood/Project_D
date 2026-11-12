@@ -36,7 +36,10 @@ public class PlayerSkills : MonoBehaviour
     public static int SlotFromKeyDown()
     {
         for (int i = 0; i < SlotCount; i++)
+        {
+            if ((i == 1 || i == 2) && TowerSelection.UsesQE) continue;   // v154 포탑 선택 중 Q/E = 판매/업그레이드
             foreach (KeyCode k in SlotKeys[i]) if (Input.GetKeyDown(k)) return i;
+        }
         return -1;
     }
 

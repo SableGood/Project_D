@@ -9,10 +9,17 @@
 //      땅(평평한 부분) = Floor 메쉬, 강(파인 부분) = RiverBed (Ignore Raycast 레이어) + 반투명 물 면
 //      몹 길찾기(내비메쉬)는 땅만으로 실행 중에 다시 구움 → 몹은 물에 들어가지 않음
 //  - 그림을 바꾸려면 두 파일을 함께 바꿔야 함 (깊이 지도는 그림에서 자동으로 만듦)
+//  v151 요새 맵 (Fort_*): 있으면 섬 대신 씀 (프로젝트 바깥 Tools/fort_map_gen.py로 만듦)
+//  - 깊이 지도 뒤에 '솟은 높이'(절벽) 칸이 이어짐: float 최대 높이 + 칸마다 byte(0~255)
+//      절벽 = Cliffs (Ignore Raycast 레이어, 충돌은 됨) → 내비메쉬에서 빠져 몹이 못 지나감, 포탑도 못 지음
+//  - Map/Fort_Layout.txt: 플레이어 시작 위치·기지 안쪽·입구 벽 자리·몹 스폰 위치 (FortLayout)
 public static class IslandMap
 {
     public const string TexturePath = "Image/Map/Island_Field";
     public const string HeightPath = "Map/Island_Height";
+    public const string FortTexturePath = "Image/Map/Fort_Field";
+    public const string FortHeightPath = "Map/Fort_Height";
+    public static bool IsFort { get; private set; }
 
     private const float WaterSurfaceDepth = 0.22f;   // 물 면 높이 (땅 아래)
     private static readonly Color WaterColor = new Color(0.36f, 0.52f, 0.64f, 0.32f);   // 바닥 그림처럼 연하게
@@ -25,6 +32,8 @@ public static class IslandMap
     private static int gw, gh;
     private static float worldW, worldH, maxDepth, baseY;
     private static byte[] depth;
+    private static byte[] rise;          // 절벽 높이 (없으면 null)
+    private static float maxRise;
     private static Vector3 minCorner;   // 맵 왼쪽 아래 (x, z)
 
     // ── 검사 ──
@@ -42,6 +51,21 @@ public static class IslandMap
     }
 
     private static float D(int x, int z) => depth[z * gw + x] / 255f * maxDepth;
+    private static float R(int x, int z) => rise != null ? rise[z * gw + x] / 255f * maxRise : 0f;
+
+    // 그 위치의 절벽 높이 (땅·물 = 0)
+    public static float RiseAt(Vector3 p)
+    {
+        if (!Active || rise == null) return 0f;
+        float fx = (p.x - minCorner.x) / worldW * (gw - 1);
+        float fz = (p.z - minCorner.z) / worldH * (gh - 1);
+        if (fx < 0f || fz < 0f || fx > gw - 1 || fz > gh - 1) return 0f;
+        int x0 = Mathf.Min((int)fx, gw - 2), z0 = Mathf.Min((int)fz, gh - 2);
+        float tx = fx - x0, tz = fz - z0;
+        return Mathf.Lerp(Mathf.Lerp(R(x0, z0), R(x0 + 1, z0), tx), Mathf.Lerp(R(x0, z0 + 1), R(x0 + 1, z0 + 1), tx), tz);
+    }
+
+    public static bool IsCliff(Vector3 p, float threshold = 0.05f) => RiseAt(p) > threshold;
 
     // 물 속인지 (강둑 비탈 아래쪽부터)
     public static bool IsWater(Vector3 p, float threshold = 0.12f) => Active && DepthAt(p) > threshold;
@@ -52,14 +76,17 @@ public static class IslandMap
         if (!Active) return true;
         for (int ix = -1; ix <= 1; ix++)
             for (int iz = -1; iz <= 1; iz++)
-                if (DepthAt(c + new Vector3(ix * half, 0f, iz * half)) > 0.02f) return false;
+            {
+                Vector3 q = c + new Vector3(ix * half, 0f, iz * half);
+                if (DepthAt(q) > 0.02f || RiseAt(q) > 0.01f) return false;
+            }
         return true;
     }
 
     // ── 생성 ──
-    private static bool Load()
+    private static bool Load(string path)
     {
-        TextAsset h = Resources.Load<TextAsset>(HeightPath);
+        TextAsset h = Resources.Load<TextAsset>(path);
         if (h == null || h.bytes == null || h.bytes.Length < 20) return false;
         byte[] b = h.bytes;
         gw = System.BitConverter.ToInt32(b, 0);
@@ -70,6 +97,14 @@ public static class IslandMap
         if (gw < 2 || gh < 2 || b.Length < 20 + gw * gh) return false;
         depth = new byte[gw * gh];
         System.Array.Copy(b, 20, depth, 0, gw * gh);
+        rise = null; maxRise = 0f;
+        int r0 = 20 + gw * gh;
+        if (b.Length >= r0 + 4 + gw * gh)
+        {
+            maxRise = System.BitConverter.ToSingle(b, r0);
+            rise = new byte[gw * gh];
+            System.Array.Copy(b, r0 + 4, rise, 0, gw * gh);
+        }
         return true;
     }
 
@@ -77,9 +112,16 @@ public static class IslandMap
     public static bool Apply(GameObject floor)
     {
         Active = false;
-        if (floor == null || !Load()) return false;
-        Texture2D tex = Resources.Load<Texture2D>(TexturePath);
-        if (tex == null) { Debug.LogWarning("IslandMap: 바닥 그림이 없음 (" + TexturePath + ")"); return false; }
+        if (floor == null) return false;
+        string texPath = FortTexturePath;
+        IsFort = Load(FortHeightPath) && Resources.Load<Texture2D>(FortTexturePath) != null;
+        if (!IsFort)
+        {
+            texPath = TexturePath;
+            if (!Load(HeightPath)) return false;
+        }
+        Texture2D tex = Resources.Load<Texture2D>(texPath);
+        if (tex == null) { Debug.LogWarning("IslandMap: 바닥 그림이 없음 (" + texPath + ")"); return false; }
         tex.filterMode = FilterMode.Bilinear;   // 배경은 부드럽게 (도트가 쨍하면 눈이 피로함)
         tex.wrapMode = TextureWrapMode.Clamp;
 
@@ -97,17 +139,19 @@ public static class IslandMap
             for (int x = 0; x < gw; x++)
             {
                 int i = z * gw + x;
-                v[i] = new Vector3(-worldW * 0.5f + worldW * x / (gw - 1), -D(x, z), -worldH * 0.5f + worldH * z / (gh - 1));
+                v[i] = new Vector3(-worldW * 0.5f + worldW * x / (gw - 1), -D(x, z) + R(x, z), -worldH * 0.5f + worldH * z / (gh - 1));
                 uv[i] = new Vector2(x / (float)(gw - 1), z / (float)(gh - 1));
             }
         var land = new System.Collections.Generic.List<int>();
         var river = new System.Collections.Generic.List<int>();
+        var cliff = new System.Collections.Generic.List<int>();
         for (int z = 0; z < gh - 1; z++)
             for (int x = 0; x < gw - 1; x++)
             {
                 int a = z * gw + x, b = a + 1, c = a + gw, d = c + 1;
+                bool high = rise != null && (rise[a] > 0 || rise[b] > 0 || rise[c] > 0 || rise[d] > 0);
                 bool flat = depth[a] <= 3 && depth[b] <= 3 && depth[c] <= 3 && depth[d] <= 3;
-                var list = flat ? land : river;
+                var list = high ? cliff : flat ? land : river;
                 list.Add(a); list.Add(c); list.Add(d);
                 list.Add(a); list.Add(d); list.Add(b);
             }
@@ -142,12 +186,26 @@ public static class IslandMap
         br.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         bed.AddComponent<MeshCollider>().sharedMesh = riverMesh;
 
+        // 절벽 (요새 맵): 그림자를 드리우고, 플레이어는 못 올라감. 내비메쉬에서 빠짐 (Ignore Raycast)
+        if (cliff.Count > 0)
+        {
+            Mesh cliffMesh = MakeMesh("FortCliffs", v, uv, cliff);
+            GameObject cl = new GameObject("Cliffs");
+            cl.layer = 2;
+            cl.transform.SetParent(ft, false);
+            cl.AddComponent<MeshFilter>().sharedMesh = cliffMesh;
+            MeshRenderer cr = cl.AddComponent<MeshRenderer>();
+            cr.sharedMaterial = mat;
+            cr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            cl.AddComponent<MeshCollider>().sharedMesh = cliffMesh;
+        }
+
         // 맵 바깥의 깊은 물 바닥: 강바닥과 같은 재질(같은 조명)로, 그림 가장자리 색을 바깥으로 늘려 씀 → 경계가 안 보임
         OuterBed(ft, mat, new Vector3(0f, -maxDepth - 0.002f, 0f), 400f);
         Quad(ft, "WaterSurface", new Vector3(0f, -WaterSurfaceDepth, 0f), 400f, WaterColor, true, 0f, 0f);
 
         RebuildNavMesh(floor);
-        Debug.Log($"[섬 지형] {worldW:0.#} x {worldH:0.#} m, 최대 깊이 {maxDepth:0.##} m");
+        Debug.Log($"[{(IsFort ? "요새 맵" : "섬 지형")}] {worldW:0.#} x {worldH:0.#} m, 최대 깊이 {maxDepth:0.##} m" + (rise != null ? $", 절벽 {maxRise:0.#} m" : ""));
         return true;
     }
 

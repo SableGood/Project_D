@@ -75,6 +75,7 @@ public class GameCursor : MonoBehaviour
         if (player.isFirstPerson) return Kind.UI;                           // 숨겨져 있음 (일시정지 등으로 풀리면 UI)
         if (PlayerSkills.Instance != null && PlayerSkills.Instance.IsAiming) return Kind.Skill;
         if (builder != null && builder.SelectedSlot >= 0) return Kind.Tower;
+        if (TowerSelection.Hovered != null || TowerSelection.HoveredWall) return Kind.Tower;   // v154 포탑 위 · v156 벽 위
         if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return Kind.UI;
         return Kind.Aim;
     }

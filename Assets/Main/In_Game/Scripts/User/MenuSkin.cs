@@ -77,7 +77,12 @@ public class MenuSkin : MonoBehaviour
             if (n.Contains("Character")) SkinPanel(panel, Layout.Cards);
             else if (n.Contains("Talent")) SkinPanel(panel, Layout.Grid);
             else if (n.Contains("Difficulty")) SkinPanel(panel, Layout.Row);
-            else SkinPanel(panel, Layout.Column); // 일시정지, 게임오버 등
+            else
+            {
+                if (n == "PauseMenuPanel") OptionsPanel.AddButton(panel);   // v154 일시정지 → 옵션 (음량)
+                SkinPanel(panel, Layout.Column); // 일시정지, 게임오버 등
+                if (n == "PauseMenuPanel") { OptionsPanel.Build(panel); KeyGuide.AttachToPause(panel); }   // v157 버튼 옆 조작키 안내
+            }
         }
     }
 
@@ -202,7 +207,7 @@ public class MenuSkin : MonoBehaviour
     }
 
     // ── 버튼: HUD 칸과 같은 테두리 + 어두운 배경, 마우스를 올리면 노란 테두리 ──
-    private static void StyleButton(Button b)
+    internal static void StyleButton(Button b)
     {
         Image img = b.GetComponent<Image>();
         if (img != null) { img.sprite = null; img.type = Image.Type.Simple; img.color = ButtonBg; }
@@ -344,7 +349,7 @@ public class MenuSkin : MonoBehaviour
     }
 
     // ── 공통 ──
-    private static void StyleText(Text t, int size, Color color, bool bold)
+    internal static void StyleText(Text t, int size, Color color, bool bold)
     {
         t.fontSize = size;
         t.color = color;
@@ -360,7 +365,7 @@ public class MenuSkin : MonoBehaviour
     }
 
     // 테두리: 안쪽 가장자리 4줄 (배경이 반투명이어도 테두리만 깔끔하게)
-    private static Image[] AddFrame(RectTransform rt, Color color, float width)
+    internal static Image[] AddFrame(RectTransform rt, Color color, float width)
     {
         RectTransform root = NewRect("Frame", rt);
         root.anchorMin = Vector2.zero; root.anchorMax = Vector2.one;
@@ -386,7 +391,7 @@ public class MenuSkin : MonoBehaviour
         foreach (Image e in edges) if (e != null) e.color = color;
     }
 
-    private static RectTransform NewRect(string name, Transform parent)
+    internal static RectTransform NewRect(string name, Transform parent)
     {
         GameObject go = new GameObject(name, typeof(RectTransform));
         go.transform.SetParent(parent, false);

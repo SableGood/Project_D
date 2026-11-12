@@ -17,9 +17,12 @@ public static class Difficulty
     private static readonly float[] GoldMul = { 1f, 1f, 0.85f };
     private static readonly float[] Prep = { 20f, 15f, 10f };
 
-    public static float MobHpMul => HpMul[Index];
-    public static float MobDamageMul => DmgMul[Index];
-    public static float MobCountMul => CountMul[Index];
+    // v151 무한 생존: 웨이브 목록을 한 바퀴 돌 때마다(WaveManager.LoopCount) 몹이 강해짐
+    public static float LoopHpStep = 0.6f, LoopDamageStep = 0.25f, LoopCountStep = 0.2f;
+    private static int Loop => WaveManager.LoopCount;
+    public static float MobHpMul => HpMul[Index] * (1f + LoopHpStep * Loop);
+    public static float MobDamageMul => DmgMul[Index] * (1f + LoopDamageStep * Loop);
+    public static float MobCountMul => CountMul[Index] * (1f + LoopCountStep * Loop);
     public static float KillGoldMul => GoldMul[Index];
     public static float PrepTime => Prep[Index];
     public const float FirstPrepTime = 30f;

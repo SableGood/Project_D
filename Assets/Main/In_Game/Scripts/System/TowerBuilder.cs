@@ -76,6 +76,7 @@ public class TowerBuilder : MonoBehaviour
 
         // 하단 통합 HUD (체력·스킬·포탑 슬롯·골드·무기)
         GameHUD.Ensure();
+        if (GetComponent<TowerSelection>() == null) gameObject.AddComponent<TowerSelection>();   // v154 포탑 선택 (우클릭)
     }
 
     // 포탑 데이터: 프리팹의 TurretAI에 연결된 데이터 → 없으면 Resources/Data/Entities/Turrets/Ent_{프리팹 이름}
@@ -127,18 +128,54 @@ public class TowerBuilder : MonoBehaviour
         return paidCost.TryGetValue(tower, out int c) ? c : defaultTowerCost;
     }
 
-    private void TrySellAimedTower()
+    // v154 화면의 한 점(커서, 1인칭은 화면 가운데) 아래 설치된 포탑 (없으면 null)
+    public GameObject TowerUnder(Ray ray) => TowerUnder(ray, out _);
+    public GameObject TowerUnder(Ray ray, out float dist)
     {
-        Camera cam = Camera.main;
-        if (cam == null) return;
-        GameObject tower = null;
-        Ray ray = cam.ScreenPointToRay(Input.mousePosition);
+        dist = float.MaxValue;
         int mask = builtTowerLayer >= 0 ? (1 << builtTowerLayer) : obstacleLayer.value;
         if (Physics.Raycast(ray, out RaycastHit hit, 300f, mask, QueryTriggerInteraction.Ignore))
             foreach (var pair in occupiedCells)
-                if (pair.Value != null && pair.Value.activeInHierarchy && hit.transform.IsChildOf(pair.Value.transform)) { tower = pair.Value; break; }
-        if (tower == null) { AugmentManager.Toast("판매할 포탑에 마우스를 올리고 X를 누르세요"); return; }
+                if (pair.Value != null && pair.Value.activeInHierarchy && hit.transform.IsChildOf(pair.Value.transform)) { dist = hit.distance; return pair.Value; }
+        // v156 포탑 콜라이더(ProBuilder 메쉬)가 비어 있어 광선에 안 잡힘 → 그림 상자(렌더러 범위)로 찾기
+        GameObject best = null;
+        foreach (var pair in occupiedCells)
+        {
+            GameObject t = pair.Value;
+            if (t == null || !t.activeInHierarchy) continue;
+            if (!TowerBounds(t, out Bounds b)) continue;
+            if (b.IntersectRay(ray, out float d) && d < dist) { dist = d; best = t; }
+        }
+        return best;
+    }
 
+    private readonly Dictionary<GameObject, Renderer[]> towerRenderers = new Dictionary<GameObject, Renderer[]>();
+    private bool TowerBounds(GameObject t, out Bounds b)
+    {
+        b = default;
+        if (!towerRenderers.TryGetValue(t, out Renderer[] rs) || rs == null)
+        {
+            var list = new List<Renderer>();
+            foreach (Renderer r in t.GetComponentsInChildren<Renderer>(true))
+                if ((r is MeshRenderer || r is SkinnedMeshRenderer || r is SpriteRenderer) && !r.name.StartsWith("SelOutline")) list.Add(r);
+            rs = list.ToArray();
+            towerRenderers[t] = rs;
+        }
+        bool any = false;
+        foreach (Renderer r in rs)
+        {
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+            if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+        }
+        return any;
+    }
+
+    public int RefundOf(GameObject tower) => Mathf.FloorToInt((paidCost.TryGetValue(tower, out int c) ? c : defaultTowerCost) * SellRefund);
+
+    // v154 포탑 판매 (선택 후 Q)
+    public void SellTower(GameObject tower)
+    {
+        if (tower == null) return;
         int paid = paidCost.TryGetValue(tower, out int c) ? c : defaultTowerCost;
         int refund = Mathf.FloorToInt(paid * SellRefund);
         var cells = new List<Vector2Int>();
@@ -187,8 +224,7 @@ public class TowerBuilder : MonoBehaviour
         // 재능 선택창이 열려 있거나 방금 닫혔으면 숫자 키는 선택창 몫
         if (AugmentManager.IsOpen || Time.frameCount <= AugmentManager.ClosedFrame + 1) return;
 
-        // X = 가리킨 포탑 판매 (건설 모드가 아닐 때)
-        if (!isBuildMode && Input.GetKeyDown(KeyCode.X)) TrySellAimedTower();
+        // v154 X 판매 → 포탑 우클릭 선택 후 Q 판매 / E 업그레이드 (TowerSelection)
 
         // 1번(0) ~ 5번(4) 키 입력 감지
         if (Input.GetKeyDown(KeyCode.Alpha1)) SelectTower(0);
@@ -344,7 +380,7 @@ public class TowerBuilder : MonoBehaviour
         // 직업(헬스 중독자): 포탑 수 제한
         if (BuiltCount >= Jobs.TurretLimit)
         {
-            AugmentManager.Toast($"포탑은 {Jobs.TurretLimit}개까지만 지을 수 있어요 · 가리키고 X로 판매");
+            AugmentManager.Toast($"포탑은 {Jobs.TurretLimit}개까지만 지을 수 있어요 · 포탑 우클릭 → Q로 판매");
             return false;
         }
 

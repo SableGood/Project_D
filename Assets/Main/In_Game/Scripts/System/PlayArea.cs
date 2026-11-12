@@ -109,9 +109,9 @@ public class PlayArea : MonoBehaviour
             {
                 if (a == null || !a.isActiveAndEnabled) continue;
                 Vector3 p = a.transform.position;
-                if (IslandMap.IsWater(p, 0.05f))
+                if (IslandMap.IsWater(p, 0.05f) || IslandMap.IsCliff(p, 0.3f))
                 {
-                    // 넉백 등으로 물에 밀려난 몹: 가장 가까운 땅(내비메쉬)으로 되돌림
+                    // 넉백 등으로 물·절벽에 밀려난 몹: 가장 가까운 땅(내비메쉬)으로 되돌림
                     if (NavMesh.SamplePosition(p, out NavMeshHit hit, 6f, NavMesh.AllAreas)) a.Warp(hit.position);
                     continue;
                 }
@@ -133,6 +133,7 @@ public class PlayArea : MonoBehaviour
             groundY = Area.center.y;
             BuildWalls(Area.center, Area.size.x, Area.size.z);
             gameObject.AddComponent<WaterHazard>();
+            if (IslandMap.IsFort) FortLayout.Apply();   // v151 요새 맵: 시작 위치·스폰·입구 벽
             Debug.Log($"[구역] 섬 지형 {Area.size.x:0.#} x {Area.size.z:0.#} m");
             return;
         }

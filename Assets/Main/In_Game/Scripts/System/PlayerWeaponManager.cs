@@ -14,7 +14,7 @@ public class PlayerWeaponManager : MonoBehaviour
     [Header("무기 보유 (최대 2정)")]
     [Tooltip("처음 들고 시작하는 무기 코드 (Weapon_Data의 코드명, 예: W002 = 콜트). 최대 2개")]
     public string[] startWeaponCodes = { "W002" };
-    [Tooltip("테스트: 목록의 모든 무기를 휠로 돌려 쓰기 (끄면 보유한 무기만)")]
+    [Tooltip("테스트: 목록의 모든 무기를 X(1인칭은 휠)로 돌려 쓰기 · F6 무기 목록 (끄면 보유한 무기만)")]
     public bool testAllWeapons = false;
     // 시작 화면(SetupScreen)의 '테스트 모드' 버튼. 켜져 있으면 스폰될 때 testAllWeapons를 켬
     public static bool TestModeAllWeapons;
@@ -146,11 +146,16 @@ public class PlayerWeaponManager : MonoBehaviour
     {
         if (weaponPrefabs == null || weaponPrefabs.Length == 0) return;
 
-        // 마우스 휠 무기 교체 (보유한 무기끼리. 테스트 모드면 목록 전체)
-        float scroll = AugmentManager.IsOpen ? 0f : Input.GetAxis("Mouse ScrollWheel");
-        if (scroll != 0f)
+        // v156 무기 교체: X = 다음 무기 / 1인칭에서는 마우스 휠도 (탑뷰 휠 = 카메라 줌)
+        //  보유한 무기끼리. 테스트 모드면 목록 전체 (F6 무기 목록에서 골라도 됨)
+        bool canSwap = !AugmentManager.IsOpen && !WeaponBrowser.IsOpen && Time.timeScale > 0f;
+        bool fpsView = playerController != null && playerController.isFirstPerson;
+        float scroll = canSwap && fpsView ? Input.mouseScrollDelta.y : 0f;
+        int swapDir = scroll > 0f ? 1 : scroll < 0f ? -1 : 0;
+        if (canSwap && Input.GetKeyDown(KeyCode.X)) swapDir = 1;
+        if (swapDir != 0)
         {
-            int dir = scroll > 0f ? 1 : -1;
+            int dir = swapDir;
             if (testAllWeapons)
                 EquipWeapon((currentWeaponIndex + dir + weaponPrefabs.Length) % weaponPrefabs.Length);
             else if (owned.Count > 1)
@@ -335,6 +340,13 @@ public class PlayerWeaponManager : MonoBehaviour
         HitEffects.CasingType type = CasingTypeOf(w.playerWepData);
         float size = type == HitEffects.CasingType.Shotgun ? shotgunCasingSize
                    : type == HitEffects.CasingType.Rifle ? rifleCasingSize : pistolCasingSize;
+        // v154 1인칭 3D 총: 모델의 배출구에서 화면 오른쪽 위로 튀어나감
+        if (currentVisual != null && currentVisual.ViewmodelEject(out Vector3 ep, out Vector3 er, out Vector3 eu, out float es))
+        {
+            pos = ep;
+            vel = er * Random.Range(1.1f, 1.6f) + eu * Random.Range(1.0f, 1.5f);
+            size *= es;
+        }
         HitEffects.EjectCasing(pos, vel, type, size * Random.Range(0.95f, 1.05f), FloorHeight());
     }
 
@@ -394,6 +406,12 @@ public class PlayerWeaponManager : MonoBehaviour
         {
             Ray ray = cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             bool any = Physics.Raycast(ray, out RaycastHit hit, 100f, ~tpsAimIgnoreLayers, QueryTriggerInteraction.Ignore);
+            if (any && FortWall.IsWall(hit.collider))   // v154 벽 너머를 조준 (아군 탄은 벽 통과)
+            {
+                any = false; float best = float.MaxValue;
+                foreach (RaycastHit h in Physics.RaycastAll(ray, 100f, ~tpsAimIgnoreLayers, QueryTriggerInteraction.Ignore))
+                    if (!FortWall.IsWall(h.collider) && h.distance < best) { best = h.distance; hit = h; any = true; }
+            }
             // v105: 조준선이 몹 '그림' 위에 있으면 그 몹을 조준 (그림이 히트박스보다 넓어서 가장자리를 쏘면 빗나가던 문제)
             if (currentWeapon != null && currentWeapon.targetLayer.value != 0)
             {

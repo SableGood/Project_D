@@ -314,8 +314,14 @@ public class MobAI : MonoBehaviour
 
         Transform newTarget = null;
 
+        // v154 MR002(박격포): 포탑 저격이 목적 → 벽 너머라도 가까운 포탑부터 (벽은 제외)
+        if (towerMask != 0 && MobCode() == "MR002") newTarget = FindNearestTower(true, Mathf.Max(towerSearchRadius, MR002TowerSearch));
+
+        // v151 요새 맵: 기지 밖에 있고 입구 벽이 서 있으면 벽만 노림 (돌아갈 길이 없음)
+        if (newTarget == null && FortWall.ShouldTarget(transform.position)) newTarget = FortWall.Body;
+
         // 길을 막은 포탑: 부서지거나 멀어질 때까지 우선 공격
-        if (blockingTower != null)
+        if (newTarget == null && blockingTower != null)
         {
             Health bh = blockingTower.GetComponent<Health>();
             bool gone = !blockingTower.gameObject.activeInHierarchy || (bh != null && bh.IsDead)
@@ -396,15 +402,18 @@ public class MobAI : MonoBehaviour
         return best;
     }
 
-    private Transform FindNearestTower()
+    public static float MR002TowerSearch = 30f;
+    private Transform FindNearestTower() => FindNearestTower(false, towerSearchRadius);
+    private Transform FindNearestTower(bool skipWall, float radius)
     {
-        int count = Physics.OverlapSphereNonAlloc(transform.position, towerSearchRadius, towerHits, towerMask, QueryTriggerInteraction.Ignore);
+        int count = Physics.OverlapSphereNonAlloc(transform.position, radius, towerHits, towerMask, QueryTriggerInteraction.Ignore);
         Transform best = null;
         float bestSqr = float.MaxValue;
         for (int i = 0; i < count; i++)
         {
             Transform root = towerHits[i].transform.root; // 타워 본체 (부품 콜라이더의 최상위)
             if (!root.gameObject.activeInHierarchy) continue;
+            if (skipWall && root == FortWall.Body) continue;
             float sqr = (root.position - transform.position).sqrMagnitude;
             if (sqr < bestSqr) { bestSqr = sqr; best = root; }
         }
@@ -562,6 +571,9 @@ public class MobAI : MonoBehaviour
     //  MR002: 포탄 그림 + 착탄 시 반경 1.8m 폭발 (도트 폭발 이펙트)
     public static float MR001BulletSpeed = 10f;
     public static float MR002BlastRadius = 1.8f;
+    public static float MR003BulletSpeed = 26f;
+    public static int MR003Damage = 15;
+    public static float SniperFreezeTime = 0.3f;   // v154 조준 마지막 이 시간 동안 조준점 고정 (피할 틈)
     private void ApplyRangedProfile()
     {
         if (weapon == null) return;
@@ -578,6 +590,13 @@ public class MobAI : MonoBehaviour
                 break;
             case "ME002":
                 if (weapon.fireMode != Weapon.FireMode.Hitscan) { weapon.projectileSprite = FxArt.Bullet; weapon.projectileSpriteLength = 0.32f; }
+                break;
+            case "MR003":   // v154 저격: 확정 타격 대신 빠른 탄을 쏨 (조준 마지막에 고정 → 피할 수 있음), 피해 15
+                weapon.fireMode = Weapon.FireMode.RapidBullet;
+                weapon.SetProjectileSpeed(MR003BulletSpeed);
+                weapon.projectileSprite = FxArt.Bullet;
+                weapon.projectileSpriteLength = 0.6f;
+                weapon.attackDamage = MR003Damage;
                 break;
             case "MR002":
                 weapon.fireMode = Weapon.FireMode.ParabolicShell;
@@ -792,15 +811,17 @@ public class MobAI : MonoBehaviour
         if (atkFrames != null && bodyAnim != null) bodyAnim.PlayOnce(new[] { atkFrames[0] }, new[] { aimLockTime + 0.1f });
 
         float t = 0f;
+        Vector3 lockPoint = TargetCenter();
         while (t < aimLockTime)
         {
             if (target == null || !target.gameObject.activeInHierarchy) break;
             t += Time.deltaTime;
-            FaceTarget();
+            bool frozen = t >= aimLockTime - SniperFreezeTime;   // 마지막엔 조준점 고정
+            if (!frozen) { FaceTarget(); lockPoint = TargetCenter(); }
 
             Vector3 from = transform.position + Vector3.up * 0.3f;
             line.SetPosition(0, from);
-            line.SetPosition(1, TargetCenter());
+            line.SetPosition(1, frozen ? lockPoint + (lockPoint - from).normalized * 6f : lockPoint);
             // 발사 직전일수록 굵고 진하게
             float k = t / aimLockTime;
             line.widthMultiplier = Mathf.Lerp(0.01f, 0.05f, k);
@@ -811,12 +832,11 @@ public class MobAI : MonoBehaviour
         bool fire = target != null && target.gameObject.activeInHierarchy && weapon != null && t >= aimLockTime && !PlayerSkills.IsCloaked(target);
         if (fire)
         {
-            Vector3 dir = target.position - transform.position;
-            weapon.ApplyDamage(targetHealth != null ? targetHealth.transform : target, dir); // 확정 타격
-            LastAction = "저격 명중"; HitCount++;
+            weapon.FireAt(lockPoint);   // v154 확정 타격 → 고정된 조준점으로 빠른 탄
+            LastAction = "저격 발사"; HitCount++;
             PlayRangedFire();
             // v109: 쏘는 순간 조준선이 밝은 노랑으로 번쩍 (굵게) → 0.15초 동안 옅어지며 사라짐
-            Vector3 from = transform.position + Vector3.up * 0.3f, to = TargetCenter();
+            Vector3 from = transform.position + Vector3.up * 0.3f, to = lockPoint;
             float f = 0f;
             while (f < SniperFlashTime)
             {

@@ -25,6 +25,9 @@ public class CameraController : MonoBehaviour
     public Vector3 topDownOffset = new Vector3(0, 10, -7);
     public Vector3 topDownRotation = new Vector3(55, 0, 0);
     public float topDownFOV = 60f;
+    [Tooltip("v156 탑뷰 마우스 휠 줌: 카메라 거리 배율 (작을수록 가까이)")]
+    public float zoomMin = 0.6f, zoomMax = 1.4f, zoomStep = 0.1f, zoomSmooth = 14f;
+    private float zoom = 1f, zoomTarget = 1f;
 
     [Header("1인칭(FPS) 세팅")]
     [Tooltip("플레이어 중심에서 눈 높이까지 (위쪽)")]
@@ -173,7 +176,8 @@ public class CameraController : MonoBehaviour
 
         // 탑뷰 위치/회전
         // 높이는 바닥 기준 (점프해도 카메라가 따라 올라가지 않아야 캐릭터가 뜨는 게 보임)
-        Vector3 tdPos = new Vector3(p.position.x, player.GroundY, p.position.z) + topDownOffset;
+        UpdateZoom();
+        Vector3 tdPos = new Vector3(p.position.x, player.GroundY, p.position.z) + topDownOffset * zoom;
         Quaternion tdRot = Quaternion.Euler(topDownRotation);
 
         // 1인칭 위치/회전 (눈 높이, 플레이어가 바라보는 방향 + 상하 시선)
@@ -191,6 +195,15 @@ public class CameraController : MonoBehaviour
         cam.nearClipPlane = Mathf.Lerp(topDownNearClip, fpsNearClip, e);
         ApplyShake();
         UpdateFlash();
+    }
+
+    // v156 탑뷰에서 마우스 휠 = 줌 (1인칭에서는 휠 = 무기 교체)
+    private void UpdateZoom()
+    {
+        bool can = !player.isFirstPerson && Time.timeScale > 0f && !AugmentManager.IsOpen && !TalentBrowser.IsOpen && !WeaponBrowser.IsOpen;
+        float wheel = can ? Input.mouseScrollDelta.y : 0f;
+        if (wheel != 0f) zoomTarget = Mathf.Clamp(zoomTarget - Mathf.Sign(wheel) * zoomStep, zoomMin, zoomMax);
+        zoom = Mathf.Lerp(zoom, zoomTarget, 1f - Mathf.Exp(-zoomSmooth * Time.unscaledDeltaTime));
     }
 
     // 전환 순간 화면을 어둡게 했다가 빠르게 밝힘

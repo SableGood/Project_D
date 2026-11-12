@@ -110,7 +110,7 @@ public class SkillGrenade : MonoBehaviour
 
             if (kind == Kind.Fragment && TouchesMob(next)) { transform.position = next; Explode(); return; }
 
-            if (Physics.Linecast(pos, next, out RaycastHit hit, envMask, QueryTriggerInteraction.Ignore))
+            if (Physics.Linecast(pos, next, out RaycastHit hit, envMask, QueryTriggerInteraction.Ignore) && !FortWall.IsWall(hit.collider))   // v154 아군 수류탄은 벽 통과
             {
                 transform.position = hit.point + hit.normal * Radius;
                 Land();

@@ -39,6 +39,10 @@ public class TowerStatusBar : MonoBehaviour
 
     private static Font font;
 
+    // v157 늘린 상자(입구 벽: 가로로 긴 큐브) 아래에 붙이면 글자가 납작해짐 → 부모에서 떼고 위치만 따라감
+    private bool detached;
+    private Vector3 followOffset;
+
     // 포탑에 상태 표시를 붙이거나(이미 있으면 다시 연결) 이름을 갱신
     public static TowerStatusBar Attach(GameObject tower, EntityData data)
     {
@@ -65,6 +69,16 @@ public class TowerStatusBar : MonoBehaviour
         if (canvas != null) canvas.gameObject.SetActive(Visible);
     }
 
+    void OnDisable()
+    {
+        if (detached && canvas != null) canvas.gameObject.SetActive(false);
+    }
+
+    void OnDestroy()
+    {
+        if (detached && canvas != null) Destroy(canvas.gameObject);
+    }
+
     void LateUpdate()
     {
         if (canvas == null) return;
@@ -73,6 +87,7 @@ public class TowerStatusBar : MonoBehaviour
         if (!show) return;
 
         if (cam == null) cam = Camera.main;
+        if (detached) canvas.transform.position = transform.position + followOffset;
         if (cam != null) canvas.transform.rotation = cam.transform.rotation;
         Refresh();
     }
@@ -109,6 +124,7 @@ public class TowerStatusBar : MonoBehaviour
             found = true;
         }
         canvas.transform.position = new Vector3(transform.position.x, top + heightOffset, transform.position.z);
+        followOffset = canvas.transform.position - transform.position;
     }
 
     private void BuildUI()
@@ -128,6 +144,13 @@ public class TowerStatusBar : MonoBehaviour
         RectTransform rt = (RectTransform)root.transform;
         rt.sizeDelta = new Vector2(Width, 52f);
         rt.localScale = Vector3.one * worldScale;
+        Vector3 ls = transform.lossyScale;
+        if (Mathf.Abs(ls.x - ls.y) > 0.01f || Mathf.Abs(ls.y - ls.z) > 0.01f)
+        {
+            detached = true;
+            root.transform.SetParent(null, false);
+            rt.localScale = Vector3.one * worldScale;
+        }
 
         // 이름
         nameText = MakeText(rt, "Name", 20, FontStyle.Bold, new Vector2(0f, 34f), new Vector2(Width + 60f, 24f));

@@ -13,6 +13,7 @@ public class Projectile : MonoBehaviour
     [HideInInspector] public int attackDamage;
     [HideInInspector] public Transform attacker; // 쏜 개체 (피격 알림용, 없으면 null)
     [HideInInspector] public bool isCrit;        // 치명타 탄 (플레이어 무기, Weapon이 정함)
+    [HideInInspector] public bool blockByWall;   // v154 적 탄: 요새 벽에 막힘
     [HideInInspector] public bool fromPlayerGun; // 플레이어 총에서 나간 탄 (재능 효과)
     [HideInInspector] public LayerMask targetLayer;
     [HideInInspector] public float armorPenetration;   // 방어구 무시
@@ -152,6 +153,13 @@ public class Projectile : MonoBehaviour
 
         // ★ 위에서 이미 명중/소멸해 풀로 돌아갔다면 여기서 종료 (같은 프레임 이중 반환 → 풀에 중복 등록되는 버그 방지)
         if (!gameObject.activeInHierarchy) return;
+
+        if (blockByWall && FortWall.Blocks(transform.position))
+        {
+            HitEffects.Impact(transform.position, true);
+            ReturnToPool();
+            return;
+        }
 
         // ★ [핵심] 수동 조준 등 락온 타겟이 없을 경우 비행 도중 충돌(명중) 검사를 별도로 수행
         if (target == null)
