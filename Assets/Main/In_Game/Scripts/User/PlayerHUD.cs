@@ -72,9 +72,46 @@ public class PlayerHUD : MonoBehaviour
         for (int i = 0; i < CrosshairCount; i++)
             if (crosshairs[i] != null)
                 foreach (Graphic g in crosshairs[i].GetComponentsInChildren<Graphic>(true)) g.raycastTarget = false;
+        EmphasizeCrosshairs();
 
         // 씬 시작 시 크로스헤어를 모두 숨기는 초기화 작업만 수행합니다.
         UpdateCrosshair();
+    }
+
+    // v167: 크로스헤어를 굵고 또렷하게 — 가는 선은 두께 ×1.8, 전체 1.15배, 진한 외곽선, 불투명
+    [Header("크로스헤어 강조 (v167)")]
+    public float crosshairThickness = 1.8f;
+    public float crosshairSize = 1.15f;
+    public Color crosshairOutline = new Color(0.13f, 0.08f, 0.10f, 1f);
+    public float crosshairOutlineWidth = 2f;
+    private void EmphasizeCrosshairs()
+    {
+        for (int i = 0; i < CrosshairCount; i++)
+        {
+            if (crosshairs[i] == null) continue;
+            if (baseScales != null && i < baseScales.Length) baseScales[i] *= crosshairSize;
+            foreach (Graphic g in crosshairs[i].GetComponentsInChildren<Graphic>(true))
+            {
+                if (!(g is Image) && !(g is RawImage)) continue;
+                RectTransform rt = g.rectTransform;
+                Vector2 s = rt.sizeDelta;
+                // 선(가로·세로로 긴 그림)만 두껍게: 짧은 쪽을 늘림
+                if (s.x > 0f && s.y > 0f)
+                {
+                    if (s.x >= s.y * 2.5f) s.y = Mathf.Ceil(s.y * crosshairThickness);
+                    else if (s.y >= s.x * 2.5f) s.x = Mathf.Ceil(s.x * crosshairThickness);
+                    rt.sizeDelta = s;
+                }
+                Color c = g.color; if (c.a > 0.05f) { c.a = 1f; g.color = c; } // 숨겨 둔 그림(투명)은 그대로
+                if (g.GetComponent<Outline>() == null)
+                {
+                    Outline o = g.gameObject.AddComponent<Outline>();
+                    o.effectColor = crosshairOutline;
+                    o.effectDistance = new Vector2(crosshairOutlineWidth, -crosshairOutlineWidth);
+                    o.useGraphicAlpha = true;
+                }
+            }
+        }
     }
 
     void Update()

@@ -3,15 +3,15 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // v156 무기 목록 (테스트용) — 재능 목록(F3)과 같은 모양
-//  시작 화면에서 '테스트 모드'를 켜면 게임 중 F6으로 열림. 모든 무기의 능력치를 한눈에 보고, 누르면 바로 들기
+//  시작 화면에서 '테스트 모드'를 켜면 게임 중 F5로 열림 (v168: F6 → F5). 모든 무기의 능력치를 한눈에 보고, 누르면 바로 들기
 //  - 검색: 이름·별칭·코드·분류·역할·설명 (띄어쓰기로 여러 단어 → 모두 포함)
 //  - 분류 버튼: 전체 / 권총 / 기관단총 / 돌격 / 전투 / 기관총 / 저격 / 산탄 / 근접 / 로켓 / 보유
-//  - Esc 또는 F6: 닫기. 열려 있는 동안 게임은 멈춤
+//  - Esc 또는 F5: 닫기. 열려 있는 동안 게임은 멈춤
 public class WeaponBrowser : MonoBehaviour
 {
     public static WeaponBrowser Instance { get; private set; }
     public static bool IsOpen => Instance != null && Instance.open;
-    public static KeyCode Key = KeyCode.F6;
+    public static KeyCode Key = KeyCode.F5;
 
     private bool open;
     private float prevTimeScale = 1f;
@@ -51,7 +51,7 @@ public class WeaponBrowser : MonoBehaviour
             return;
         }
         if (!Input.GetKeyDown(Key)) return;
-        if (!PlayerWeaponManager.TestModeAllWeapons) { AugmentManager.Toast("무기 목록(F6)은 시작 화면에서 테스트 모드를 켜야 열려요"); return; }
+        if (!PlayerWeaponManager.TestModeAllWeapons) { AugmentManager.Toast("무기 목록(F5)은 시작 화면에서 테스트 모드를 켜야 열려요"); return; }
         if (AugmentManager.IsOpen || TalentBrowser.IsOpen) return;
         if (Manager() == null) { AugmentManager.Toast("플레이어를 찾지 못해 무기 목록을 열 수 없어요"); return; }
         Open();
@@ -205,7 +205,7 @@ public class WeaponBrowser : MonoBehaviour
         RectTransform pr = panel.rectTransform; pr.anchorMin = pr.anchorMax = new Vector2(0.5f, 0.5f); pr.sizeDelta = new Vector2(1500f, 900f);
 
         Text title = NewText(panel.transform, "Title", 30, TextAnchor.MiddleLeft);
-        title.text = "무기 목록 <size=18><color=#8A8A84>테스트 모드 · 누르면 바로 들기 · Esc / F6 닫기</color></size>";
+        title.text = "무기 목록 <size=18><color=#8A8A84>테스트 모드 · 누르면 바로 들기 · Esc / F5 닫기</color></size>";
         title.supportRichText = true;
         Place(title.rectTransform, 24f, -18f, 1100f, 44f);
 

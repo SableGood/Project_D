@@ -33,6 +33,18 @@ public class Billboard : MonoBehaviour
     private bool proxyActive;
     private UnityEngine.Rendering.ShadowCastingMode savedShadowMode;
 
+    // v167 발밑 그림자: 그림 모양 그림자(윤곽 뒤로 길게 늘어짐) 대신 발밑에 둥근 그림자 하나 (탑뷰·1인칭 모두)
+    public static bool BlobShadows = true;
+    public static float BlobSize = 1f;          // 전체 크기 배율
+    public static float BlobAlpha = 0.42f;      // 진하기
+    [Tooltip("이 캐릭터의 발밑 그림자 크기 배율")]
+    public float blobScale = 1f;
+    private SpriteRenderer blob;
+    private bool blobOwner;
+    private static Sprite blobSprite;
+    private static Transform blobRoot;
+    private static int blobMask = 0;
+
     // 피격 흔들림
     private float shakeAmount;
     private float shakeStart, shakeEnd;
@@ -53,13 +65,17 @@ public class Billboard : MonoBehaviour
         if (sr != null)
         {
             // TwoSided로 설정해야 빌보드 회전 시 그림자가 얇아지거나 사라지는 현상을 막을 수 있습니다.
-            sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.TwoSided;
+            sr.shadowCastingMode = BlobShadows ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.TwoSided;
             sr.receiveShadows = true;
         }
+        // 한 캐릭터에 Billboard가 여럿이어도 그림자는 하나 (같은 부모 아래 첫 번째만)
+        blobOwner = BlobShadows && sr != null &&
+            (transform.parent == null || transform.parent.GetComponentInChildren<Billboard>(true) == this);
     }
 
     void OnDisable()
     {
+        if (blob != null) blob.enabled = false;
         if (shadowProxy != null) shadowProxy.enabled = false;
         if (proxyActive) { proxyActive = false; if (sr != null) sr.shadowCastingMode = savedShadowMode; }
         shakeEnd = 0f;
@@ -119,6 +135,73 @@ public class Billboard : MonoBehaviour
         }
         wasShaking = shaking;
         UpdateShadowProxy(fpsView && !shadowOnly);
+        UpdateBlob();
+    }
+
+    // ===== v167 발밑 그림자 =====
+    private void UpdateBlob()
+    {
+        if (!blobOwner) return;
+        bool show = sr.enabled && sr.sprite != null;
+        if (!show) { if (blob != null && blob.enabled) blob.enabled = false; return; }
+        if (blob == null)
+        {
+            if (blobRoot == null) blobRoot = new GameObject("BlobShadows").transform;
+            GameObject go = new GameObject(name + "_Blob");
+            go.layer = 2; // Ignore Raycast
+            go.transform.SetParent(blobRoot, false);
+            blob = go.AddComponent<SpriteRenderer>();
+            blob.sprite = BlobSprite();
+            blob.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            blob.receiveShadows = false;
+            blob.sortingLayerID = sr.sortingLayerID;
+            blob.sortingOrder = sr.sortingOrder - 5; // 몸 그림보다 먼저(아래에) 그림
+        }
+        if (!blob.enabled) blob.enabled = true;
+
+        Vector3 feet = HasFeet ? FeetWorld : transform.position;
+        float groundY = feet.y;
+        if (blobMask == 0) blobMask = ~((1 << 2) | (1 << 5) | LayerMask.GetMask("Mob", "Player"));
+        if (Physics.Raycast(feet + Vector3.up * 0.4f, Vector3.down, out RaycastHit hit, 4f, blobMask, QueryTriggerInteraction.Ignore))
+            groundY = Mathf.Min(feet.y, hit.point.y);
+        // 공중에 뜨면 작고 옅게
+        float lift = Mathf.Clamp01((feet.y - groundY) / 2.5f);
+
+        float w = sr.sprite.bounds.size.x * Mathf.Abs(transform.lossyScale.x);
+        float h = sr.sprite.bounds.size.y * Mathf.Abs(transform.lossyScale.y);
+        float size = Mathf.Clamp(Mathf.Min(w * 0.6f, h * 0.45f), 0.3f, 7f) * blobScale * BlobSize * (1f - lift * 0.4f);
+        Color c = new Color(0.13f, 0.08f, 0.10f, BlobAlpha * (1f - lift * 0.6f) * sr.color.a);
+        if (blob.color != c) blob.color = c;
+
+        Transform t = blob.transform;
+        t.position = new Vector3(feet.x, groundY + 0.035f, feet.z);
+        t.rotation = Quaternion.Euler(90f, mainCam.transform.eulerAngles.y, 0f);
+        // 그림 1칸 = 1m (64px / PPU 64) → 가로 size, 세로(깊이) size × 0.5
+        t.localScale = new Vector3(size, size * 0.5f, 1f);
+    }
+
+    // 가운데가 진하고 가장자리가 부드러운 원 (64×64, 1m)
+    private static Sprite BlobSprite()
+    {
+        if (blobSprite != null) return blobSprite;
+        const int N = 64;
+        Texture2D tex = new Texture2D(N, N, TextureFormat.RGBA32, false);
+        tex.wrapMode = TextureWrapMode.Clamp;
+        tex.filterMode = FilterMode.Bilinear;
+        Color32[] px = new Color32[N * N];
+        for (int y = 0; y < N; y++)
+            for (int x = 0; x < N; x++)
+            {
+                float dx = (x + 0.5f) / N * 2f - 1f, dy = (y + 0.5f) / N * 2f - 1f;
+                float r = Mathf.Sqrt(dx * dx + dy * dy);
+                float t = Mathf.Clamp01((r - 0.55f) / 0.45f);
+                float a = 1f - t * t * (3f - 2f * t);
+                px[y * N + x] = new Color32(255, 255, 255, (byte)(Mathf.Clamp01(a) * 255));
+            }
+        tex.SetPixels32(px);
+        tex.Apply();
+        blobSprite = Sprite.Create(tex, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+        return blobSprite;
     }
 
     // 1인칭: 보이는 그림의 그림자는 끄고, 탑뷰 방향으로 세운 '그림자 전용' 복사본이 대신 드리움
@@ -173,6 +256,7 @@ public class Billboard : MonoBehaviour
 
     void OnDestroy()
     {
+        if (blob != null) Destroy(blob.gameObject);
         if (shadowProxy != null) Destroy(shadowProxy.gameObject);
     }
 

@@ -272,7 +272,7 @@ public class InGameIntro : MonoBehaviour
         }
         TL(NewText(c, "TestLabel", "테스트 모드  <size=18>T</size>", 24, TextSub, TextAnchor.MiddleLeft).rectTransform, 0f, 224f, leftW, 32f);
         test = MakeChoice(c, "Test", 0f, 264f, leftW, 64f, "", 24, ToggleTest);
-        Text testNote = NewText(c, "TestNote", "무기 목록: F6 · 재능 목록: F3 · 무기 넘기기: X", 18, TextSub, TextAnchor.MiddleLeft);
+        Text testNote = NewText(c, "TestNote", "무기 목록: F5 · 재능 목록: F3 · 무기 넘기기: X", 18, TextSub, TextAnchor.MiddleLeft);
         TL(testNote.rectTransform, 0f, 336f, leftW, 28f);
 
         // ── 오른쪽: 직업 8개 한 줄 + 설명 ──

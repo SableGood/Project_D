@@ -79,9 +79,9 @@ public class MenuSkin : MonoBehaviour
             else if (n.Contains("Difficulty")) SkinPanel(panel, Layout.Row);
             else
             {
-                if (n == "PauseMenuPanel") OptionsPanel.AddButton(panel);   // v154 일시정지 → 옵션 (음량)
+                if (n == "PauseMenuPanel") { OptionsPanel.AddButton(panel); PauseCodex.AddButtons(panel); }   // v154 옵션 · v168 직업·무기·재능 목록
                 SkinPanel(panel, Layout.Column); // 일시정지, 게임오버 등
-                if (n == "PauseMenuPanel") { OptionsPanel.Build(panel); KeyGuide.AttachToPause(panel); }   // v157 버튼 옆 조작키 안내
+                if (n == "PauseMenuPanel") { OptionsPanel.Build(panel); KeyGuide.AttachToPause(panel); PauseCodex.Build(panel); }   // v157 버튼 옆 조작키 안내 · v168 목록
             }
         }
     }

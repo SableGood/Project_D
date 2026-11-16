@@ -10,7 +10,8 @@ using System.Collections.Generic;
 //    · 일찍 시작하면 남은 1초당 3골드
 //  - 웨이브 길이: 스테이지 안 순서대로 20·25·30·35·40·45·65초
 //    · 처음 80% 동안 스폰 포인트마다 2~3초 간격으로 3~6마리씩 나옴 (동시에 살아 있는 몹은 최대 60)
-//    · 시간이 끝나면 남은 몹은 골드 없이 사라지고 웨이브 종료. 다 잡으면 바로 종료
+//    · v168 연속 웨이브: 시간이 끝나도 남은 몹은 사라지지 않고 계속 공격 → 정비 시간 뒤 다음 웨이브가 겹쳐서 옴 (못 잡으면 쌓임)
+//      다 잡으면 바로 종료. 정비 중에도 남은 몹은 싸움
 //    · 보스 웨이브는 보스를 잡을 때까지 계속
 //  - 몹 수 × 난이도 배율. 어려움이면 엘리트 웨이브에 엘리트 +1
 //  - 클리어 보너스 = (50 + 15 × (웨이브 번호-1)) × 직업 골드 배율 + 직업 웨이브 보너스(백수)
@@ -218,7 +219,8 @@ public class WaveManager : MonoBehaviour
         TotalWave++;
         spawningDone = false;
         despawning = false;
-        alive.Clear();
+        // v168: 지난 웨이브에서 남은 몹은 그대로 (alive에 남겨 둠 → 동시에 살아 있는 수 제한·'남은 몹'에 포함)
+        alive.RemoveWhere(m => m == null || !m.activeInHierarchy);
         bosses.Clear();
 
         if (waveStartButton != null) waveStartButton.gameObject.SetActive(false);
@@ -420,8 +422,7 @@ public class WaveManager : MonoBehaviour
         IsWaveActive = false;
         if (waveRoutine != null) { StopCoroutine(waveRoutine); waveRoutine = null; }
 
-        int leftover = alive.Count;
-        DespawnAll();
+        int leftover = alive.Count;   // v168: 남은 몹은 사라지지 않음 (다음 웨이브까지 계속 싸움)
 
         int clearedIndex = currentWaveIndex;
         currentWaveIndex++;
@@ -466,7 +467,7 @@ public class WaveManager : MonoBehaviour
 
         if (waveText != null)
         {
-            string head = leftover > 0 ? $"시간 종료 (남은 몹 {leftover}마리 퇴각)" : "웨이브 종료";
+            string head = leftover > 0 ? $"다음 웨이브가 다가옵니다 <size=28>(남은 몹 {leftover}마리)</size>" : "웨이브 종료";
             waveText.text = bonus > 0 ? $"{head}\n<size=28><color=#FFD54A>+{bonus} 골드</color>  ·  정비 시간</size>" : $"{head}\n<size=28>정비 시간</size>";
             waveText.gameObject.SetActive(true);
         }
@@ -546,6 +547,7 @@ public class WaveManager : MonoBehaviour
         versionText = MakeHudText(canvas, "Version", new Vector2(1f, 1f), new Vector2(-22f, -46f), new Vector2(360f, 20f), 14, TextAnchor.MiddleRight);
         versionText.text = $"<color=#FFFFFF80>Project_D 프로토타입 {BuildInfo.Version}</color>";
         versionText.fontStyle = FontStyle.Normal; UIFont.Apply(versionText, FontStyle.Normal);
+        KillStreak.Create(canvas, new Vector2(-22f, -70f)); // v167 연속 킬 (버전 표시 아래)
 
         // v157 웨이브 시작 카운트다운: WAVE START 버튼 오른쪽에 크게
         countText = MakeHudText(canvas, "WaveCountdown", new Vector2(0f, 1f),
@@ -592,9 +594,10 @@ public class WaveManager : MonoBehaviour
             }
             else if (prepActive)
             {
-                timerText.text = PlayerWeaponManager.TestModeAllWeapons
+                string left = alive.Count > 0 ? $"  <size=18><color=#FF9A7A>남은 몹 {alive.Count}</color></size>" : "";
+                timerText.text = (PlayerWeaponManager.TestModeAllWeapons
                     ? "정비 시간  <color=#7FE0FF>테스트 모드</color>  <size=18><color=#FFFFFFB0>F1로 웨이브 시작</color></size>"
-                    : "정비 시간";
+                    : "정비 시간") + left;
             }
             else timerText.text = "";
         }

@@ -14,7 +14,7 @@ public class PlayerWeaponManager : MonoBehaviour
     [Header("무기 보유 (최대 2정)")]
     [Tooltip("처음 들고 시작하는 무기 코드 (Weapon_Data의 코드명, 예: W002 = 콜트). 최대 2개")]
     public string[] startWeaponCodes = { "W002" };
-    [Tooltip("테스트: 목록의 모든 무기를 X(1인칭은 휠)로 돌려 쓰기 · F6 무기 목록 (끄면 보유한 무기만)")]
+    [Tooltip("테스트: 목록의 모든 무기를 X(1인칭은 휠)로 돌려 쓰기 · F5 무기 목록 (끄면 보유한 무기만)")]
     public bool testAllWeapons = false;
     // 시작 화면(SetupScreen)의 '테스트 모드' 버튼. 켜져 있으면 스폰될 때 testAllWeapons를 켬
     public static bool TestModeAllWeapons;
@@ -147,7 +147,7 @@ public class PlayerWeaponManager : MonoBehaviour
         if (weaponPrefabs == null || weaponPrefabs.Length == 0) return;
 
         // v156 무기 교체: X = 다음 무기 / 1인칭에서는 마우스 휠도 (탑뷰 휠 = 카메라 줌)
-        //  보유한 무기끼리. 테스트 모드면 목록 전체 (F6 무기 목록에서 골라도 됨)
+        //  보유한 무기끼리. 테스트 모드면 목록 전체 (F5 무기 목록에서 골라도 됨)
         bool canSwap = !AugmentManager.IsOpen && !WeaponBrowser.IsOpen && Time.timeScale > 0f;
         bool fpsView = playerController != null && playerController.isFirstPerson;
         float scroll = canSwap && fpsView ? Input.mouseScrollDelta.y : 0f;

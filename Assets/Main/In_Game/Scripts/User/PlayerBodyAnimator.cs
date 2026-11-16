@@ -58,7 +58,7 @@ public class PlayerBodyAnimator : MonoBehaviour
     [Header("1인칭 무기 그림자")]
     public bool fpsWeaponShadow = true;
 
-    [Header("새 몸 그림 + 손만 따로 (F5로 예전 그림과 비교)")]
+    [Header("새 몸 그림 + 손만 따로 (v168: F5 비교 키 없앰)")]
     [Tooltip("켜면 Resources/{armRigFolder}의 새 그림(팔 없는 상체 + 새 하체)을 쓰고, 무기는 작은 손 두 개가 잡음")]
     public bool armRigTest = false; // v112: 기본은 팔이 그려진 원래 통짜 그림 (테스트 모드 F5로 팔 분리 그림과 비교)
     public KeyCode armRigToggleKey = KeyCode.F5;
@@ -252,6 +252,7 @@ public class PlayerBodyAnimator : MonoBehaviour
         fore.transform.localScale = new Vector3(Mathf.Min(foreK, maxArmStretch), sy, 1f);
         var shadow = lowerRenderer.shadowCastingMode;
         up.shadowCastingMode = fore.shadowCastingMode = shadow;
+        up.forceRenderingOff = fore.forceRenderingOff = lowerRenderer.forceRenderingOff;
         SetFeet(up, lastFeet, lastFeetValid ? 1f + bias : 0f);
         SetFeet(fore, lastFeet, lastFeetValid ? 1f + bias + 0.005f : 0f);
     }
@@ -307,6 +308,7 @@ public class PlayerBodyAnimator : MonoBehaviour
         var shadow = lowerRenderer.shadowCastingMode;
         handRear.shadowCastingMode = shadow;
         handFront.shadowCastingMode = shadow;
+        handRear.forceRenderingOff = handFront.forceRenderingOff = lowerRenderer.forceRenderingOff;
         if (weapons == null || weapons.weaponMountPoint == null || weapons.CurrentWeapon == null)
         {
             handRear.enabled = handFront.enabled = false;
@@ -347,10 +349,11 @@ public class PlayerBodyAnimator : MonoBehaviour
         if (lowerRenderer == null || upperRenderer == null) return;
         if (cam == null) cam = Camera.main;
         bool fps = pc != null && pc.isFirstPerson;
-        if (Input.GetKeyDown(armRigToggleKey) && PlayerWeaponManager.TestModeAllWeapons && !AugmentManager.IsOpen) SetArmRig(!armRigOn);
+        // v168: F5 몸 그림 비교 키 없앰 (F5 = 무기 목록). 필요하면 인스펙터의 armRigTest로
 
         // 1인칭에서는 내 몸이 안 보이므로(그림자만) 하체 설정을 상체에도 그대로
         upperRenderer.shadowCastingMode = lowerRenderer.shadowCastingMode;
+        upperRenderer.forceRenderingOff = lowerRenderer.forceRenderingOff; // v167: 1인칭 숨김
 
         bool moving = pc != null && pc.IsMoving;
         if (moving || Input.GetMouseButton(0)) lastActiveTime = Time.time;
@@ -462,13 +465,13 @@ public class PlayerBodyAnimator : MonoBehaviour
     // 1인칭: 손 위치에 그림자만 드리우는 무기 그림을 둠 / 탑뷰: 숨김
     private void UpdateWeaponShadow(bool fps, Dir dir)
     {
-        bool want = fps && fpsWeaponShadow;
+        bool want = fps && fpsWeaponShadow && !Billboard.BlobShadows; // v167: 발밑 그림자만 씀
         SpriteRenderer w = MainWeaponRenderer();
 
         // 실제 무기 그림: 1인칭에선 카메라 앞이라 그림자를 끔 (엉뚱한 곳에 그림자가 생기지 않게)
         if (fps != lastFps || want)
         {
-            var mode = fps ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
+            var mode = (fps || Billboard.BlobShadows) ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.On;
             foreach (SpriteRenderer r in weaponRenderers)
                 if (r != null && r.shadowCastingMode != mode) r.shadowCastingMode = mode;
             lastFps = fps;
@@ -579,7 +582,7 @@ public class PlayerBodyAnimator : MonoBehaviour
         {
             if (r == lowerRenderer || r == upperRenderer) continue;
             if (upperRenderer.sharedMaterial != null) r.sharedMaterial = upperRenderer.sharedMaterial;
-            r.shadowCastingMode = (pc != null && pc.isFirstPerson)
+            r.shadowCastingMode = (pc != null && pc.isFirstPerson) || Billboard.BlobShadows
                 ? UnityEngine.Rendering.ShadowCastingMode.Off
                 : UnityEngine.Rendering.ShadowCastingMode.On;
             weaponRenderers.Add(r);

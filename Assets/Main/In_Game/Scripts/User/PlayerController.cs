@@ -236,6 +236,13 @@ public class PlayerController : MonoBehaviour
         for (int i = 0; i < bodySprites.Length; i++)
         {
             if (bodySprites[i] == null) continue;
+            if (Billboard.BlobShadows)
+            {
+                // v167: 그림 모양 그림자 없음 → 1인칭에선 그림만 숨김 (발밑 그림자는 Billboard가 따로)
+                bodySprites[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                bodySprites[i].forceRenderingOff = isFirstPerson;
+                continue;
+            }
             bodySprites[i].shadowCastingMode = isFirstPerson
                 ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly
                 : bodyShadowModes[i];

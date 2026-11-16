@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 
 // v156 조작키 안내: 키보드 모양 + 마우스 + 분류별 설명 (출동 준비 화면 아래쪽)
-//  쓰는 키만 분류 색으로 칠함. 테스트 키(F2·F3·F4·F6·F9)는 테스트 모드를 켰을 때만 칠함
+//  쓰는 키만 분류 색으로 칠함. 테스트 키(F2·F3·F4·F5·F9)는 테스트 모드를 켰을 때만 칠함
 //  키를 바꾸면 여기 Bindings · Legend 도 같이 고칠 것
 public class KeyGuide : MonoBehaviour
 {
@@ -22,7 +22,7 @@ public class KeyGuide : MonoBehaviour
         { "LShift", Cat.Skill }, { "Q", Cat.Skill }, { "E", Cat.Skill }, { "F", Cat.Skill },
         { "1", Cat.Build }, { "2", Cat.Build }, { "3", Cat.Build }, { "4", Cat.Build }, { "5", Cat.Build }, { "RMB", Cat.Build },
         { "Esc", Cat.System }, { "Tab", Cat.System }, { "F1", Cat.System }, { "Wheel", Cat.System },
-        { "F2", Cat.Test }, { "F3", Cat.Test }, { "F4", Cat.Test }, { "F6", Cat.Test }, { "F9", Cat.Test },
+        { "F2", Cat.Test }, { "F3", Cat.Test }, { "F4", Cat.Test }, { "F5", Cat.Test }, { "F9", Cat.Test },
     };
 
     private static readonly string[] Legend =
@@ -32,7 +32,7 @@ public class KeyGuide : MonoBehaviour
         "Shift · Q · E · F 직업 스킬",
         "1~5 포탑 고르기 → 좌클릭 설치 · 우클릭 포탑·벽 선택 → Q 판매·수리 / E 업그레이드·강화",
         "Tab 탑뷰 ↔ 1인칭 · 휠 카메라 줌 (탑뷰) · F1 웨이브 바로 시작 · Esc 일시정지·옵션",
-        "F2 몹 테스트 · F3 재능 목록 · F4 상점 · F6 무기 목록 · F9 3D 총 비교",
+        "F2 몹 테스트 · F3 재능 목록 · F4 상점 · F5 무기 목록 · F9 3D 총 비교",
     };
 
     // 키보드 줄: 이름 (빈 이름 = 빈칸), 폭(칸)

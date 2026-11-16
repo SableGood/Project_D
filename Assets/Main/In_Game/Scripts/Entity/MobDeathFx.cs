@@ -101,7 +101,7 @@ public class MobDeathFx : MonoBehaviour
         sr.sharedMaterial = body.sharedMaterial;
         sr.sortingLayerID = body.sortingLayerID;
         sr.sortingOrder = body.sortingOrder;
-        sr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.TwoSided;
+        sr.shadowCastingMode = Billboard.BlobShadows ? UnityEngine.Rendering.ShadowCastingMode.Off : UnityEngine.Rendering.ShadowCastingMode.TwoSided;
         sr.receiveShadows = true;
         sr.color = Color.white;
         sr.enabled = true;

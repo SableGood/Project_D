@@ -255,6 +255,13 @@ public class TowerOutline : MonoBehaviour
     private static float pendingWidth;
     private Color color;
     private float width;
+    // v168 항상 보이는 외곽선: 지형·옆 포탑에 가려져도 맨 위에 테두리 (Project_D/Selection Outline)
+    public static bool XRay = true;
+    public static float XRaySelectedPx = 3f, XRayHoverPx = 2f;   // 1080p 기준 픽셀
+    private static Shader xrayShader;
+    private static bool xrayTried;
+    private readonly List<GameObject> xrayObjs = new List<GameObject>();
+
     public static TowerOutline Add(GameObject go, Color c, float w)
     {
         pendingColor = c; pendingWidth = w;
@@ -285,6 +292,7 @@ public class TowerOutline : MonoBehaviour
             meshSrc.Add(r); meshOrig.Add(orig);
             r.sharedMaterials = repl;
         }
+        if (XRay) AddXRay();
         if (mat == null)
         {
             // v160 GUI/Text Shader는 빌드에 넣을 수 없는 내장 셰이더라 빌드 오류 → Sprites/Default (포탑은 거의 메쉬라 영향 적음)
@@ -315,11 +323,51 @@ public class TowerOutline : MonoBehaviour
         LateUpdate();
     }
 
+    // 메쉬마다 같은 메쉬를 쓰는 자식을 하나 두고 외곽선 재질만 씌움 (원래 재질은 그대로)
+    private void AddXRay()
+    {
+        if (!xrayTried) { xrayTried = true; xrayShader = Resources.Load<Shader>("Shaders/SelectionOutline"); }
+        if (xrayShader == null) return;
+        bool hover = pendingColor.HasValue || width < MeshOutlineWidth;
+        float px = (hover ? XRayHoverPx : XRaySelectedPx) * Mathf.Max(1f, Screen.height / 1080f);
+        Bounds all = new Bounds(transform.position, Vector3.zero); bool has = false;
+        foreach (MeshRenderer r in GetComponentsInChildren<MeshRenderer>())
+        {
+            if (!r.enabled || r.gameObject.layer == 2 || r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly) continue;
+            if (has) all.Encapsulate(r.bounds); else { all = r.bounds; has = true; }
+        }
+        if (!has) return;
+        Material m = new Material(xrayShader) { name = "SelectionOutline (runtime)" };
+        m.SetColor("_Color", color);
+        m.SetFloat("_Width", px);
+        m.SetVector("_Center", all.center);
+        made.Add(m);
+        foreach (MeshRenderer r in GetComponentsInChildren<MeshRenderer>())
+        {
+            if (!r.enabled || r.gameObject.layer == 2 || r.shadowCastingMode == UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly) continue;
+            MeshFilter mf = r.GetComponent<MeshFilter>();
+            if (mf == null || mf.sharedMesh == null) continue;
+            GameObject g = new GameObject("XRayOutline");
+            g.layer = 2;
+            g.transform.SetParent(r.transform, false);
+            g.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+            MeshRenderer o = g.AddComponent<MeshRenderer>();
+            Material[] mats = new Material[Mathf.Max(1, mf.sharedMesh.subMeshCount)];
+            for (int i = 0; i < mats.Length; i++) mats[i] = m;
+            o.sharedMaterials = mats;
+            o.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            o.receiveShadows = false;
+            xrayObjs.Add(g);
+        }
+    }
+
     void OnDisable()
     {
         for (int i = 0; i < meshSrc.Count; i++) if (meshSrc[i] != null) meshSrc[i].sharedMaterials = meshOrig[i];
         foreach (Material m in made) if (m != null) Destroy(m);
         meshSrc.Clear(); meshOrig.Clear(); made.Clear();
+        foreach (GameObject g in xrayObjs) if (g != null) Destroy(g);
+        xrayObjs.Clear();
         foreach (var arr in copies) foreach (SpriteRenderer c in arr) if (c != null) Destroy(c.gameObject);
         copies.Clear(); src.Clear();
     }

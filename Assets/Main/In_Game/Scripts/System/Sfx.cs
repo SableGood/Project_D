@@ -181,14 +181,15 @@ public class Sfx : MonoBehaviour
         if (Time.time - lastMobHit < mobHitInterval) return;
         lastMobHit = Time.time;
         // 일반 타격음: 경장갑 Mob/Hit_Light_1·2·3. 중장갑(HeavyArmorMobs: MM002·MB001)은 Hit_Light + Mob/Hit_Armor_1·2 를 겹쳐서
-        float vol = Mathf.Clamp01(mobHit * 1.2f);
+        // v167: 일반 타격음 20% 키움 (1.2 → 1.44). 중장갑은 일반 타격음 + 장갑음(절반 크기)
+        float vol = Mathf.Clamp01(mobHit * 1.44f);
         AudioClip[] v = Variants("Mob/Hit_Light");
         PlayClip(v.Length > 0 ? v[Random.Range(0, v.Length)] : Clip("Mob/Mob_Hit_Ric_1"), vol, 0.08f);
         MobAI mob = h.GetComponent<MobAI>();
         if (mob != null && HeavyArmorMobs.Contains(mob.Code ?? ""))
         {
             AudioClip[] a = Variants("Mob/Hit_Armor");
-            if (a.Length > 0) PlayClip(a[Random.Range(0, a.Length)], vol * 0.85f, 0.08f);
+            if (a.Length > 0) PlayClip(a[Random.Range(0, a.Length)], mobHit * 1.2f * 0.85f * 0.5f, 0.08f);
         }
     }
 
