@@ -322,6 +322,26 @@ public class Sfx : MonoBehaviour
     private float cockAt = -1f;
     private string cockClip;
 
+    // v183 경호실장 총소리 (플레이어 총보다 작게)
+    public static void CompanionFire(Weapon w, float volMul = 0.55f)
+    {
+        if (Instance == null || w == null) return;
+        string fam = FamilyOf(w.playerWepData);
+        if (fam == null) return;
+        string fire = IsSuppressed(w.playerWepData, fam) && Instance.Variants("Gun/Suppress_Light").Length > 0 ? "Gun/Suppress_Light"
+                    : fam == "Battle" ? "Gun/Battle_fire" : "Gun/" + fam + "_Fire";
+        AudioClip[] v = Instance.Variants(fire);
+        if (v.Length == 0) return;
+        AudioClip fc = v[Random.Range(0, v.Length)];
+        Instance.PlayClip(fc, Mathf.Clamp01(Instance.gunFire * volMul * FireGain(fc)), 0.06f, 24);
+    }
+
+    public static void CompanionReload(float volMul = 0.5f)
+    {
+        if (Instance == null) return;
+        Instance.PlayClip(Instance.Clip("Gun/draw"), Instance.gunReload * volMul, 0.05f);
+    }
+
     private static string FamilyOf(PlayerWeaponData d)
     {
         if (d == null) return null;

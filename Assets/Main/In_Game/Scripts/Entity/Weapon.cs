@@ -116,10 +116,14 @@ public class Weapon : MonoBehaviour
     // 이 무기를 든 개체 (피격 알림의 '공격자'로 전달 → 피해 반사·흡혈 등)
     private Transform attackerRoot;
     private bool attackerSearched;
+    // v183 경호실장 총: 피해·처치를 주인(플레이어) 몫으로 / 플레이어 전용 알림(재장전 재능 등) 끔
+    [System.NonSerialized] public Transform attackerOverride;
+    [System.NonSerialized] public bool companion;
     public Transform AttackerRoot
     {
         get
         {
+            if (attackerOverride != null) return attackerOverride;
             if (!attackerSearched || attackerRoot == null)
             {
                 attackerSearched = true;
@@ -325,7 +329,7 @@ public class Weapon : MonoBehaviour
         bool overheat = TalentEffects.Overheat;
         if (overheat && currentAmmo > 0) return; // 과열: 탄을 다 쏴야만 (스스로) 식음
         reloadRoutine = StartCoroutine(ShellReload && !overheat ? ShellReloadCoroutine() : ReloadCoroutine());
-        PlayerReloadStarted?.Invoke(this);
+        PlayerReloadStarted?.Invoke(this);   // v189 경호실장 총도 (재장전 재능은 경호실장 자리에서 발동)
     }
 
     // 장전 중단 (산탄총: 장전 중 사격). 이미 넣은 탄은 그대로
@@ -665,6 +669,8 @@ public class Weapon : MonoBehaviour
             // 플레이어 총탄: 커서(조준점)에서 멈추고 착탄 이펙트
             if (stopAtAimPoint && IsGun && targetTransform == null)
                 projectile.stopDistance = Mathf.Min(attackRange, Vector3.Distance(spawnPos, manualTargetPosition));
+            // v181 플레이어 폭발 무기(알라·엔비): 착탄 구역을 노란 원으로
+            if (playerWepData != null && projectileAoeRadius > 0f) projectile.ShowLandingMarker();
         }
     }
 

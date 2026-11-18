@@ -5,11 +5,11 @@ using UnityEngine;
 //  J01 공돌이     : 포탑 설치·강화 비용 -30% (포탑 관련만, 엘리트 상점은 할인 없음). 무기로 직접 공격 불가 (스킬은 가능)
 //  J02 헬스 중독자 : 최대 체력 +50%, 포탑 1개만 설치 (판매는 가능, 70% 환불)
 //  J03 돈 많은 백수: 웨이브가 끝날 때마다 0~200 골드 무작위 (전용 재능은 아직 없음)
-//  J04 사이보그   : 모든 공격 자동 (자동 조준·사격), 수동 조준 불가 — 자동 조준은 재능 A046과 함께 만들 예정 (지금은 효과 없음)
+//  J04 사이보그   : 모든 공격 자동 (자동 조준·사격, v183 AutoAim), 수동 조준 불가. 이동·스킬·포탑은 직접
 //  J05 사업가     : 보유 골드 1당 피해 +0.01% (최대 +100% = 10,000 골드). 플레이어·포탑 모두
 //  J06 학생       : 포탑·강화·엘리트 상점 비용 -10%, 얻는 골드 -10%
 //  J07 졷 윅      : 무기 칸 3개 (기본 2개), 재장전 시간 -20%
-//  J08 대통령     : 무기로 직접 공격 불가 (상점에 무기 안 나옴), 경호실장 둘이 따라다니며 자동 사격. 스킬은 사용 가능
+//  J08 대통령     : 무기로 직접 공격 불가, 경호실장 둘이 권총을 들고 따라다니며 자동 조준·사격·재장전. 상점에선 권총(HG) 강화만 (새 무기 없음) → 경호실장 총, 경호실장 추가 300G (최대 5명) (v188)
 public static class Jobs
 {
     public const string Engineer = "J01", Gym = "J02", Rich = "J03", Cyborg = "J04",
@@ -38,6 +38,9 @@ public static class Jobs
     // v147: 테스트 모드에서는 직업과 상관없이 무기 사용 가능 (공돌이·대통령으로 무기 테스트할 때 막히지 않게)
     public static bool CanUseWeapons => PlayerWeaponManager.TestModeAllWeapons || (!Is(President) && !Is(Engineer));
     public static bool AutoAim => Is(Cyborg);
+    // v183 상점에서 무기를 살 수 있는가 (대통령은 경호실장용 권총만)
+    public static bool CanBuyWeapons => CanUseWeapons || Is(President);
+    public static bool WeaponAllowed(PlayerWeaponData d) => !Is(President) || PlayerWeaponManager.TestModeAllWeapons || (d != null && d.Category == "HG");
 
     // 사업가: 보유 골드 1당 +0.01% (100골드당 +1%), 최대 +100%
     public const float BusinessGoldPerPct = 100f, BusinessMaxPct = 100f;

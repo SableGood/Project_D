@@ -51,7 +51,7 @@ W0084,Battle_Ballista,배틀 / 발리스타,3티어 화력형 전투소총,BR,De
 W0035,MAX,맥스,해금 기관단총,SMG,Default,Multi,Hitscan,Auto,13,8,1.7,40,12,1,FALSE,0,-,Projectile_Ball,작고 빠르다. (테스트: 톰슨 / 모던과 같은 수치),Pic_MAX,0.6,6,6,0,근거리,연발,,고급,O,해금,
 W0045,Duty,듀티,해금 돌격소총,AR,Default,Multi,Hitscan,Auto,19,14,1.9,30,10,1,FALSE,2,-,Projectile_Ball,수직 손잡이가 달린 현대식 소총. (테스트: 유진 / 모던과 같은 수치),Pic_Duty,1,2.5,6,0,중거리,연발,,고급,O,해금,
 W0085,Heavy,헤비,해금 전투소총,BR,Default,Multi,Hitscan,Auto,21,20,2.3,22,8,1,FALSE,5,-,Projectile_Ball,묵직한 전투소총. (테스트: 배틀 / 모던과 같은 수치),Pic_Heavy,1.1,1.5,7,0,중장거리,연발,경직,고급,O,해금,
-W009,ALA,알라,로켓포,RL,Default,Multi,Projectile,Semi,20,90,3,1,1,1,FALSE,10,14,Projectile_Ball,한 발에 모든 걸 건다. 조준한 곳에서 폭발. (재능으로만 얻음),Pic_ALA,1.4,1,6,1.5,중장거리,단발,폭발,영웅,O,재능,5
+W009,ALA,알라,로켓포,RL,Default,Multi,Projectile,Semi,20,90,3,1,1,1,FALSE,10,14,Projectile_Ball,한 발에 모든 걸 건다. 조준한 곳에서 폭발. (재능으로만 얻음),Pic_ALA,1.4,1,6,1.5,중장거리,단발,폭발,영웅,O,재능,3.5
 W0075,SPA5,스파스,해금 반자동 산탄총,SG,Default,Multi,Hitscan,Semi,10,10,2.7,7,4,6,FALSE,0,-,Projectile_Shot,"펌프 없이 연달아 쏘는 반자동 산탄총. (테스트: 모스버그 / 모던 수치, 공격속도만 4)",Pic_SPA5,0.95,16,4,0,근거리,단발,다중 발사,고급,O,해금,
 W0046,Duty_Upgrade,듀티 / 업그레이드,듀티 강화형 돌격소총,AR,Default,Multi,Hitscan,Auto,19,17,1.9,30,10,1,FALSE,2,-,Projectile_Ball,듀티의 강화판. 공격력·집탄율 상승 (임시 수치),Pic_Duty_Upgrade,1.05,1.8,5,0,중거리,연발,,희귀,O,,
 W010,Envy,엔비,6연장 유탄발사기,GL,Default,Multi,Projectile,Semi,18,45,3.2,6,1.5,1,FALSE,5,18,Projectile_Ball,여섯 발의 40mm 유탄. 조준한 곳에서 폭발. (임시 수치),Pic_Envy,1,1.5,5,1,중거리,단발,폭발,영웅,O,,2.2

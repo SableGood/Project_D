@@ -419,12 +419,16 @@ public class TalentEffects : MonoBehaviour
     // ===== 재장전 =====
     private void OnReloadStarted(Weapon w)
     {
-        if (weapons == null || w != weapons.CurrentWeapon) return;
-        if (reloadBlastDmg > 0f) StartCoroutine(Blast(transform.position, reloadBlastR, reloadBlastDmg, 0f));
-        if (magDmg > 0f) StartCoroutine(ThrowMag(w));
+        // v189 대통령: 무기 재능은 경호실장 총에 (경호실장이 재장전하면 그 자리에서 발동)
+        bool guard = w != null && w.companion && w.attackerOverride == transform;
+        if (!guard && (weapons == null || w != weapons.CurrentWeapon)) return;
+        Vector3 origin = guard ? w.transform.position : transform.position;
+        origin.y = transform.position.y;
+        if (reloadBlastDmg > 0f) StartCoroutine(Blast(origin, reloadBlastR, reloadBlastDmg, 0f));
+        if (magDmg > 0f) StartCoroutine(ThrowMag(w, origin));
     }
 
-    private IEnumerator ThrowMag(Weapon w)
+    private IEnumerator ThrowMag(Weapon w, Vector3 origin)
     {
         Camera cam = Camera.main;
         Vector3 dir = w.LastFireDirection; dir.y = 0f;
@@ -437,7 +441,7 @@ public class TalentEffects : MonoBehaviour
             if (r.name.StartsWith("Magazine") && r.sprite != null) { magSrc = r; break; }
         if (magSrc != null) { sr.sprite = magSrc.sprite; go.transform.localScale = magSrc.transform.lossyScale; }
         else { sr.sprite = HitEffects.CasingSprite(HitEffects.CasingType.Rifle); go.transform.localScale = Vector3.one * 2.5f; }
-        Vector3 pos = transform.position + Vector3.up * 0.9f;
+        Vector3 pos = origin + Vector3.up * 0.9f;
         float dist = 0f, spin = 0f;
         var hit = new HashSet<Health>();
         while (dist < 9f)

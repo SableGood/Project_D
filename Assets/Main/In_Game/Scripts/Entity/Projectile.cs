@@ -282,6 +282,7 @@ public class Projectile : MonoBehaviour
                 // v176 그림마다 칸 크기가 달라도(알라 128px) 다 퍼진 지름(칸의 0.875)이 폭발 범위에 맞게
                 PixelFx.Play(explosionFx, p, Vector3.zero, explosionRadius * 2f / (PixelFx.CellWidth(explosionFx) * 0.875f));
                 ExplosionDebris.Burst(transform.position, explosionRadius);
+                GroundMarks.Scorch(transform.position, explosionRadius);   // v181 폭발 흔적 5~7초
                 Sfx.Play(string.IsNullOrEmpty(explosionSfx) ? "Gun/Frag_Explode" : explosionSfx, 0.55f);
             }
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, targetLayer);
@@ -303,8 +304,22 @@ public class Projectile : MonoBehaviour
         ReturnToPool();
     }
 
+    // v181 착탄 구역 표시 (폭발 무기). 터지거나 사라질 때 지움
+    private GameObject landingMarker;
+    public void ShowLandingMarker()
+    {
+        if (!isAreaOfEffect || explosionRadius <= 0f) return;
+        Vector3 p = target != null ? target.position
+            : stopDistance > 0f ? startPos + straightDir * stopDistance
+            : projectileType == ProjectileType.Parabolic ? targetPos
+            : startPos + straightDir * 30f;
+        GroundMarks.HideMarker(landingMarker);
+        landingMarker = GroundMarks.ShowMarker(p, explosionRadius);
+    }
+
     private void ReturnToPool()
     {
+        GroundMarks.HideMarker(landingMarker); landingMarker = null;
         explosionSfx = null;
         trailFx = null;   // 풀에서 다른 무기(포탑·몹)가 재사용할 때 연기가 따라가지 않게
         launchMul = boostMul = 1f; launchDelay = 0f;

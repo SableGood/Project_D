@@ -296,6 +296,7 @@ public class TowerBuilder : MonoBehaviour
         if (instantiatedPreviews[currentTowerIndex] == null)
         {
             instantiatedPreviews[currentTowerIndex] = Instantiate(previewPrefabs[currentTowerIndex]);
+            TowerBaseShrink.Apply(instantiatedPreviews[currentTowerIndex]);   // v190 하부 95%
             MakePreviewOnly(instantiatedPreviews[currentTowerIndex]);
         }
 
@@ -379,7 +380,11 @@ public class TowerBuilder : MonoBehaviour
             Vector3 halfExtents = new Vector3(TurretTiles * BuildGrid.Tile * 0.45f, 0.9f, TurretTiles * BuildGrid.Tile * 0.45f);
             Vector3 center = new Vector3(checkPos.x, currentGroundY + halfExtents.y + 0.05f, checkPos.z); // 지면 바로 위 공간 검사
             // v175 플레이어·Ignore Raycast(절벽·그리드·그림자 등)는 빼고 검사 — 빈 칸인데 내가 서 있다는 이유로 막히던 문제
+            // v190 포탑·벽도 뺌: 칸 점유 기록(BuildGrid.AllFree)으로 정확히 막음. 물리 검사에 넣으면
+            //      옆 포탑의 포신·머리(회전하며 칸 밖으로 튀어나옴)에 걸려 빈 칸인데도 못 짓던 문제
             int mask = obstacleLayer.value & ~((1 << 2) | LayerMask.GetMask("Player"));
+            if (builtTowerLayer >= 0) mask &= ~(1 << builtTowerLayer);
+            mask &= ~LayerMask.GetMask("Wall");
             bool isOverlapping = Physics.CheckBox(center, halfExtents, Quaternion.identity, mask, QueryTriggerInteraction.Ignore);
 
             // v172 네 칸 모두 비어 있어야 (땅·플레이 구역 안·포탑/벽 없음)
@@ -450,6 +455,7 @@ public class TowerBuilder : MonoBehaviour
         // ★ 포탑 머리 위 상태 표시 (이름 + 체력)
         TowerStatusBar.Attach(tower, towerData);
         // ★ 3D 외곽선이 모서리에서 끊기지 않도록 부드러운 노멀 준비 (같은 메쉬는 1회만 계산)
+        TowerBaseShrink.Apply(tower);   // v190 하부 몸체 가로·세로 95%
         OutlineNormals.Bake(tower);
         // ★ v126 TR 시리즈 긴급 전개: 하부 → 링 → 상부 순서로 하늘에서 떨어져 결합 (그동안 무적·작동 정지)
         TowerDrop.Play(tower);

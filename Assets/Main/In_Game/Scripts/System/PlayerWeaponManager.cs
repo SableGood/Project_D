@@ -172,7 +172,11 @@ public class PlayerWeaponManager : MonoBehaviour
         if (currentWeapon == null) return;
 
         // 조준점 계산 → 무기 이미지 방향 갱신 (사격 여부와 무관하게 항상)
-        Vector3 aimPoint = GetAimPoint();
+        //  v183 사이보그: 마우스 대신 가까운 몹을 자동으로 조준
+        bool autoAim = Jobs.AutoAim;
+        bool hasAutoTarget = false;
+        Vector3 aimPoint = autoAim ? AutoAimPoint(out hasAutoTarget) : GetAimPoint();
+        LastAimPoint = aimPoint;
         if (currentVisual != null)
         {
             currentVisual.SetAimPoint(aimPoint);
@@ -193,6 +197,17 @@ public class PlayerWeaponManager : MonoBehaviour
 
         // v125 무기 교체 직후: 장전 손잡이·슬라이드를 당기는 동안 사격·장전 불가
         if (Time.time < swapReadyTime) return;
+
+        // v183 사이보그: 조준·사격 자동. 건설·스킬 조준 중에도 계속 쏨 (클릭과 무관). 구르는 중만 멈춤
+        if (autoAim)
+        {
+            if (Input.GetKeyDown(KeyCode.R)) currentWeapon.StartReload();
+            if (playerController != null && playerController.Ability != null && playerController.Ability.IsRolling) return;
+            if (hasAutoTarget) { autoIdleSince = Time.time; currentWeapon.ManualAttackCommand(aimPoint); }
+            else if (Time.time - autoIdleSince > AutoIdleReload && currentWeapon.playerWepData.maxAmmo > 0
+                     && currentWeapon.currentAmmo < currentWeapon.playerWepData.maxAmmo) currentWeapon.StartReload(); // 적이 없으면 알아서 장전
+            return;
+        }
 
         // R키 수동 장전
         if (Input.GetKeyDown(KeyCode.R))
@@ -400,6 +415,42 @@ public class PlayerWeaponManager : MonoBehaviour
         if (weaponMountPoint != null) return;
         Transform found = transform.Find("WeaponMountPoint");
         weaponMountPoint = found != null ? found : transform;
+    }
+
+    // ===== v183 사이보그 자동 조준 =====
+    public const float AutoIdleReload = 1.2f;   // 적이 없는 채로 이만큼 지나면 덜 찬 탄창을 장전
+    public const float AutoFpsCone = 40f;       // 1인칭: 바라보는 방향 ±40° 안의 적만
+    private Health autoTarget;
+    private float autoIdleSince;
+    private Vector3 autoLastDir = Vector3.forward;
+    public Health AutoTarget => autoTarget;
+    public Vector3 LastAimPoint { get; private set; }   // v184 몸 그림이 바라볼 곳 (사이보그 자동 조준)
+
+    private Vector3 AutoAimPoint(out bool has)
+    {
+        Vector3 from = weaponMountPoint != null ? weaponMountPoint.position : transform.position + Vector3.up;
+        float range = currentWeapon != null ? Mathf.Max(1.5f, currentWeapon.attackRange) : 10f;
+        bool fps = playerController != null && playerController.isFirstPerson;
+        Camera cam = Camera.main;
+        Vector3 cone = fps && cam != null ? cam.transform.forward : Vector3.zero;
+        autoTarget = AutoAim.Find(from, range, autoTarget, cone, fps ? AutoFpsCone : 0f);
+        has = autoTarget != null;
+        if (has)
+        {
+            Vector3 p = AutoAim.AimPointOf(autoTarget);
+            Vector3 d = p - from; d.y = 0f;
+            if (d.sqrMagnitude > 0.01f) autoLastDir = d.normalized;
+            return p;
+        }
+        // 적이 없으면: 1인칭은 화면 가운데, 탑뷰는 마지막으로 노린 방향 (움직이면 걷는 방향)
+        if (fps) return GetAimPoint();
+        if (cc == null) cc = GetComponent<CharacterController>();
+        if (cc != null && playerController != null && playerController.IsMoving)
+        {
+            Vector3 mv = cc.velocity; mv.y = 0f;
+            if (mv.sqrMagnitude > 0.01f) autoLastDir = mv.normalized;
+        }
+        return from + autoLastDir * 4f;
     }
 
     private Vector3 GetAimPoint()

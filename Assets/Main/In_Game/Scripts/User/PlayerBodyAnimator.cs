@@ -91,6 +91,114 @@ public class PlayerBodyAnimator : MonoBehaviour
 
     public Dir CurrentDir { get; private set; }
 
+    // ===== v184 권총 12방향 상체 (손이 그림에 포함된 권총 파지) =====
+    //  Resources/Image/Players/{캐릭터}_Pistol/ : Upper/P12_00~11 (12방향) · Lower/Walk_01~06 (걷기) · pistol12.txt (칸 각도·손잡이 위치·상체 높이)
+    //  권총(HG)을 들면 이 그림으로: 조준 각도에 가장 가까운 칸 → 그 칸의 손 위치에 무기 손잡이. 총은 실제 조준 방향으로 돎
+    //  다른 무기는 기존 9방향 그림. 캐릭터 폴더가 없으면(원숭이·오랑우탄) 기존 그대로
+    public class PistolSet { public Sprite[] upper; public float[] angle; public Vector2[] grip; public Sprite[] walk; public float upperY; public int idle; public Sprite stand; public Sprite[] jump = new Sprite[0]; }
+    private PistolSet pistolSet, rifleSet, activeSet; private bool pistolLoaded, rifleLoaded, pistolOn;
+    private Vector3 savedUpperPos; private float savedUpperJointV, savedLowerJointV;
+    public int PistolFrame { get; private set; } = -1;
+
+    public PistolSet GetPistolSet()
+    {
+        if (pistolLoaded) return pistolSet;
+        pistolLoaded = true;
+        string n = name.Replace("(Clone)", "").Trim();
+        if (n.StartsWith("PC_")) n = n.Substring(3);
+        pistolSet = LoadPistolSet($"Image/Players/{n}_Pistol");
+        return pistolSet;
+    }
+
+    // v186 양손 무기(권총 외 총) 12방향 상체: {캐릭터}_Rifle/Upper/R12_xx + rifle12.txt. 하체는 권총 세트의 걷기를 같이 씀
+    public PistolSet GetRifleSet()
+    {
+        if (rifleLoaded) return rifleSet;
+        rifleLoaded = true;
+        string n = name.Replace("(Clone)", "").Trim();
+        if (n.StartsWith("PC_")) n = n.Substring(3);
+        rifleSet = LoadPistolSet($"Image/Players/{n}_Rifle", "rifle12", "R12_");
+        PistolSet p = GetPistolSet();
+        if (rifleSet != null && rifleSet.walk.Length == 0 && p != null) { rifleSet.walk = p.walk; rifleSet.stand = p.stand; rifleSet.jump = p.jump; }
+        return rifleSet;
+    }
+
+    public static PistolSet LoadPistolSet(string folder, string file = "pistol12", string prefix = "P12_")
+    {
+        TextAsset txt = Resources.Load<TextAsset>(folder + "/" + file);
+        if (txt == null) return null;
+        var s = new PistolSet();
+        var ang = new List<float>(); var grip = new List<Vector2>(); var up = new List<Sprite>();
+        var ci = System.Globalization.CultureInfo.InvariantCulture;
+        foreach (string raw in txt.text.Split('\n'))
+        {
+            string line = raw.Trim();
+            if (line.Length == 0 || line.StartsWith("#")) continue;
+            string[] v = line.Split(new[] { ' ', '\t' }, System.StringSplitOptions.RemoveEmptyEntries);
+            if (v[0] == "upperY") { s.upperY = float.Parse(v[1], ci); continue; }
+            if (v[0] == "idle") { s.idle = int.Parse(v[1]); continue; }
+            if (v.Length < 4) continue;
+            int k = int.Parse(v[0]);
+            Sprite sp = Resources.Load<Sprite>($"{folder}/Upper/{prefix}{k:00}");
+            if (sp == null) { Debug.LogWarning($"[12방향 상체] {folder}/Upper/{prefix}{k:00} 그림이 없어요"); return null; }
+            up.Add(sp); ang.Add(float.Parse(v[1], ci)); grip.Add(new Vector2(float.Parse(v[2], ci), float.Parse(v[3], ci)));
+        }
+        var walk = new List<Sprite>();
+        for (int i = 1; i <= 12; i++) { Sprite w = Resources.Load<Sprite>($"{folder}/Lower/Walk_{i:00}"); if (w == null) break; walk.Add(w); }
+        if (up.Count == 0) return null;
+        // v187 제자리 하체 (Lower/Idle_01) · 점프 하체 (Lower/Jump_01 착지·도약 / 02 웅크림 / 03 뻗음)
+        s.stand = Resources.Load<Sprite>($"{folder}/Lower/Idle_01");
+        var jump = new List<Sprite>();
+        for (int i = 1; i <= 3; i++) { Sprite j = Resources.Load<Sprite>($"{folder}/Lower/Jump_{i:00}"); if (j == null) break; jump.Add(j); }
+        s.jump = jump.Count == 3 ? jump.ToArray() : new Sprite[0];
+        s.upper = up.ToArray(); s.angle = ang.ToArray(); s.grip = grip.ToArray(); s.walk = walk.ToArray();
+        return s;
+    }
+
+    // 화면 기준 조준 각도(도)에 가장 가까운 칸
+    public static int NearestPistolFrame(PistolSet s, float deg)
+    {
+        int best = 0; float bd = float.MaxValue;
+        for (int i = 0; i < s.angle.Length; i++) { float d = Mathf.Abs(Mathf.DeltaAngle(deg, s.angle[i])); if (d < bd) { bd = d; best = i; } }
+        return best;
+    }
+
+    // 지금 무기에 맞는 12방향 세트: 권총(HG) → 권총 세트, 그 밖의 총 → 양손 세트, 근접·없음 → null (기존 그림)
+    private PistolSet WantedSet()
+    {
+        Weapon w = weapons != null ? weapons.CurrentWeapon : null;
+        if (w == null || w.playerWepData == null || !Jobs.CanUseWeapons) return null;
+        if (w.playerWepData.Category == "HG") return GetPistolSet();
+        return w.playerWepData.UsesAmmo ? GetRifleSet() : null;
+    }
+
+    private void SetPistolMode(PistolSet set)
+    {
+        bool on = set != null;
+        if (on && pistolOn && set == activeSet) return;
+        if (!on && !pistolOn) return;
+        if (on && !pistolOn)
+        {
+            savedUpperPos = upperRenderer.transform.localPosition;
+            savedUpperJointV = upperJointV; savedLowerJointV = lowerJointV;
+        }
+        pistolOn = on;
+        activeSet = set;
+        pistolSet = GetPistolSet();
+        if (on)
+        {
+            upperRenderer.transform.localPosition = new Vector3(savedUpperPos.x, set.upperY, savedUpperPos.z);
+            upperJointV = 0f; lowerJointV = 1f;
+        }
+        else
+        {
+            upperRenderer.transform.localPosition = savedUpperPos;
+            upperJointV = savedUpperJointV; lowerJointV = savedLowerJointV;
+            PistolFrame = -1;
+        }
+        waistCache.Clear();
+    }
+
     // ---- 새 몸 + 손 ----
     private Sprite handRearSprite, handFrontSprite;
     private SpriteRenderer handRear, handFront;
@@ -363,8 +471,14 @@ public class PlayerBodyAnimator : MonoBehaviour
         if (cam != null)
         {
             Vector3 sp = cam.WorldToScreenPoint(transform.position);
-            aim = (Vector2)Input.mousePosition - new Vector2(sp.x, sp.y);
+            // v184 사이보그: 마우스가 아니라 자동 조준점을 바라봄
+            Vector2 target = Jobs.AutoAim && weapons != null ? (Vector2)cam.WorldToScreenPoint(weapons.LastAimPoint) : (Vector2)Input.mousePosition;
+            aim = target - new Vector2(sp.x, sp.y);
+            if (Jobs.AutoAim) lastActiveTime = Time.time;
         }
+
+        // v184 권총 12방향
+        SetPistolMode(!fps && !armRigOn ? WantedSet() : null);
 
         // ---- 상체 ----
         Dir dir;
@@ -373,6 +487,12 @@ public class PlayerBodyAnimator : MonoBehaviour
         else dir = DirFromVector(aim);
         CurrentDir = dir;
         Sprite us = Get(upperSprites, (int)dir);
+        if (pistolOn)
+        {
+            PistolFrame = dir == Dir.Idle ? Mathf.Clamp(activeSet.idle, 0, activeSet.upper.Length - 1)
+                                          : NearestPistolFrame(activeSet, Mathf.Atan2(aim.y, aim.x) * Mathf.Rad2Deg);
+            us = activeSet.upper[PistolFrame];
+        }
         if (us != null && upperRenderer.sprite != us) upperRenderer.sprite = us;
 
         // ---- 하체 ----
@@ -380,18 +500,25 @@ public class PlayerBodyAnimator : MonoBehaviour
         if (moving && Mathf.Abs(h) > 0.01f) facingLeft = h < 0f;          // 좌우로 움직이면 그쪽을 봄
         else if (!moving && Mathf.Abs(aim.x) > 4f) facingLeft = aim.x < 0f; // 서 있으면 조준 쪽을 봄
         if (fps) facingLeft = false; // 1인칭: 상체(오른쪽 고정)와 그림자 방향을 맞춤
-        if (walkFrames != null && walkFrames.Length > 0)
+        Sprite[] wf = pistolOn && activeSet.walk.Length > 0 ? activeSet.walk : walkFrames;
+        if (wf != null && wf.Length > 0)
         {
             Sprite ls;
             if (moving)
             {
-                walkPhase = (walkPhase + walkFps * Time.deltaTime) % walkFrames.Length;
-                ls = walkFrames[Mathf.Clamp((int)walkPhase, 0, walkFrames.Length - 1)];
+                walkPhase = (walkPhase + walkFps * Time.deltaTime) % wf.Length;
+                ls = wf[Mathf.Clamp((int)walkPhase, 0, wf.Length - 1)];
             }
             else
             {
                 walkPhase = 0f;
-                ls = walkFrames[Mathf.Clamp(standFrame, 0, walkFrames.Length - 1)];
+                ls = pistolOn && activeSet.stand != null ? activeSet.stand : wf[Mathf.Clamp(standFrame, 0, wf.Length - 1)];
+            }
+            // v187 점프: 올라갈 때 다리 뻗음 → 꼭대기 웅크림 → 내려올 때 착지 자세
+            if (pistolOn && activeSet.jump.Length == 3 && pc != null && pc.Ability != null && pc.Ability.IsJumping)
+            {
+                float vv = pc.VerticalVelocity;
+                ls = vv > 1.5f ? activeSet.jump[2] : vv > -2f ? activeSet.jump[1] : activeSet.jump[0];
             }
             if (ls != null && lowerRenderer.sprite != ls) lowerRenderer.sprite = ls;
         }
@@ -401,7 +528,9 @@ public class PlayerBodyAnimator : MonoBehaviour
         RefreshWeaponRenderers();
         if (!fps && weapons != null && weapons.weaponMountPoint != null)
         {
-            if (armRigOn)
+            if (pistolOn)
+                weapons.weaponMountPoint.position = upperRenderer.transform.TransformPoint(activeSet.grip[PistolFrame]);
+            else if (armRigOn)
                 weapons.weaponMountPoint.position = GripPoint(aim, dir == Dir.Idle, fps);
             else
             {

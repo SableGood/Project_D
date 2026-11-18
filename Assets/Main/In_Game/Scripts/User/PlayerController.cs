@@ -38,6 +38,7 @@ public class PlayerController : MonoBehaviour
     private PlayerMovementAbility ability;
     public PlayerMovementAbility Ability => ability;
     private float verticalVelocity;
+    public float VerticalVelocity => verticalVelocity;   // v187 점프 하체 그림용 (+ 올라감, - 내려옴)
     [Tooltip("점프가 아닐 때 떨어지는 중력 (포탑 위에서 내려올 때 등)")]
     public float fallGravity = 22f;
     // 포탑·몹 위에 올라섰을 때 옆으로 미끄러져 내려오기

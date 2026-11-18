@@ -27,6 +27,7 @@ public class EliteShop : MonoBehaviour
     public int priceNewWeapon = 150;
     public int priceNewWeaponPremium = 200;   // 고급 무기 (배틀)
     public int priceUpgradeModern = 150;
+    public int priceBodyguard = 300;   // v188 대통령 경호실장 추가
     public int priceUpgradeTier3 = 250;
     public int rerollBaseCost = 30, rerollStep = 20;
     private int paidRerolls;
@@ -42,7 +43,7 @@ public class EliteShop : MonoBehaviour
         return new GameObject("EliteShop").AddComponent<EliteShop>();
     }
 
-    private enum Kind { NewTurret, NewWeapon, WeaponUpgrade, TurretUpgrade }
+    private enum Kind { NewTurret, NewWeapon, WeaponUpgrade, TurretUpgrade, Bodyguard }
     private class Item
     {
         public Kind kind;
@@ -233,7 +234,19 @@ public class EliteShop : MonoBehaviour
             }
 
         PlayerWeaponManager pw = Weapons();
-        if (pw != null && pw.CatalogCount > 0 && Jobs.CanUseWeapons) // 대통령: 무기 상품 없음
+        // v188 대통령: 경호실장 추가 (최대 5명)
+        if (pw != null && Jobs.Is(Jobs.President) && global::Bodyguard.CountFor(pw.transform) < global::Bodyguard.MaxCount)
+        {
+            int n = global::Bodyguard.CountFor(pw.transform);
+            JobData.Job pj = null; foreach (JobData.Job j in JobData.All) if (j.code == Jobs.President) pj = j;
+            pool.Add(new Item
+            {
+                kind = Kind.Bodyguard, category = "경호원", verb = "고용", title = "경호실장 추가",
+                desc = $"권총을 든 경호실장 1명 더 (지금 {n}/{(global::Bodyguard.MaxCount)}명)", icon = pj != null ? pj.Icon : null,
+                price = Jobs.ShopPrice(priceBodyguard),
+            });
+        }
+        if (pw != null && pw.CatalogCount > 0 && Jobs.CanBuyWeapons) // v183 대통령: 권총만 (경호실장용)
         {
             var ownedFamilies = new HashSet<string>();
             foreach (int o in pw.Owned) ownedFamilies.Add(Family(WName(pw.DataAt(o))));
@@ -243,7 +256,7 @@ public class EliteShop : MonoBehaviour
             {
                 PlayerWeaponData d = pw.DataAt(o);
                 string n = WName(d);
-                if (n.Length == 0 || Tier(n) >= 3) continue;
+                if (n.Length == 0 || Tier(n) >= 3 || !Jobs.WeaponAllowed(d)) continue;
                 var it = new Item { kind = Kind.WeaponUpgrade, weaponFrom = o, verb = "강화" };
                 for (int i = 0; i < pw.CatalogCount; i++)
                 {
@@ -275,7 +288,8 @@ public class EliteShop : MonoBehaviour
             {
                 PlayerWeaponData d = pw.DataAt(i);
                 string n = WName(d);
-                if (n.Length == 0 || Tier(n) != 1 || ownedFamilies.Contains(Family(n))) continue;
+                if (n.Length == 0 || Tier(n) != 1 || ownedFamilies.Contains(Family(n)) || !Jobs.WeaponAllowed(d)) continue;
+                if (Jobs.Is(Jobs.President)) continue;   // v188 대통령: 새 무기 없음 (권총 강화만)
                 if (d.TalentOnly) continue;                                            // v113: 재능으로만 얻는 무기 (로켓포)
                 if (d.ShopUnlock && !RunProgress.HasShopCategory(d.Category)) continue; // v113: 같은 분류 무기를 상점에서 얻어야 등장
                 var it = new Item { kind = Kind.NewWeapon, category = d.ShopUnlock ? "새 무기 · 해금" : "새 무기", verb = "사기", title = Display(d), icon = d.weaponSprite };
@@ -324,6 +338,7 @@ public class EliteShop : MonoBehaviour
         {
             case Kind.NewTurret: return !RunProgress.IsTurretUnlocked(it.turretCode);
             case Kind.TurretUpgrade: return !TurretUpgrade.IsUnlocked(it.turretCode);
+            case Kind.Bodyguard: return pw != null && global::Bodyguard.CountFor(pw.transform) < global::Bodyguard.MaxCount;
             case Kind.WeaponUpgrade: return pw != null && pw.Owns(it.weaponFrom);
             default:
                 if (pw == null || it.weapons.Count == 0) return false;
@@ -350,6 +365,13 @@ public class EliteShop : MonoBehaviour
                 if (!Pay(it)) return;
                 RunProgress.UnlockTurret(it.turretCode);
                 Sold(it, $"'{it.title}' 해금 · 이제 지을 수 있어요");
+                break;
+
+            case Kind.Bodyguard:
+                if (pw == null || global::Bodyguard.CountFor(pw.transform) >= global::Bodyguard.MaxCount) { Notice("경호실장은 5명까지예요"); return; }
+                if (!Pay(it)) return;
+                global::Bodyguard.Add(pw);
+                Sold(it, $"경호실장 합류 ({(global::Bodyguard.CountFor(pw.transform))}/{(global::Bodyguard.MaxCount)}명)");
                 break;
 
             case Kind.TurretUpgrade:
@@ -419,7 +441,7 @@ public class EliteShop : MonoBehaviour
     {
         it.sold = true;
         // v113: 상점에서 얻은 무기의 분류를 기록 → 같은 분류의 해금 무기가 이후 상점에 나옴
-        if (it.kind != Kind.NewTurret && it.kind != Kind.TurretUpgrade && it.weapons.Count > 0)
+        if (it.kind != Kind.NewTurret && it.kind != Kind.TurretUpgrade && it.kind != Kind.Bodyguard && it.weapons.Count > 0)
         {
             PlayerWeaponManager pw = Weapons();
             PlayerWeaponData got = pw != null ? pw.DataAt(it.weapons[0]) : null;
