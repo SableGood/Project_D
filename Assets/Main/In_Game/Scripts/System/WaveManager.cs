@@ -46,6 +46,15 @@ public class WaveManager : MonoBehaviour
     public Vector2Int groupSize = new Vector2Int(3, 6);
     [Tooltip("동시에 살아 있을 수 있는 몹 수")]
     public int maxAlive = 60;
+    [Header("v169 몹 넘침 패배")]
+    [Tooltip("살아 있는 몹이 이 수 이상이면 경고 카운트다운 시작")]
+    public int overrunLimit = 80;
+    [Tooltip("넘친 뒤 이 시간(초) 안에 제한 아래로 줄이지 못하면 패배")]
+    public float overrunGrace = 10f;
+    private float overrunLeft = -1f;
+    private Text mobCountText;
+    // 생성 상한: 넘침 제한까지는 몹이 쌓일 수 있어야 함 (씬에 저장된 maxAlive가 작아도)
+    private int SpawnCap => Mathf.Max(maxAlive, overrunLimit + 10);
     [Tooltip("일찍 시작할 때 남은 1초당 골드")]
     public int earlyStartGoldPerSec = 3;
     [Tooltip("웨이브마다 늘어나는 클리어 보너스")]
@@ -144,6 +153,49 @@ public class WaveManager : MonoBehaviour
             if (prepRemaining <= 0f) { prepRemaining = 0f; StartWave(); }
         }
         UpdateTimerUI();
+        UpdateOverrun();
+    }
+
+    // ===== v169 몹 넘침: 살아 있는 몹이 제한 이상 → 카운트다운 → 못 줄이면 패배 =====
+    private void UpdateOverrun()
+    {
+        int n = alive.Count;
+        bool running = GameManager.Instance == null || GameManager.Instance.IsRunning;
+        bool test = PlayerWeaponManager.TestModeAllWeapons;   // 테스트 모드: 표시만, 패배 없음
+        if (running && n >= overrunLimit)
+        {
+            if (overrunLeft < 0f)
+            {
+                overrunLeft = overrunGrace;
+                AugmentManager.Toast(test ? "몹이 넘쳤어요 (테스트 모드: 패배 없음)" : $"몹이 너무 많아요! {overrunGrace:0}초 안에 {overrunLimit}마리 아래로 줄이세요");
+            }
+            if (!test && !AugmentManager.IsOpen) overrunLeft -= Time.deltaTime;
+            if (overrunLeft <= 0f && !test) { OverrunDefeat(); return; }
+        }
+        else overrunLeft = -1f;
+
+        if (mobCountText == null) return;
+        if (n <= 0 || !running) { mobCountText.text = ""; return; }
+        float ratio = (float)n / Mathf.Max(1, overrunLimit);
+        string col = ratio >= 1f ? "FF5A4A" : ratio >= 0.75f ? "FFB347" : "FFFFFFCC";
+        string tail = overrunLeft >= 0f
+            ? (test ? "  <color=#FF5A4A>넘침</color>" : $"  <color=#FF5A4A>넘침! {Mathf.CeilToInt(overrunLeft)}초</color>")
+            : "";
+        mobCountText.text = $"<color=#{col}>몹 {n} / {overrunLimit}</color>{tail}";
+        // 넘친 동안 글자가 두근거림
+        float s = overrunLeft >= 0f ? 1f + 0.12f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 6f)) : 1f;
+        mobCountText.rectTransform.localScale = new Vector3(s, s, 1f);
+    }
+
+    private void OverrunDefeat()
+    {
+        overrunLeft = -1f;
+        if (waveText != null)
+        {
+            waveText.text = $"몹이 넘쳐 버티지 못했습니다\n<size=28>살아 있는 몹 {alive.Count}마리 (제한 {overrunLimit})</size>";
+            waveText.gameObject.SetActive(true);
+        }
+        if (GameManager.Instance != null) GameManager.Instance.TriggerGameOver();
     }
 
     // 인스펙터에서 입력한 스테이지 번호에 맞춰 시작 인덱스를 찾아주는 함수
@@ -296,7 +348,7 @@ public class WaveManager : MonoBehaviour
                 Transform sp = GetSpawnPoint(points, kv.Key);
                 for (int i = 0; i < size; i++)
                 {
-                    if (alive.Count >= maxAlive) break;
+                    if (alive.Count >= SpawnCap) break;
                     GameObject prefab = q[0];
                     q.RemoveAt(0);
                     SpawnMob(prefab, sp.position, sp.rotation, PrefabIs(prefab, "MB"));
@@ -343,7 +395,7 @@ public class WaveManager : MonoBehaviour
         if (prefab == null) { Debug.LogWarning($"[웨이브] 추가 소환할 몹 {mobCode}을(를) 웨이브 데이터에서 찾지 못했습니다."); return; }
         for (int i = 0; i < count; i++)
         {
-            if (alive.Count >= maxAlive + 10) break;
+            if (alive.Count >= SpawnCap + 10) break;
             Vector2 r = Random.insideUnitCircle.normalized * radius;
             SpawnMob(prefab, center + new Vector3(r.x, 0f, r.y), Quaternion.identity, false);
         }
@@ -548,6 +600,8 @@ public class WaveManager : MonoBehaviour
         versionText.text = $"<color=#FFFFFF80>Project_D 프로토타입 {BuildInfo.Version}</color>";
         versionText.fontStyle = FontStyle.Normal; UIFont.Apply(versionText, FontStyle.Normal);
         KillStreak.Create(canvas, new Vector2(-22f, -70f)); // v167 연속 킬 (버전 표시 아래)
+        // v169 살아 있는 몹 수 / 넘침 제한: 웨이브 타이머 바로 아래
+        mobCountText = MakeHudText(canvas, "MobCount", new Vector2(0.5f, 1f), new Vector2(0f, -54f), new Vector2(400f, 28f), 20, TextAnchor.MiddleCenter);
 
         // v157 웨이브 시작 카운트다운: WAVE START 버튼 오른쪽에 크게
         countText = MakeHudText(canvas, "WaveCountdown", new Vector2(0f, 1f),

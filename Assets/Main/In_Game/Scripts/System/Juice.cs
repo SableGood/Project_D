@@ -226,9 +226,13 @@ public class Juice : MonoBehaviour
     private readonly Stack<Coin> coinPool = new Stack<Coin>();
     private static Sprite coinSprite;
 
+    // v169: 동전을 흩뿌리지 않고 처치 즉시 골드 지급 (몹 투사체와 섞여 화면이 어지러움). true로 되돌리면 예전 동전
+    public static bool CoinDrops = false;
+
     public static void DropGold(Vector3 at, int amount)
     {
         if (amount <= 0) return;
+        if (!CoinDrops) { if (GoldManager.Instance != null) GoldManager.Instance.Add(amount); return; }
         Juice j = Instance;
         GoldManager gm = GoldManager.Instance;
         if (j == null || Player == null) { if (gm != null) gm.Add(amount); return; }

@@ -979,7 +979,7 @@ public class MobAI : MonoBehaviour
 
         GoldManager gm = GoldManager.Instance;
         if (gm == null) return;
-        // 난이도(어려움 -15%) × 직업(학생 -10%) 골드 배율. 골드는 바닥에 떨어진 뒤 플레이어에게 빨려 와서 들어옴
+        // 몹 종류별 골드(데이터 cost, 없으면 일반 10·엘리트 30·보스 100) × 난이도 × 직업 × 재능. v169: 처치 즉시 지급
         int reward = Mathf.Max(1, Mathf.RoundToInt(gm.GetKillReward(myData) * Difficulty.KillGoldMul * Jobs.GoldGainMul * TalentEffects.KillGoldMul(heavy)));
         TalentEffects.OnMobDied(this, heavy); // 현상금 사냥꾼 등
         Juice.DropGold(transform.position, reward);
