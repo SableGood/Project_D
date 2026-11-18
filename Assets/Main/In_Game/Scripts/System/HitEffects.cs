@@ -337,6 +337,15 @@ public class HitEffects : MonoBehaviour
         });
     }
 
+    // v177 불똥 한 점 (도트 사각형): 날아가며 중력·공기 저항, 작아지며 사라짐 (폭발 등 외부에서)
+    public static void Spark(Vector3 pos, Vector3 velocity, Color color, float size, float life, float gravity)
+    {
+        if (!Enabled || instance == null || instance.active.Count > instance.maxPieces) return;
+        instance.EnsureCam();
+        EnsureAssets();
+        instance.Add(pos, velocity, color, size, Mathf.Max(0.05f, life), gravity, false);
+    }
+
     private void Spawn(Vector3 point, Style s, float radius)
     {
         if (active.Count > maxPieces) return;

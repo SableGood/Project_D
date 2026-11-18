@@ -151,8 +151,11 @@ public class SupportTower : MonoBehaviour
         }
     }
 
+    private static readonly System.Collections.Generic.Dictionary<Health, float> healLock = new System.Collections.Generic.Dictionary<Health, float>();
+
     private void UpdateRepair()
     {
+        if (healLock.Count > 256) healLock.Clear();
         if (Time.time < nextTickTime) return;
         nextTickTime = Time.time + EffectiveInterval;
         if (towerMask == 0 || EffectiveHeal <= 0f) return;
@@ -166,6 +169,9 @@ public class SupportTower : MonoBehaviour
             if (h == null || h.IsDead || !healedThisPulse.Add(h)) continue;
             if (h == selfHealth && !healSelf) continue;
             if (h.GetComponent<PlayerController>() != null) continue; // 포탑만 (플레이어 제외)
+            // v173 수리 포탑 여러 개가 겹쳐도 한 포탑은 한 주기에 한 번만 회복 (중첩 안 됨)
+            if (healLock.TryGetValue(h, out float until) && Time.time < until) continue;
+            healLock[h] = Time.time + EffectiveInterval * 0.95f;
             if (h.Heal(EffectiveHeal) > 0f) any = true;
         }
         PlayPulse(any ? 1f : 0.35f); // 실제로 회복했으면 진하게

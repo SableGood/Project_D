@@ -18,9 +18,9 @@ public class KeyGuide : MonoBehaviour
     private static readonly Dictionary<string, Cat> Bindings = new Dictionary<string, Cat>
     {
         { "W", Cat.Move }, { "A", Cat.Move }, { "S", Cat.Move }, { "D", Cat.Move }, { "Space", Cat.Move },
-        { "R", Cat.Combat }, { "X", Cat.Combat }, { "LMB", Cat.Combat },
+        { "R", Cat.Combat }, { "LMB", Cat.Combat },
         { "LShift", Cat.Skill }, { "Q", Cat.Skill }, { "E", Cat.Skill }, { "F", Cat.Skill },
-        { "1", Cat.Build }, { "2", Cat.Build }, { "3", Cat.Build }, { "4", Cat.Build }, { "5", Cat.Build }, { "RMB", Cat.Build },
+        { "1", Cat.Build }, { "2", Cat.Build }, { "3", Cat.Build }, { "4", Cat.Build }, { "5", Cat.Build }, { "RMB", Cat.Build }, { "X", Cat.Build }, { "G", Cat.Build },
         { "Esc", Cat.System }, { "Tab", Cat.System }, { "F1", Cat.System }, { "Wheel", Cat.System },
         { "F2", Cat.Test }, { "F3", Cat.Test }, { "F4", Cat.Test }, { "F5", Cat.Test }, { "F9", Cat.Test },
     };
@@ -28,9 +28,9 @@ public class KeyGuide : MonoBehaviour
     private static readonly string[] Legend =
     {
         "W A S D 이동 · Space 점프",
-        "좌클릭 사격 · R 재장전 · X 무기 교체 (1인칭은 휠도)",
+        "좌클릭 사격 · R 재장전 · 빈 곳 우클릭 무기 교체 (1인칭은 휠도)",
         "Shift · Q · E · F 직업 스킬",
-        "1~5 포탑 고르기 → 좌클릭 설치 · 우클릭 포탑·벽 선택 → Q 판매·수리 / E 업그레이드·강화",
+        "1~5 포탑 · X 벽 (우클릭 돌리기) → 좌클릭 설치 · 우클릭 포탑·벽 선택 → Q 판매·수리 / E 강화 / G 벽 철거",
         "Tab 탑뷰 ↔ 1인칭 · 휠 카메라 줌 (탑뷰) · F1 웨이브 바로 시작 · Esc 일시정지·옵션",
         "F2 몹 테스트 · F3 재능 목록 · F4 상점 · F5 무기 목록 · F9 3D 총 비교",
     };

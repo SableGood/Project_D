@@ -5,13 +5,17 @@ using System.Collections.Generic;
 
 // v154 설치된 포탑 선택: 커서를 올리면 포탑 커서, 우클릭 = 선택 (연두색 외곽선) → Q 판매 / E 업그레이드
 //  선택한 포탑 위에 안내 글자. 업그레이드가 아직 없으면(미해금) 회색
-// v156 입구 벽(FortWall)도 같은 방식: 우클릭 → Q 수리 / E 강화 (무너졌으면 잔해를 골라 E = 다시 짓기)
+// v156 입구 벽(FortWall)도 같은 방식: 우클릭 → Q 수리 / E 강화 (무너졌으면 잔해를 골라 E = 다시 짓기) · v172 G 철거
+// v172 빈 곳 우클릭 = 무기 교체
 public class TowerSelection : MonoBehaviour
 {
     public static GameObject Hovered { get; private set; }
     public static GameObject Selected { get; private set; }
     public static bool HoveredWall { get; private set; }
     public static bool WallSelected { get; private set; }
+    // v172 벽이 여러 개: 지금 마우스가 올라간 벽 / 고른 벽
+    public static FortWall HoverWallRef { get; private set; }
+    public static FortWall SelWall { get; private set; }
     public static bool HoveringSelected => (Selected != null && Hovered == Selected) || (WallSelected && HoveredWall);
     private static int usedFrame = -1;
     // 이번 프레임 Q/E는 포탑·벽 몫 (스킬 키 막기)
@@ -23,6 +27,7 @@ public class TowerSelection : MonoBehaviour
     public static float PromptHeight = 1.9f;
 
     private TowerBuilder builder;
+    private PlayerWeaponManager weapons;
     private PlayerController player;
     private Text prompt;
     private RectTransform promptRt;
@@ -53,27 +58,43 @@ public class TowerSelection : MonoBehaviour
         bool fps = player != null && player.isFirstPerson;
         fpsNow = fps;
         bool onUI = !fps && PointerOverVisibleUI();
-        if (WallSelected && FortWall.Instance == null) Deselect();
-        Hovered = null; HoveredWall = false;
+        if (WallSelected && SelWall == null) Deselect();
+        bool wallMode = WallBuilder.Instance != null && WallBuilder.Instance.Active;
+        blocked |= wallMode;
+        Hovered = null; HoveredWall = false; HoverWallRef = null;
         if (!blocked && !onUI)
         {
             Ray ray = fps ? cam.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f)) : cam.ScreenPointToRay(Input.mousePosition);
             Hovered = builder.TowerUnder(ray, out float td);
-            if (FortWall.Instance != null && FortWall.Instance.Pick(ray, out float wd) && (Hovered == null || wd < td)) { Hovered = null; HoveredWall = true; }
+            float wbest = Hovered != null ? td : float.MaxValue;
+            foreach (FortWall w in FortWall.All)
+                if (w != null && w.Pick(ray, out float wd) && wd < wbest) { wbest = wd; Hovered = null; HoveredWall = true; HoverWallRef = w; }
         }
         if (builder != null && builder.SelectedSlot >= 0 && (Selected != null || WallSelected)) Deselect();   // 건설 모드에 들어가면 해제
 
-        if (!blocked && !onUI && Input.GetMouseButtonDown(1))
+        // v172 우클릭: 포탑·벽 위 = 고르기, 고른 게 있으면 해제, 빈 곳 = 무기 교체 (X는 벽 건설로)
+        //  포탑 건설 중 우클릭 = 건설 취소. 벽 건설 중 우클릭 = 벽 돌리기 (WallBuilder)
+        if (Input.GetMouseButtonDown(1) && !onUI && cam != null && Time.timeScale > 0f && !AugmentManager.IsOpen && !wallMode)
         {
-            if (Hovered != null && Hovered != Selected) Select(Hovered);
-            else if (HoveredWall && !WallSelected) SelectWall();
-            else Deselect();
+            if (builder != null && builder.SelectedSlot >= 0) builder.CancelBuild();
+            else if (!blocked)
+            {
+                if (Hovered != null && Hovered != Selected) Select(Hovered);
+                else if (HoveredWall && (!WallSelected || HoverWallRef != SelWall)) SelectWall(HoverWallRef);
+                else if (Selected != null || WallSelected) Deselect();
+                else
+                {
+                    if (weapons == null) weapons = FindFirstObjectByType<PlayerWeaponManager>();
+                    if (weapons != null) weapons.SwapNext();
+                }
+            }
         }
 
-        if (WallSelected && !blocked)
+        if (WallSelected && !blocked && SelWall != null)
         {
-            if (Input.GetKeyDown(KeyCode.Q)) { usedFrame = Time.frameCount; FortWall.Instance.TryRepair(); }
-            else if (Input.GetKeyDown(KeyCode.E)) { usedFrame = Time.frameCount; FortWall.Instance.TryBuildOrUpgrade(); }
+            if (Input.GetKeyDown(KeyCode.Q)) { usedFrame = Time.frameCount; SelWall.TryRepair(); }
+            else if (Input.GetKeyDown(KeyCode.E)) { usedFrame = Time.frameCount; SelWall.TryBuildOrUpgrade(); }
+            else if (Input.GetKeyDown(KeyCode.G)) { usedFrame = Time.frameCount; FortWall w = SelWall; Deselect(); w.Demolish(); }
         }
         if (WallSelected) KeepWallOutline();
         UpdateHoverOutline();
@@ -89,7 +110,7 @@ public class TowerSelection : MonoBehaviour
             else if (Input.GetKeyDown(KeyCode.E))
             {
                 usedFrame = Time.frameCount;
-                AugmentManager.Toast("포탑 업그레이드는 아직 해금되지 않았어요");
+                TryUpgrade(Selected);
             }
         }
         UpdatePrompt(cam);
@@ -127,7 +148,7 @@ public class TowerSelection : MonoBehaviour
     // v159 마우스를 올린 포탑·벽에 옅은 외곽선 (선택된 것은 선택 외곽선이 있으므로 빼고)
     private void UpdateHoverOutline()
     {
-        GameObject target = Hovered != null ? Hovered : (HoveredWall && FortWall.Instance != null ? FortWall.Instance.Visual : null);
+        GameObject target = Hovered != null ? Hovered : (HoveredWall && HoverWallRef != null ? HoverWallRef.Visual : null);
         if (target != null && target == outlined) target = null;
         if (target == hoverOutlined && (target == null || hoverOutline != null)) return;
         ClearHover();
@@ -149,11 +170,12 @@ public class TowerSelection : MonoBehaviour
         Sfx.Play(Sfx.UIClickSound, 0.6f);
     }
 
-    private void SelectWall()
+    private void SelectWall(FortWall w)
     {
         Deselect();
         ClearHover();
         WallSelected = true;
+        SelWall = w;
         KeepWallOutline();
         Sfx.Play(Sfx.UIClickSound, 0.6f);
     }
@@ -161,8 +183,8 @@ public class TowerSelection : MonoBehaviour
     // 벽이 무너지거나 다시 지어지면 외곽선 대상이 바뀜
     private void KeepWallOutline()
     {
-        GameObject v = FortWall.Instance != null ? FortWall.Instance.Visual : null;
-        int lv = FortWall.Instance != null ? FortWall.Instance.CurrentLevel : -2;
+        GameObject v = SelWall != null ? SelWall.Visual : null;
+        int lv = SelWall != null ? SelWall.CurrentLevel : -2;
         if (v == outlined && outline != null && lv == outlinedLevel) return;   // 강화하면 재질(무늬)이 바뀌므로 다시 씌움
         outlinedLevel = lv;
         if (hoverOutlined == v) ClearHover();
@@ -175,23 +197,54 @@ public class TowerSelection : MonoBehaviour
     {
         if (outline != null) DestroyImmediate(outline);   // v159 바로 올림 외곽선을 씌울 수 있게 즉시 되돌림
         outline = null; outlined = null;
-        Selected = null; WallSelected = false;
+        Selected = null; WallSelected = false; SelWall = null;
     }
 
     private void UpdatePrompt(Camera cam)
     {
         if (prompt == null) BuildPrompt();
         if (fpsCursor != null) fpsCursor.enabled = fpsNow && (Hovered != null || HoveredWall) && Time.timeScale > 0f;
-        bool wall = WallSelected && FortWall.Instance != null;
+        bool wall = WallSelected && SelWall != null;
         bool show = (Selected != null || wall) && cam != null && Time.timeScale > 0f;
-        Vector3 anchor = wall ? FortWall.Instance.PromptAnchor : (Selected != null ? Selected.transform.position + Vector3.up * PromptHeight : Vector3.zero);
+        Vector3 anchor = wall ? SelWall.PromptAnchor : (Selected != null ? Selected.transform.position + Vector3.up * PromptHeight : Vector3.zero);
         Vector3 sp = show ? cam.WorldToScreenPoint(anchor) : Vector3.zero;
         if (sp.z <= 0f) show = false;
         prompt.enabled = show;
         if (!show) return;
         promptRt.position = new Vector3(Mathf.Round(sp.x), Mathf.Round(sp.y), 0f);
-        prompt.text = wall ? FortWall.Instance.PromptText()
-            : $"<color=#FFFFFF>[Q] 판매 +{builder.RefundOf(Selected)} G</color>\n<color=#7A7A7A>[E] 업그레이드 (미해금)</color>";
+        prompt.text = wall ? SelWall.PromptText()
+            : $"<color=#FFFFFF>[Q] 판매 +{builder.RefundOf(Selected)} G</color>\n{UpgradeLine(Selected)}";
+    }
+
+    // v176 포탑 강화 (E). 엘리트 상점에서 강화를 해금해야 함
+    private int UpgradeCost(GameObject t, TurretUpgrade.Spec s) => Mathf.Max(1, Mathf.RoundToInt(builder.PaidCostOf(t) * s.costRatio));
+
+    private string UpgradeLine(GameObject t)
+    {
+        TurretUpgrade.Spec s = TurretUpgrade.SpecFor(t);
+        if (s == null) return "<color=#7A7A7A>[E] 업그레이드 (없음)</color>";
+        if (TurretUpgrade.IsUpgraded(t)) return "<color=#C6E7A7>강화 완료</color>";
+        if (!TurretUpgrade.IsUnlocked(s.code)) return "<color=#7A7A7A>[E] 업그레이드 (엘리트 상점에서 해금)</color>";
+        int cost = UpgradeCost(t, s);
+        bool ok = GoldManager.Instance == null || GoldManager.Instance.CanAfford(cost);
+        return ok ? $"<color=#C6E7A7>[E] 강화 -{cost} G</color>" : $"<color=#C86A5A>[E] 강화 -{cost} G (골드 부족)</color>";
+    }
+
+    private void TryUpgrade(GameObject t)
+    {
+        TurretUpgrade.Spec s = TurretUpgrade.SpecFor(t);
+        if (s == null) { AugmentManager.Toast("이 포탑은 강화가 없어요"); return; }
+        if (TurretUpgrade.IsUpgraded(t)) { AugmentManager.Toast("이미 강화한 포탑이에요"); return; }
+        if (!TurretUpgrade.IsUnlocked(s.code)) { AugmentManager.Toast("엘리트 상점에서 강화를 해금하세요"); return; }
+        int cost = UpgradeCost(t, s);
+        GoldManager gm = GoldManager.Instance;
+        if (gm != null && !gm.TrySpend(cost)) { gm.NotifyShort(cost); return; }
+        if (!TurretUpgrade.Apply(t)) { if (gm != null) gm.Add(cost); return; }
+        builder.AddPaid(t, cost);
+        Sfx.Play("Tower/Turret_Assemble", 0.8f);
+        AugmentManager.Toast($"{s.title} -{cost} G");
+        // 외곽선을 새 모양으로 다시
+        Deselect(); Select(t);
     }
 
     private void BuildPrompt()

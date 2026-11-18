@@ -279,7 +279,9 @@ public class Projectile : MonoBehaviour
             {
                 Camera cam = Camera.main;
                 Vector3 p = transform.position + (cam != null ? -cam.transform.forward * 0.3f : Vector3.zero);
-                PixelFx.Play(explosionFx, p, Vector3.zero, explosionRadius * 2f / 56f);
+                // v176 그림마다 칸 크기가 달라도(알라 128px) 다 퍼진 지름(칸의 0.875)이 폭발 범위에 맞게
+                PixelFx.Play(explosionFx, p, Vector3.zero, explosionRadius * 2f / (PixelFx.CellWidth(explosionFx) * 0.875f));
+                ExplosionDebris.Burst(transform.position, explosionRadius);
                 Sfx.Play(string.IsNullOrEmpty(explosionSfx) ? "Gun/Frag_Explode" : explosionSfx, 0.55f);
             }
             Collider[] colliders = Physics.OverlapSphere(transform.position, explosionRadius, targetLayer);

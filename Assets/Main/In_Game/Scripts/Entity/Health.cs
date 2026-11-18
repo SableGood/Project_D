@@ -59,6 +59,14 @@ public class Health : MonoBehaviour
         this.isDead = false;
     }
 
+    // v176 최대 체력 배율 (포탑 강화). 지금 체력 비율은 유지
+    public void ScaleMaxHealth(float mul)
+    {
+        float ratio = maxHealth > 0f ? currentHealth / maxHealth : 1f;
+        maxHealth *= mul;
+        currentHealth = maxHealth * ratio;
+    }
+
     // 데이터 없이 직접 지정 (임시 타워 등)
     public void InitStats(float hp, float def)
     {

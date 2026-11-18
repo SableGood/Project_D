@@ -19,6 +19,21 @@ public static class FortLayout
     public static float WallYaw { get; private set; }
     public static float WallLength { get; private set; } = 3.6f;
     public static readonly List<Vector3> Spawns = new List<Vector3>();
+    // v172 거점 범위 (zone 이름 x z 반가로 반세로). 플레이어가 거점 안에 있으면 몹은 그 거점의 벽부터 때림
+    public static readonly List<(string name, Vector3 center, Vector2 half)> Zones = new List<(string, Vector3, Vector2)>();
+
+    public static bool InZone(int i, Vector3 p, float margin = 0f)
+    {
+        if (i < 0 || i >= Zones.Count) return false;
+        var z = Zones[i];
+        return Mathf.Abs(p.x - z.center.x) <= z.half.x + margin && Mathf.Abs(p.z - z.center.z) <= z.half.y + margin;
+    }
+
+    public static int ZoneIndexOf(Vector3 p, float margin = 0f)
+    {
+        for (int i = 0; i < Zones.Count; i++) if (InZone(i, p, margin)) return i;
+        return -1;
+    }
 
     // 기지 안쪽인지 (margin만큼 넓혀서)
     public static bool InsideBase(Vector3 p, float margin = 0f)
@@ -31,6 +46,7 @@ public static class FortLayout
     {
         Active = false;
         Spawns.Clear();
+        Zones.Clear();
         TextAsset t = Resources.Load<TextAsset>(LayoutPath);
         if (t == null) { Debug.LogWarning("[요새 맵] 배치 파일이 없음: " + LayoutPath); return; }
         Vector3 c = IslandMap.MapBounds.center;
@@ -48,9 +64,11 @@ public static class FortLayout
                 case "base": BaseCenter = W(F(1), F(2)); BaseHalf = new Vector2(F(3), F(4)); break;
                 case "wall": WallPos = W(F(1), F(2)); WallYaw = F(3); WallLength = Mathf.Max(1f, F(4)); break;
                 case "spawn": Spawns.Add(W(F(1), F(2))); break;
+                case "zone": if (s.Length >= 6) Zones.Add((s[1], W(F(2), F(3)), new Vector2(F(4), F(5)))); break;
             }
         }
         Active = true;
+        if (Zones.Count == 0) Zones.Add(("C", BaseCenter, BaseHalf));   // 예전 배치 파일: 기지 하나
 
         // 플레이어 시작 위치
         GameManager gm = GameManager.Instance != null ? GameManager.Instance : Object.FindFirstObjectByType<GameManager>();

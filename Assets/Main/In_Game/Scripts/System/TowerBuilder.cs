@@ -9,7 +9,11 @@ public class TowerBuilder : MonoBehaviour
     public GameObject[] towerPrefabs;
     [Tooltip("순서대로 TR010 ~ TR050 타워의 미리보기용 프리팹을 넣으세요.")]
     public GameObject[] previewPrefabs;
-    public float gridSize = 2.0f;
+    public float gridSize = 2.0f;   // v172부터 쓰지 않음: 1m 타일(BuildGrid) 위에 포탑 2×2칸
+    public const int TurretTiles = 2;
+    public static TowerBuilder Instance { get; private set; }
+    private readonly List<Vector2Int> footTiles = new List<Vector2Int>();
+    private readonly List<Vector2Int> placeTiles = new List<Vector2Int>();
 
     [Header("최대 건설 가능 거리")]
     public float maxBuildDistance = 10.0f;
@@ -64,8 +68,13 @@ public class TowerBuilder : MonoBehaviour
     public bool IsUnlocked(int index) { GameObject p = GetTowerPrefab(index); return p != null && RunProgress.IsTurretUnlocked(p.name); }
     public GameObject GetTowerPrefab(int index) => (towerPrefabs != null && index >= 0 && index < towerPrefabs.Length) ? towerPrefabs[index] : null;
 
+    void Awake() { Instance = this; }
+    void OnDestroy() { if (Instance == this) Instance = null; if (BuildGrid.TowerTaken == (System.Func<Vector2Int, bool>)IsCellOccupied) BuildGrid.TowerTaken = null; }
+
     void Start()
     {
+        BuildGrid.TowerTaken = IsCellOccupied;
+        if (GetComponent<WallBuilder>() == null) gameObject.AddComponent<WallBuilder>();   // v172 X = 벽 건설
         // 미리보기 오브젝트를 담을 빈 배열 공간을 슬롯 개수(보통 5개)만큼 초기화합니다.
         instantiatedPreviews = new GameObject[previewPrefabs.Length];
 
@@ -100,11 +109,12 @@ public class TowerBuilder : MonoBehaviour
         return data;
     }
 
+    public static float TowerPriceMul = 1.3f;   // v173 포탑이 값에 비해 너무 셈 (친구 피드백)
     public int GetTowerCost(int index)
     {
         EntityData data = GetTowerData(index);
         int baseCost = (data != null && data.cost > 0) ? data.cost : defaultTowerCost;
-        return Jobs.TurretPrice(baseCost); // 직업 할인 (공돌이 -30%, 학생 -10%)
+        return Jobs.TurretPrice(Mathf.RoundToInt(baseCost * TowerPriceMul)); // v173 전체 +30% → 직업 할인 (공돌이 -30%, 학생 -10%)
     }
 
     // ===== 포탑 판매 (X: 마우스가 가리키는 포탑, 낸 값의 70% 돌려받음) =====
@@ -170,6 +180,13 @@ public class TowerBuilder : MonoBehaviour
         return any;
     }
 
+    // v176 포탑 강화 비용을 낸 골드에 더함 (판매 환급에 포함)
+    public void AddPaid(GameObject tower, int amount)
+    {
+        if (tower == null || amount <= 0) return;
+        paidCost[tower] = PaidCostOf(tower) + amount;
+    }
+
     public int RefundOf(GameObject tower) => Mathf.FloorToInt((paidCost.TryGetValue(tower, out int c) ? c : defaultTowerCost) * SellRefund);
 
     // v154 포탑 판매 (선택 후 Q)
@@ -211,8 +228,9 @@ public class TowerBuilder : MonoBehaviour
                 }
                 else if (placementOk)
                 {
-                    // 자리는 괜찮은데 골드가 부족 → HUD에 알림
+                    // 자리는 괜찮은데 골드가 부족 → HUD에 알림 + v173 건설 모드 끔 (다음 클릭은 사격)
                     if (GoldManager.Instance != null) GoldManager.Instance.NotifyShort(GetTowerCost(currentTowerIndex));
+                    CancelBuildMode();
                     waitForMouseRelease = true;
                 }
             }
@@ -251,7 +269,16 @@ public class TowerBuilder : MonoBehaviour
             return;
         }
 
+        // v173 골드가 모자라면 건설 모드에 들어가지 않음 (좌클릭이 사격으로 그대로 나가게)
+        if (GoldManager.Instance != null && !GoldManager.Instance.CanAfford(GetTowerCost(index)))
+        {
+            GoldManager.Instance.NotifyShort(GetTowerCost(index));
+            if (isBuildMode) CancelBuildMode();
+            return;
+        }
+
         // 새로운 타워 선택 및 건설 모드 진입
+        if (WallBuilder.Instance != null) WallBuilder.Instance.Cancel();
         currentTowerIndex = index;
         isBuildMode = true;
         StartBuildMode();
@@ -295,9 +322,12 @@ public class TowerBuilder : MonoBehaviour
         foreach (UnityEngine.AI.NavMeshObstacle o in preview.GetComponentsInChildren<UnityEngine.AI.NavMeshObstacle>(true)) o.enabled = false;
     }
 
+    public void CancelBuild() { if (isBuildMode) CancelBuildMode(); }
+
     private void CancelBuildMode()
     {
         isBuildMode = false;
+        BuildGridView.Hide();
         if (currentPreviewObj != null)
         {
             currentPreviewObj.SetActive(false);
@@ -313,9 +343,9 @@ public class TowerBuilder : MonoBehaviour
         {
             Vector3 hitPoint = ray.GetPoint(rayDistance);
 
-            // 바둑판 스냅 로직
-            float x = Mathf.Round(hitPoint.x / gridSize) * gridSize;
-            float z = Mathf.Round(hitPoint.z / gridSize) * gridSize;
+            // v172 타일 스냅: 1m 칸 위 2×2 (가운데는 칸 경계)
+            Vector3 snapped = BuildGrid.Footprint(hitPoint, TurretTiles, TurretTiles, footTiles);
+            float x = snapped.x, z = snapped.z;
 
             // ★ 높이 수정: 고정값(1.0) 대신 실제 지면 높이 + 모델 바닥 보정
             currentGroundY = GetGroundHeight(x, z);
@@ -340,20 +370,23 @@ public class TowerBuilder : MonoBehaviour
             if (currentPreviewObj.activeSelf) currentPreviewObj.SetActive(false);
             canBuild = false;
             placementOk = false;
+            BuildGridView.Show(checkPos, footTiles, false);
         }
         else
         {
             if (!currentPreviewObj.activeSelf) currentPreviewObj.SetActive(true);
 
-            Vector3 halfExtents = new Vector3(gridSize * 0.45f, 0.9f, gridSize * 0.45f);
+            Vector3 halfExtents = new Vector3(TurretTiles * BuildGrid.Tile * 0.45f, 0.9f, TurretTiles * BuildGrid.Tile * 0.45f);
             Vector3 center = new Vector3(checkPos.x, currentGroundY + halfExtents.y + 0.05f, checkPos.z); // 지면 바로 위 공간 검사
-            bool isOverlapping = Physics.CheckBox(center, halfExtents, Quaternion.identity, obstacleLayer, QueryTriggerInteraction.Ignore);
+            // v175 플레이어·Ignore Raycast(절벽·그리드·그림자 등)는 빼고 검사 — 빈 칸인데 내가 서 있다는 이유로 막히던 문제
+            int mask = obstacleLayer.value & ~((1 << 2) | LayerMask.GetMask("Player"));
+            bool isOverlapping = Physics.CheckBox(center, halfExtents, Quaternion.identity, mask, QueryTriggerInteraction.Ignore);
 
-            placementOk = !isOverlapping && !IsCellOccupied(ToCell(checkPos))
-                          && PlayArea.IsInside(checkPos, gridSize * 0.5f)   // 플레이 구역(Floor) 밖에는 설치 불가
-                          && IslandMap.IsLandArea(checkPos, gridSize * 0.5f); // 섬 지형: 물·강둑 위에는 설치 불가
+            // v172 네 칸 모두 비어 있어야 (땅·플레이 구역 안·포탑/벽 없음)
+            placementOk = !isOverlapping && BuildGrid.AllFree(footTiles);
             bool affordable = GoldManager.Instance == null || GoldManager.Instance.CanAfford(GetTowerCost(currentTowerIndex));
             canBuild = placementOk && affordable; // 골드가 부족해도 미리보기는 빨간색
+            BuildGridView.Show(checkPos, footTiles, canBuild);
 
             // ★ 하나의 오브젝트가 여러 머티리얼을 가져도 모두 초록/빨강으로 교체
             //   (최적화) 색이 바뀔 때만 칠하고, materials 대신 sharedMaterials를 써서 매 프레임 머티리얼 복제(메모리 누수)를 막음
@@ -376,6 +409,8 @@ public class TowerBuilder : MonoBehaviour
     private bool BuildTower()
     {
         Vector3 pos = currentPreviewObj.transform.position;
+
+        placeTiles.Clear(); placeTiles.AddRange(footTiles);
 
         // 직업(헬스 중독자): 포탑 수 제한
         if (BuiltCount >= Jobs.TurretLimit)
@@ -424,7 +459,7 @@ public class TowerBuilder : MonoBehaviour
         foreach (var pair in occupiedCells) if (pair.Value == tower) stale.Add(pair.Key);
         foreach (Vector2Int c in stale) occupiedCells.Remove(c);
 
-        occupiedCells[ToCell(pos)] = tower;
+        foreach (Vector2Int t in placeTiles) occupiedCells[t] = tower;   // v172 2×2칸
         paidCost[tower] = cost;
         return true;
     }
@@ -452,11 +487,6 @@ public class TowerBuilder : MonoBehaviour
             minY = Mathf.Min(minY, r.bounds.min.y);
         }
         return minY == float.MaxValue ? 0f : obj.transform.position.y - minY;
-    }
-
-    private Vector2Int ToCell(Vector3 worldPos)
-    {
-        return new Vector2Int(Mathf.RoundToInt(worldPos.x / gridSize), Mathf.RoundToInt(worldPos.z / gridSize));
     }
 
     // 칸에 타워가 있고, 그 타워가 아직 살아있으면(활성) 점유 중

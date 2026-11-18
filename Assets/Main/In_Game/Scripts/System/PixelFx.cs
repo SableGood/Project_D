@@ -14,7 +14,7 @@ public class PixelFx : MonoBehaviour
                         ShotgunFlash = "Fx_shotgun_flash", ShotgunSmoke = "Fx_shotgun_smoke", Slash = "Fx_slash", Claw = "Fx_claw";
     public static int MaxActive = 160;
 
-    private class Clip { public Sprite[] frames; public float fps; public bool loop; }
+    private class Clip { public Sprite[] frames; public float fps; public bool loop; public int cellW; }
     private class Live
     {
         public SpriteRenderer sr; public Clip clip; public float t, speed, angle, alpha;
@@ -29,6 +29,8 @@ public class PixelFx : MonoBehaviour
     private Camera cam;
 
     public static bool Has(string name) => Enabled && Load(name) != null;
+    // v176 한 칸 너비(px). 없으면 64
+    public static float CellWidth(string name) { Clip c = Load(name); return c != null && c.cellW > 0 ? c.cellW : 64f; }
 
     // worldDir: 이펙트가 향할 월드 방향 (화면 평면으로 투영해서 각도를 구함). zero면 오른쪽
     public static void Play(string name, Vector3 pos, Vector3 worldDir, float metersPerPixel, Transform follow = null, float speed = 1f, float alpha = 1f, Color? tint = null)
@@ -112,7 +114,7 @@ public class PixelFx : MonoBehaviour
                     frames[i] = Sprite.Create(tex, new Rect(x, tex.height - y - fh, fw, fh), pivot, 1f, 0, SpriteMeshType.FullRect);
                     frames[i].name = name + "_" + i;
                 }
-                c = new Clip { frames = frames, fps = Mathf.Max(1f, fps), loop = v[7] == "1" };
+                c = new Clip { frames = frames, fps = Mathf.Max(1f, fps), loop = v[7] == "1", cellW = fw };
             }
         }
         if (c == null) Debug.LogWarning($"[PixelFx] {name} 그림(.png)이나 정보(.txt)를 찾지 못했어요 (Resources/Image/FX)");

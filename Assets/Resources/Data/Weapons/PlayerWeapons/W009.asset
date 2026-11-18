@@ -34,7 +34,7 @@ MonoBehaviour:
   armorPenetration: 10
   projectileSpeed: 14
   projectilePrefabName: Projectile_Ball
-  aoeRadius: 2.5
+  aoeRadius: 5
   spriteName: Pic_ALA
   spriteLength: 1.4
   weaponSprite: {fileID: 21300000, guid: 74c49ad9bebd4423954e7b98ad2798e0, type: 3}

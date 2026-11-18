@@ -142,17 +142,21 @@ public class PlayerWeaponManager : MonoBehaviour
         if (wasHeld || owned.Count == 1) EquipWeapon(newCatalogIndex);
     }
 
+    private bool pendingSwap;
+    public void SwapNext() { pendingSwap = true; }
+
     void Update()
     {
         if (weaponPrefabs == null || weaponPrefabs.Length == 0) return;
 
-        // v156 무기 교체: X = 다음 무기 / 1인칭에서는 마우스 휠도 (탑뷰 휠 = 카메라 줌)
+        // v156 무기 교체: v172 우클릭(빈 곳) = 다음 무기 / 1인칭에서는 마우스 휠도 (탑뷰 휠 = 카메라 줌)
         //  보유한 무기끼리. 테스트 모드면 목록 전체 (F5 무기 목록에서 골라도 됨)
         bool canSwap = !AugmentManager.IsOpen && !WeaponBrowser.IsOpen && Time.timeScale > 0f;
         bool fpsView = playerController != null && playerController.isFirstPerson;
         float scroll = canSwap && fpsView ? Input.mouseScrollDelta.y : 0f;
         int swapDir = scroll > 0f ? 1 : scroll < 0f ? -1 : 0;
-        if (canSwap && Input.GetKeyDown(KeyCode.X)) swapDir = 1;
+        if (canSwap && pendingSwap) swapDir = 1;   // v172 빈 곳 우클릭 (TowerSelection이 부름). X는 벽 건설
+        pendingSwap = false;
         if (swapDir != 0)
         {
             int dir = swapDir;
@@ -202,6 +206,7 @@ public class PlayerWeaponManager : MonoBehaviour
         if (playerController != null && playerController.Ability != null && playerController.Ability.IsRolling) return;
         // 투척 스킬 조준 중이거나, 던진 클릭을 아직 떼지 않았으면 사격하지 않음
         if (PlayerSkills.BlocksFiring) return;
+        if (WallBuilder.BlocksFiring) return;   // v172 벽 건설 중
 
         // 탑뷰에서 UI(버튼 등) 위를 클릭할 때는 사격하지 않음
         bool firstPerson = playerController != null && playerController.isFirstPerson;

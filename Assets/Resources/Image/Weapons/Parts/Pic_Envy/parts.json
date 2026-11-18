@@ -13,5 +13,5 @@
  },
  "projectileLength": 0.24,
  "explosionSound": "Gun/GL40_Explode",
- "explosionFx": "Fx_shell_explosion_soft"
+ "explosionFx": "Fx_envy_blast"
 }

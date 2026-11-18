@@ -300,6 +300,8 @@ public class WaveManager : MonoBehaviour
             yield break;
         }
 
+        JitterFortSpawns();
+
         // 스폰 포인트별 대기열 (몹 수 × 난이도, 어려움이면 엘리트 +1). 보스·엘리트는 맨 앞
         var queues = new Dictionary<int, List<GameObject>>();
         bool addedHardElite = false;
@@ -316,7 +318,7 @@ public class WaveManager : MonoBehaviour
             for (int i = 0; i < count; i++)
             {
                 if (boss || elite) q.Insert(0, info.mobPrefab);
-                else q.Insert(Random.Range(0, q.Count + 1), info.mobPrefab);
+                else q.Insert(Random.Range(0, q.Count + 1), MaybeRanged(info.mobPrefab));
             }
             total += count;
         }
@@ -431,6 +433,41 @@ public class WaveManager : MonoBehaviour
             Debug.LogWarning($"스폰 포인트 {index}번을 찾을 수 없어 무작위 지점에서 스폰합니다.");
         }
         return points[Random.Range(0, points.Length)];
+    }
+
+    // v173 박격포숭이(MR002)·저격숭이(MR003)를 더 자주: 일반 근접 몹(MM) 일부를 웨이브가 지날수록 바꿔 넣음
+    [Header("v173 원거리 몹 섞기")]
+    public float rangedSwapPerWave = 0.04f;   // 웨이브마다 +4%
+    public float rangedSwapMax = 0.3f;        // 최대 30%
+    private GameObject MaybeRanged(GameObject prefab)
+    {
+        if (!PrefabIs(prefab, "MM")) return prefab;
+        float chance = Mathf.Min(rangedSwapMax, rangedSwapPerWave * currentWaveIndex);
+        if (Random.value >= chance) return prefab;
+        GameObject r = FindMobPrefab(Random.value < 0.5f ? "MR002" : "MR003");
+        return r != null ? r : prefab;
+    }
+
+    // v173 요새 맵: 웨이브마다 스폰 위치를 원래 자리 주변 최대 6m 안에서 옮김 (스폰 자리에 포탑을 둘러치는 공략 막기)
+    public float fortSpawnJitter = 6f;
+    private void JitterFortSpawns()
+    {
+        if (!FortLayout.Active || defaultSpawnPoints == null) return;
+        for (int i = 0; i < defaultSpawnPoints.Length && i < FortLayout.Spawns.Count; i++)
+        {
+            if (defaultSpawnPoints[i] == null) continue;
+            Vector3 home = FortLayout.Spawns[i];
+            for (int tries = 0; tries < 8; tries++)
+            {
+                Vector2 r = Random.insideUnitCircle * fortSpawnJitter;
+                Vector3 p = home + new Vector3(r.x, 0f, r.y);
+                if (UnityEngine.AI.NavMesh.SamplePosition(p, out UnityEngine.AI.NavMeshHit hit, 2f, UnityEngine.AI.NavMesh.AllAreas))
+                {
+                    defaultSpawnPoints[i].position = hit.position;
+                    break;
+                }
+            }
+        }
     }
 
     // 스폰 지점 주변의 무작위 위치 (네비메시 위로 보정)

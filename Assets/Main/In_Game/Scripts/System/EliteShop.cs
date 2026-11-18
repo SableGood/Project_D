@@ -42,7 +42,7 @@ public class EliteShop : MonoBehaviour
         return new GameObject("EliteShop").AddComponent<EliteShop>();
     }
 
-    private enum Kind { NewTurret, NewWeapon, WeaponUpgrade }
+    private enum Kind { NewTurret, NewWeapon, WeaponUpgrade, TurretUpgrade }
     private class Item
     {
         public Kind kind;
@@ -218,6 +218,20 @@ public class EliteShop : MonoBehaviour
                 pool.Add(it);
             }
 
+        // v176 포탑 강화 해금: 지을 수 있는 포탑 중 강화가 있는 것
+        if (tb != null)
+            for (int i = 0; i < tb.SlotCount; i++)
+            {
+                GameObject p = tb.GetTowerPrefab(i);
+                if (p == null || !RunProgress.IsTurretUnlocked(p.name)) continue;
+                if (!TurretUpgrade.Specs.TryGetValue(p.name, out TurretUpgrade.Spec s) || TurretUpgrade.IsUnlocked(s.code)) continue;
+                var it = new Item { kind = Kind.TurretUpgrade, turretCode = s.code, category = "포탑 강화", verb = "해금", title = s.title };
+                it.desc = $"포신 {s.barrelScale:0.#}배 · 공격력 ×{s.damageMul:0.#} · 연사 ×{s.fireRateMul:0.#} · 사거리 ×{s.rangeMul:0.#} · 체력 ×{s.hpMul:0.#}\n지은 포탑을 골라 E (지을 때 값의 {s.costRatio * 100f:0}%)";
+                it.icon = Resources.Load<Sprite>($"Image/TurretIcons/{p.name}");
+                it.price = Jobs.ShopPrice(priceUpgradeModern);
+                pool.Add(it);
+            }
+
         PlayerWeaponManager pw = Weapons();
         if (pw != null && pw.CatalogCount > 0 && Jobs.CanUseWeapons) // 대통령: 무기 상품 없음
         {
@@ -309,6 +323,7 @@ public class EliteShop : MonoBehaviour
         switch (it.kind)
         {
             case Kind.NewTurret: return !RunProgress.IsTurretUnlocked(it.turretCode);
+            case Kind.TurretUpgrade: return !TurretUpgrade.IsUnlocked(it.turretCode);
             case Kind.WeaponUpgrade: return pw != null && pw.Owns(it.weaponFrom);
             default:
                 if (pw == null || it.weapons.Count == 0) return false;
@@ -335,6 +350,12 @@ public class EliteShop : MonoBehaviour
                 if (!Pay(it)) return;
                 RunProgress.UnlockTurret(it.turretCode);
                 Sold(it, $"'{it.title}' 해금 · 이제 지을 수 있어요");
+                break;
+
+            case Kind.TurretUpgrade:
+                if (!Pay(it)) return;
+                RunProgress.UnlockTurret(TurretUpgrade.UnlockKey(it.turretCode));
+                Sold(it, $"'{it.title}' 해금 · 포탑을 골라 E로 강화");
                 break;
 
             case Kind.NewWeapon:
@@ -398,7 +419,7 @@ public class EliteShop : MonoBehaviour
     {
         it.sold = true;
         // v113: 상점에서 얻은 무기의 분류를 기록 → 같은 분류의 해금 무기가 이후 상점에 나옴
-        if (it.kind != Kind.NewTurret && it.weapons.Count > 0)
+        if (it.kind != Kind.NewTurret && it.kind != Kind.TurretUpgrade && it.weapons.Count > 0)
         {
             PlayerWeaponManager pw = Weapons();
             PlayerWeaponData got = pw != null ? pw.DataAt(it.weapons[0]) : null;

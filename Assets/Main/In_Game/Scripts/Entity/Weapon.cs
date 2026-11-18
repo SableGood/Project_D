@@ -294,21 +294,19 @@ public class Weapon : MonoBehaviour
             else return; // 장전 중 사격 불가
         }
 
+        // v173 탄이 0이면 사격 간격을 기다리지 않고 바로 재장전
+        if (playerWepData != null && playerWepData.maxAmmo > 0 && currentAmmo <= 0) { StartReload(); return; }
+
         if (Time.time >= lastAttackTime + EffectiveCooldown)
         {
             // 탄창 시스템 적용 (장탄수가 0보다 큰 무기만 적용, 0 = 무한)
-            if (playerWepData != null && playerWepData.maxAmmo > 0)
-            {
-                if (currentAmmo <= 0)
-                {
-                    StartReload();
-                    return;
-                }
-                currentAmmo--; // 총알 소모
-            }
+            if (playerWepData != null && playerWepData.maxAmmo > 0) currentAmmo--; // 총알 소모
 
             PerformAttack(null, targetPosition);
             lastAttackTime = Time.time;
+
+            // v173 마지막 탄을 쏘면 자동 재장전 (다시 누르지 않아도)
+            if (playerWepData != null && playerWepData.maxAmmo > 0 && currentAmmo <= 0) StartReload();
         }
     }
 
@@ -657,7 +655,7 @@ public class Weapon : MonoBehaviour
             projectile.explosionSfx = wv != null && !string.IsNullOrEmpty(wv.ExplosionSound) ? wv.ExplosionSound : null;   // v121: 유탄 GL40_Explode
             projectile.trailFx = rocket ? PixelFx.MuzzleSmoke : null; // v115: 로켓 연기 꼬리
             // v116 로켓 연출: 발사 직후 0.5초는 절반 속도로 밀려 나가다가, 점화 후 2배 속도로
-            projectile.launchMul = rocket ? 0.5f : 1f; projectile.boostMul = rocket ? 2f : 1f; projectile.launchDelay = rocket ? 0.5f : 0f;
+            projectile.launchMul = rocket ? 0.5f : 1f; projectile.boostMul = rocket ? 2f : 1f; projectile.launchDelay = rocket ? 0.25f : 0f;   // v174 느린 구간 0.5 → 0.25초
             projectile.armorPenetration = armorPenetration;
             projectile.knockbackDistance = knockbackDistance;
 
@@ -994,7 +992,7 @@ public class Weapon : MonoBehaviour
     public static bool useOldTracer = false;
     private void ShowTracer(Vector3 from, Vector3 to)
     {
-        if (!useOldTracer) { BulletFx.Spawn(from, to, tracerWidth / 0.03f, playerWepData != null); return; }
+        if (!useOldTracer) { BulletFx.Spawn(from, to, tracerWidth / 0.03f, playerWepData != null, playerWepData != null ? playerWepData.Category : null); return; }
         LineRenderer lr = GetTracer(tracerIndex++);
         lr.SetPosition(0, from);
         while (tracerStartLocal.Count < tracers.Count) tracerStartLocal.Add(Vector3.zero);

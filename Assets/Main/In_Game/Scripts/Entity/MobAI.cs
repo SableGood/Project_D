@@ -318,7 +318,7 @@ public class MobAI : MonoBehaviour
         if (towerMask != 0 && MobCode() == "MR002") newTarget = FindNearestTower(true, Mathf.Max(towerSearchRadius, MR002TowerSearch));
 
         // v151 요새 맵: 기지 밖에 있고 입구 벽이 서 있으면 벽만 노림 (돌아갈 길이 없음)
-        if (newTarget == null && FortWall.ShouldTarget(transform.position)) newTarget = FortWall.Body;
+        if (newTarget == null) newTarget = FortWall.TargetFor(transform.position);   // v172 플레이어가 있는 거점의 벽
 
         // 길을 막은 포탑: 부서지거나 멀어질 때까지 우선 공격
         if (newTarget == null && blockingTower != null)
@@ -368,12 +368,16 @@ public class MobAI : MonoBehaviour
         // 경로가 끊긴 경우(포탑이 길을 완전히 막아 내비메쉬가 갈라짐)도 막힌 것으로 봄
         bool partial = agent.hasPath && agent.pathStatus != UnityEngine.AI.NavMeshPathStatus.PathComplete;
 
-        if (tryingToMove && (slow || partial)) stuckTime += Time.deltaTime;
+        // v173 길이 완전히 막혔으면(경로 일부만) 움직이고 있어도 막힌 것으로 셈 → 포탑을 둘러쳐도 뚫고 나옴
+        if (partial && !agent.pathPending) stuckTime += Time.deltaTime;
+        else if (tryingToMove && slow) stuckTime += Time.deltaTime;
         else stuckTime = Mathf.Max(0f, stuckTime - Time.deltaTime * 2f);
         if (stuckTime < blockedDelay) return;
         stuckTime = 0f;
 
         Transform tower = FindTowerAhead(target.position);
+        if (tower == null && partial) tower = NearestTowerTo(agent.pathEndPosition, 8f);   // 갈 수 있는 끝에서 가장 가까운 포탑
+        if (tower == null && partial) tower = FindNearestTower();                          // 그래도 없으면 주변에서 가장 가까운 포탑
         if (tower == null) return;
         blockingTower = tower;
         nextRetargetTime = 0f; // 바로 대상 교체
@@ -402,6 +406,22 @@ public class MobAI : MonoBehaviour
         return best;
     }
 
+    private Transform NearestTowerTo(Vector3 p, float radius)
+    {
+        int count = Physics.OverlapSphereNonAlloc(p, radius, towerHits, towerMask, QueryTriggerInteraction.Ignore);
+        Transform best = null; float bestSqr = float.MaxValue;
+        for (int i = 0; i < count; i++)
+        {
+            Transform root = towerHits[i].transform.root;
+            if (!root.gameObject.activeInHierarchy) continue;
+            Health h = root.GetComponent<Health>();
+            if (h == null || h.IsDead) continue;
+            float sqr = (root.position - p).sqrMagnitude;
+            if (sqr < bestSqr) { bestSqr = sqr; best = root; }
+        }
+        return best;
+    }
+
     public static float MR002TowerSearch = 30f;
     private Transform FindNearestTower() => FindNearestTower(false, towerSearchRadius);
     private Transform FindNearestTower(bool skipWall, float radius)
@@ -413,7 +433,7 @@ public class MobAI : MonoBehaviour
         {
             Transform root = towerHits[i].transform.root; // 타워 본체 (부품 콜라이더의 최상위)
             if (!root.gameObject.activeInHierarchy) continue;
-            if (skipWall && root == FortWall.Body) continue;
+            if (skipWall && FortWall.IsWallRoot(root)) continue;
             float sqr = (root.position - transform.position).sqrMagnitude;
             if (sqr < bestSqr) { bestSqr = sqr; best = root; }
         }

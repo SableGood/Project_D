@@ -68,8 +68,10 @@ public class GameHUD : MonoBehaviour
     private float noticeUntil;
     private string hoverInfo;
 
-    // 초상화
+    // 초상화 (v172 없앰 → 가운데는 벽 건설 칸)
     private Image portraitImage;
+    private Image wallFrame, wallIcon;
+    private Text wallCost, wallCount, wallKey;
 
     // 스킬
     private Image[] skillIcons = new Image[5];
@@ -132,6 +134,7 @@ public class GameHUD : MonoBehaviour
 
         UpdateHealth();
         UpdateTowers();
+        UpdateWallSlot();
         UpdateWeapon();
         UpdateOverheadReload();
         UpdateGoldEffects();
@@ -195,9 +198,12 @@ public class GameHUD : MonoBehaviour
         lastGold = lastSelected = int.MinValue;
 
         // 초상화: 상·하체 애니메이션이 있으면 지정 초상화, 없으면 플레이어 일러스트 (Billboard가 붙은 스프라이트)
-        Sprite portrait = player != null ? PlayerBodyAnimator.GetPortrait(player.gameObject) : null;
-        portraitImage.sprite = portrait;
-        portraitImage.color = portrait != null ? Color.white : new Color(1f, 1f, 1f, 0f);
+        if (portraitImage != null)
+        {
+            Sprite portrait = player != null ? PlayerBodyAnimator.GetPortrait(player.gameObject) : null;
+            portraitImage.sprite = portrait;
+            portraitImage.color = portrait != null ? Color.white : new Color(1f, 1f, 1f, 0f);
+        }
 
         BuildTowerSlots();
 
@@ -258,6 +264,55 @@ public class GameHUD : MonoBehaviour
         if (!string.IsNullOrEmpty(hoverInfo)) infoText.text = hoverInfo;
         else if (selected >= 0) infoText.text = $"{TowerLabel(selected)}   <color=#AAAAAA>좌클릭 설치 · 같은 번호 다시 누르면 취소</color>";
         else infoText.text = "";
+    }
+
+    // v172 벽 건설 칸: 켜져 있으면 강조, 값·개수
+    private void UpdateWallSlot()
+    {
+        if (wallFrame == null) return;
+        bool on = WallBuilder.Instance != null && WallBuilder.Instance.Active;
+        int cost = WallBuilder.Cost, n = WallBuilder.Count;
+        bool full = n >= FortWall.MaxWalls;
+        bool afford = GoldManager.Instance == null || GoldManager.Instance.Gold >= cost;
+        wallFrame.color = on ? Accent : FrameNormal;
+        wallKey.color = on ? Accent : Color.white;
+        wallCost.text = full ? "최대" : $"{cost} G";
+        wallCost.color = full ? SubText : afford ? CostOk : Warn;
+        wallCount.text = $"{n}/{FortWall.MaxWalls}";
+        wallIcon.color = full ? new Color(1f, 1f, 1f, 0.35f) : afford ? Color.white : new Color(0.45f, 0.45f, 0.45f, 1f);
+        if (on && !NoticeActive() && string.IsNullOrEmpty(hoverInfo))
+        {
+            infoText.color = Color.white;
+            infoText.text = $"벽 건설  <color=#FFE066>{cost} G</color>   <color=#AAAAAA>좌클릭 짓기 · 우클릭 돌리기 · X 취소</color>";
+        }
+    }
+
+    // 임시 벽 아이콘: 나무 판자 벽 (32×32)
+    private static Sprite wallIconSprite;
+    private static Sprite WallIconSprite()
+    {
+        if (wallIconSprite != null) return wallIconSprite;
+        const int N = 32;
+        Texture2D t = new Texture2D(N, N, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
+        var px = new Color32[N * N];
+        for (int y = 0; y < N; y++)
+            for (int x = 0; x < N; x++)
+            {
+                bool inside = x >= 2 && x <= 29 && y >= 6 && y <= 25;
+                Color c = new Color(0, 0, 0, 0);
+                if (inside)
+                {
+                    c = new Color(0.62f, 0.43f, 0.25f, 1f);
+                    if ((x - 2) % 7 == 0) c = new Color(0.36f, 0.24f, 0.13f, 1f);               // 판자 이음
+                    if (y == 11 || y == 20) c = new Color(0.42f, 0.29f, 0.16f, 1f);             // 가로 대
+                    if ((y == 11 || y == 20) && (x - 2) % 7 == 3) c = new Color(0.8f, 0.8f, 0.82f, 1f);   // 못
+                    if (x == 2 || x == 29 || y == 6 || y == 25) c = new Color(0.13f, 0.08f, 0.1f, 1f);    // 테두리
+                }
+                px[y * N + x] = c;
+            }
+        t.SetPixels32(px); t.Apply();
+        wallIconSprite = Sprite.Create(t, new Rect(0, 0, N, N), new Vector2(0.5f, 0.5f), N);
+        return wallIconSprite;
     }
 
     // 무기 칸 그림: 본체 + 탄창 (+ 기관총 상부 덮개). 탑뷰 무기 그림의 재장전 모션을 그대로 따라감
@@ -585,14 +640,35 @@ public class GameHUD : MonoBehaviour
             KeyLabel(root, SkillKeys[i], x, labelY, Color.white);
         }
 
-        // ── 초상화 (가운데) ──
+        // ── v172 벽 건설 칸 (가운데, 예전 초상화 자리) ── X 또는 클릭
         float px = Pad + groupW + GroupGap;
-        RectTransform portraitBox = Place(NewRect("Portrait", root), px, slotY, Portrait, Portrait);
-        AddImage(portraitBox, FrameNormal, false);
-        RectTransform portraitInner = Inset(NewRect("Inner", portraitBox), 2f);
-        AddImage(portraitInner, SlotBg, false);
-        portraitImage = AddImage(Inset(NewRect("Image", portraitInner), 6f), new Color(1f, 1f, 1f, 0f), false);
-        portraitImage.preserveAspect = true;
+        float wx = px + (Portrait - Slot) * 0.5f;
+        RectTransform wallBox = SlotBox(root, "WallBuild", wx, slotY, out wallFrame);
+        Button wb = wallBox.gameObject.AddComponent<Button>();
+        wb.targetGraphic = wallFrame;
+        wb.onClick.AddListener(() => { if (WallBuilder.Instance != null) WallBuilder.Instance.Toggle(); });
+        GameHUDHoverRelay wh = wallBox.gameObject.AddComponent<GameHUDHoverRelay>();
+        wh.onEnter = () => { hoverInfo = $"벽 건설  <color=#FFE066>{WallBuilder.Cost} G</color>   <color=#AAAAAA>3×1칸 · 우클릭 돌리기 · 최대 {FortWall.MaxWalls}개 (처음 입구 벽 포함)</color>"; };
+        wh.onExit = () => { hoverInfo = null; };
+        RectTransform wIconRt = NewRect("Icon", wallBox);
+        wIconRt.anchorMin = Vector2.zero; wIconRt.anchorMax = Vector2.one;
+        wIconRt.offsetMin = new Vector2(8f, 22f); wIconRt.offsetMax = new Vector2(-8f, -8f);
+        wallIcon = AddImage(wIconRt, Color.white, false);
+        wallIcon.sprite = WallIconSprite();   // 임시 그림 (벽 디자인은 나중에)
+        wallIcon.preserveAspect = true;
+        RectTransform wCostRt = NewRect("Cost", wallBox);
+        wCostRt.anchorMin = Vector2.zero; wCostRt.anchorMax = new Vector2(1f, 0f);
+        wCostRt.pivot = new Vector2(0.5f, 0f);
+        wCostRt.offsetMin = new Vector2(2f, 2f); wCostRt.offsetMax = new Vector2(-2f, 20f);
+        AddImage(wCostRt, new Color(0f, 0f, 0f, 0.45f), false);
+        wallCost = AddText(wCostRt, "", 15, TextAnchor.MiddleCenter, CostOk);
+        wallCost.fontStyle = FontStyle.Bold;
+        RectTransform wCountRt = NewRect("Count", wallBox);
+        wCountRt.anchorMin = wCountRt.anchorMax = wCountRt.pivot = new Vector2(1f, 1f);
+        wCountRt.sizeDelta = new Vector2(40f, 18f); wCountRt.anchoredPosition = new Vector2(-4f, -2f);
+        wallCount = AddText(wCountRt, "", 13, TextAnchor.UpperRight, Color.white);
+        AddShadow(wallCount);
+        wallKey = KeyLabel(root, "X", wx, labelY, Color.white);
 
         // ── 포탑 칸 (오른쪽) ── 플레이어가 연결되면 채움
         towerGroup = Place(NewRect("Towers", root), px + Portrait + GroupGap, 0f, groupW, height);
